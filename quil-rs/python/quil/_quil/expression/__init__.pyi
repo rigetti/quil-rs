@@ -118,28 +118,57 @@ class Expression:
     def __rtruediv__(self, other: Expression  |  instructions.MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
     def __sub__(self, other: Expression  |  instructions.MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
     def __truediv__(self, other: Expression  |  instructions.MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def evaluate(self, variables: typing.Optional[typing.Mapping[builtins.str, builtins.complex]] = None, memory_references: typing.Optional[typing.Mapping[builtins.str, typing.Sequence[builtins.float]]] = None) -> builtins.complex:
+    @typing.overload
+    def evaluate(self, variables: typing.Optional[builtins.dict[str, complex]] = None, memory_references: typing.Optional[builtins.dict[str, list[float]]] = None, /, partial: typing.Literal[False] = False) -> complex: ...
+    @typing.overload
+    def evaluate(self, variables: typing.Optional[typing.Mapping[builtins.str, builtins.complex]] = None, memory_references: typing.Optional[typing.Mapping[builtins.str, typing.Sequence[builtins.float]]] = None, /, partial: builtins.bool = False) -> Expression  |  builtins.complex:
         r"""
         Evaluate an expression, expecting that it may be fully reduced to a single complex number.
         
-        If it cannot be reduced to a complex number, this raises an error.
+        By default, if it cannot be reduced to a complex number, this raises an error;
+        pass the keyword-only parameter `partial=True` to allow partial evaluation,
+        returning an `Expression` with the applied mappings.
         
         The `variables` should be a mapping of variable names to complex values,
         and `memory_references` should be a mapping of memory reference names to lists of floats.
         If not provided, they'll default to an empty mapping.
         
-        # Example
+        # Examples
+        
+        If the `Expression` has no variables or memory references, no mappings are needed:
         
         ```python
         from quil.expression import Expression
         
-        expr = Expression.parse("%beta + theta[0]")
+        expr = Expression.parse("1 + 2 * 3")
+        assert expr.evaluate() == 7.0+0.0j
+        ```
+        
+        With variables and memory references, you can provide mappings to evaluate the expression:
+        
+        ```python
+        from quil.expression import Expression
+        
+        expr = Expression.parse("%beta + theta[0] * theta[1]")
         evaluated = expr.evaluate(
             variables={"beta": 1.0+0.0j},
-            memory_references={"theta": [2.0]},
+            memory_references={"theta": [2.0, 3.0]},
         )
+        assert evaluated == 7.0+0.0j
+        ```
         
-        assert evaluated == 3.0+0.0j
+        If the expression cannot be fully evaluated, you can allow partial evaluation:
+        
+        ```python
+        from quil.expression import Expression
+        
+        expr = Expression.parse("%beta + theta[0] * theta[1]")
+        
+        evaluated = expr.evaluate(variables={"beta": 1.0+0.0j}, partial=True)
+        assert evaluated == Expression.parse("1.0 + theta[0] * theta[1]")
+        
+        evaluated = expr.evaluate(memory_references={"theta": [2.0, 3.0]}, partial=True)
+        assert evaluated == Expression.parse("%beta + 6")
         ```
         """
     def into_simplified(self) -> Expression:
@@ -157,11 +186,14 @@ class Expression:
         r"""
         Explicitly evaluate as much of ``expr`` as possible, using substitutions from `d`.
         
+        This method is deprecated; use `evaluate(..., partial=True)` instead,
+        as it is more explicit and efficient.
+        
         This supports substitution of both parameters and memory references.
         Each memory reference must be individually assigned a value at each memory offset to be substituted.
         
-        :param expr: The expression whose parameters or memory references are to be substituted.
         :param d: Numerical substitutions for parameters or memory references.
+        
         Returns a complex number (if possible) or a partially simplified `Expression`.
         """
     def substitute_variables(self, variable_values: typing.Mapping[builtins.str, Expression  |  instructions.MemoryReference  |  builtins.int  |  builtins.float  |  builtins.complex]) -> Expression:
