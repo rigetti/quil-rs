@@ -1,7 +1,10 @@
 use num_complex::Complex64;
 use numpy::{IntoPyArray as _, PyArray1, PyArrayDescr, PyArrayDescrMethods};
 use pyo3::{
-    IntoPyObjectExt, exceptions::{PyIndexError, PyStopIteration, PyValueError}, prelude::*, types::{PyComplex, PySlice, PySliceIndices},
+    exceptions::{PyIndexError, PyStopIteration, PyValueError},
+    prelude::*,
+    types::{PyComplex, PySlice, PySliceIndices},
+    IntoPyObjectExt,
 };
 
 #[cfg(feature = "stubs")]
@@ -397,14 +400,14 @@ impl PyIqSamples {
         }
 
         let arr = match dtype {
-            None => {
-                self.iq_values(py).into_any()
-            }
+            None => self.iq_values(py).into_any(),
             Some(dtype) => {
                 if dtype.is_equiv_to(&numpy::dtype::<Complex64>(py)) {
                     self.iq_values(py).into_any()
                 } else if dtype.is_equiv_to(&PyArrayDescr::object(py)) {
-                    IqSamples::from(self.clone()).iter().map(|&c| c.into_py_any(py))
+                    IqSamples::from(self.clone())
+                        .iter()
+                        .map(|&c| c.into_py_any(py))
                         .collect::<PyResult<Vec<Py<PyAny>>>>()?
                         .into_pyarray(py)
                         .into_any()

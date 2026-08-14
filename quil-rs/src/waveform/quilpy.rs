@@ -358,39 +358,44 @@ impl PyWaveform {
     // PyQuil v4-compatible methods.
     fn get_parameter<'py>(&self, py: Python<'py>, name: &str) -> PyResult<Bound<'py, PyAny>> {
         match &self.0 {
-            Waveform::Builtin { common_parameters, .. } => {
-                match name {
-                    "duration" => common_parameters.duration.into_bound_py_any(py),
-                    "scale" => common_parameters.scale.clone().into_bound_py_any(py),
-                    "phase" => common_parameters.phase.clone().into_bound_py_any(py),
-                    "detuning" => common_parameters.detuning.clone().into_bound_py_any(py),
-                    _ => py.None().into_bound_py_any(py),
-                }
-            }
-            Waveform::Custom { parameters, .. } => {
-                match parameters.get(name) {
-                    Some(value) => value.clone_ref(py).into_bound_py_any(py),
-                    None => py.None().into_bound_py_any(py),
-                }
-            }
+            Waveform::Builtin {
+                common_parameters, ..
+            } => match name {
+                "duration" => common_parameters.duration.into_bound_py_any(py),
+                "scale" => common_parameters.scale.clone().into_bound_py_any(py),
+                "phase" => common_parameters.phase.clone().into_bound_py_any(py),
+                "detuning" => common_parameters.detuning.clone().into_bound_py_any(py),
+                _ => py.None().into_bound_py_any(py),
+            },
+            Waveform::Custom { parameters, .. } => match parameters.get(name) {
+                Some(value) => value.clone_ref(py).into_bound_py_any(py),
+                None => py.None().into_bound_py_any(py),
+            },
         }
     }
 
-    fn set_parameter<'py>(
-        &mut self,
-        name: &str,
-        value: Bound<'py, PyAny>,
-    ) -> PyResult<()> {
+    fn set_parameter<'py>(&mut self, name: &str, value: Bound<'py, PyAny>) -> PyResult<()> {
         match &mut self.0 {
-            Waveform::Builtin { ref mut common_parameters, .. } => {
-                match name {
-                    "duration" => { common_parameters.duration = value.extract()?; }
-                    "scale" => { common_parameters.scale = value.extract()?; }
-                    "phase" => { common_parameters.phase = value.extract()?; }
-                    "detuning" => { common_parameters.detuning = value.extract()?; }
-                    _ => { Err(WaveformParameterError::Extra(vec![name.to_string()]))?; }
+            Waveform::Builtin {
+                ref mut common_parameters,
+                ..
+            } => match name {
+                "duration" => {
+                    common_parameters.duration = value.extract()?;
                 }
-            }
+                "scale" => {
+                    common_parameters.scale = value.extract()?;
+                }
+                "phase" => {
+                    common_parameters.phase = value.extract()?;
+                }
+                "detuning" => {
+                    common_parameters.detuning = value.extract()?;
+                }
+                _ => {
+                    Err(WaveformParameterError::Extra(vec![name.to_string()]))?;
+                }
+            },
             Waveform::Custom { parameters, .. } => {
                 if value.is_none() {
                     parameters.shift_remove(name);
@@ -401,5 +406,4 @@ impl PyWaveform {
         }
         Ok(())
     }
-
 }
