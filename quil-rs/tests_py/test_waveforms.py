@@ -8,9 +8,9 @@ from typing import Any, Optional, TypeVar, Union
 from hypothesis import given
 from hypothesis import strategies as st
 from hypothesis.strategies import DrawFn, SearchStrategy
-from quil import waveform
+from quil import waveform, expression
 from quil.expression import Expression
-from quil.instructions import FrameIdentifier, Instruction, Qubit
+from quil.instructions import FrameIdentifier, Pulse, Qubit
 from quil.program import Program
 from quil.waveform import (
     BuiltinWaveform,
@@ -271,7 +271,7 @@ def test_boxcar_kernel(common: CommonBuiltinParameters[float, complex]):
     assert type(boxcar_kernel) == waveform.BoxcarKernel
 
 
-def test_parsed():
+def test_parsed() -> None:
     program = Program.parse(
         textwrap.dedent(
             """
@@ -290,23 +290,18 @@ def test_parsed():
     program_syntactic_pulses: list[Waveform[Expression, Expression]] = []
     program_concrete_pulses: list[Waveform[float, complex]] = []
 
-    def evaluate_to_complex(e: Expression) -> complex:
-        return e.evaluate({}, {})
-
     def evaluate_to_real(e: Expression) -> float:
-        z = evaluate_to_complex(e)
-        if z.imag == 0:
+        if (z := e.evaluate()).imag == 0:
             return z.real
-        else:
-            raise ValueError
+        raise ValueError(f"Expression {e} evaluated to {z}, which is not a real number")
 
     for instruction in program.body_instructions:
-        assert isinstance(instruction, Instruction.Pulse)
-        pulse = instruction._0
+        assert isinstance(instruction, Pulse)
+        pulse = instruction
         assert pulse.blocking
         assert pulse.frame == FrameIdentifier("tx", [Qubit.Fixed(0)])
         syntactic = Waveform.from_quil(pulse.waveform)
-        concrete = syntactic.evaluate(evaluate_to_real, evaluate_to_complex)
+        concrete = syntactic.evaluate(evaluate_to_real, Expression.evaluate)
         program_syntactic_pulses.append(syntactic)
         program_concrete_pulses.append(concrete)
 
