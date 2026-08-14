@@ -138,9 +138,18 @@ mod stubs {
     impl_stub_type!(SubstitutionValue = Complex64 | Vec<Complex64>);
     impl_stub_type!(Evaluated = Expression | Complex64);
 
-    type_alias!("quil._quil.expression", ExpressionValueDesignator = i64 | f64 | Complex64);
-    type_alias!("quil._quil.expression", ExpressionDesignator = Expression | i64 | f64 | Complex64);
-    type_alias!("quil._quil.expression", ParameterDesignator = ExpressionLike);
+    type_alias!(
+        "quil._quil.expression",
+        ExpressionValueDesignator = i64 | f64 | Complex64
+    );
+    type_alias!(
+        "quil._quil.expression",
+        ExpressionDesignator = Expression | i64 | f64 | Complex64
+    );
+    type_alias!(
+        "quil._quil.expression",
+        ParameterDesignator = ExpressionLike
+    );
 
     pyo3_stub_gen::inventory::submit! {
         gen_methods_from_python! {
@@ -259,10 +268,12 @@ impl Expression {
         match self.evaluate_partial(&variables, &memory_references) {
             Expression::PiConstant() => Ok(Evaluated::Full(Complex64::new(PI, 0.0))),
             Expression::Number(c) => Ok(Evaluated::Full(c)),
-            other => if partial {
-                Ok(Evaluated::Partial(other))
-            } else {
-                Err(EvaluationError::Incomplete)?
+            other => {
+                if partial {
+                    Ok(Evaluated::Partial(other))
+                } else {
+                    Err(EvaluationError::Incomplete)?
+                }
             }
         }
     }
@@ -295,7 +306,9 @@ impl Expression {
     ///
     /// Returns a complex number (if possible) or a partially simplified `Expression`.
     #[pyo3(name = "substitute", signature = (d=None, /))]
-    #[pyo3(warn(message = "`substitute` is deprecated; use `evaluate(..., partial=True)` instead."))]
+    #[pyo3(warn(
+        message = "`substitute` is deprecated; use `evaluate(..., partial=True)` instead."
+    ))]
     fn py_substitute(
         &self,
         d: Option<HashMap<SubstitutionKey, SubstitutionValue>>,

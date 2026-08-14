@@ -1955,9 +1955,18 @@ mod stubs {
         MemoryReferenceLike = MemoryReference | DeclarationAt | Declaration | (String, u64)
     );
 
-    type_alias!("quil._quil.instructions", LabelTargetParameter = String | Target | Label); 
-    type_alias!("quil._quil.instructions", MemoryReferenceDesignator = MemoryReferenceLike);
-    type_alias!("quil._quil.instructions", QubitDesignator = Qubit | QubitPlaceholder | String | u64);
+    type_alias!(
+        "quil._quil.instructions",
+        LabelTargetParameter = String | Target | Label
+    );
+    type_alias!(
+        "quil._quil.instructions",
+        MemoryReferenceDesignator = MemoryReferenceLike
+    );
+    type_alias!(
+        "quil._quil.instructions",
+        QubitDesignator = Qubit | QubitPlaceholder | String | u64
+    );
 }
 
 pub(crate) type QubitLike<'a, 'py> = Like<'a, 'py, Qubit>;
