@@ -1,4 +1,4 @@
-from typing import TypeAlias, cast
+from typing import TypeAlias, cast, reveal_type
 
 import pytest
 import numpy as np
@@ -64,15 +64,15 @@ class TestOperations:
         assert complex(-ONE) == -complex(ONE)
 
 
-class TestExtraction:
+class TestConstructor:
     """Test extractions to `Expression` from various types."""
 
     def test_str(self):
         assert Expression("x") == Expression.Variable("x")
 
-    @pytest.mark.parametrize("value", [1, 1.0, 1.0 + 0.0j])
-    def test_number(self, value: int | float | complex):
-        assert Expression(value) == Expression.Number(1.0+0.0j)
+    def test_memref(self):
+        memref = MemoryReference("x")
+        assert Expression(memref) == Expression.Address(memref)
 
     @pytest.mark.parametrize("value", [1, 1.0, 1.0 + 0.0j])
     def test_number(self, value: int | float | complex):
@@ -83,27 +83,33 @@ def test_substitute() -> None:
     """Check that substitution works with dictionaries."""
 
     e1 = Expression.parse(r"cis(pi / 2) + %x + y[1]")
-    variable_values = {"x": 1.0j}
-    other: VarMap = {"y": [1.0, 2]}
-    full_mapping = other | variable_values
+    variables = {"x": 1.0j}
+    memory_references = {"y": [1.0, 2]}
+    full_mapping: VarMap = cast(VarMap, memory_references | variables)
 
-    e2 = e1.substitute_variables(variable_values)
-    e3 = e2.substitute(full_mapping)
-    e4 = e1.substitute(full_mapping)
+    e2 = e1.substitute_variables(variables)
+    with pytest.deprecated_call():
+        e3 = e2.substitute(full_mapping)
+        e4 = e1.substitute(full_mapping)
 
     assert complex(e3) == e4
     x = ((np.array(e2) ** 0)[0]).into_simplified()
     assert float(x) == 1.0
+
+    # Validate that `evaluate(..., partial=True)` is equivalent to `substitute`.
+    assert e3 == e2.evaluate(variables, memory_references, partial=True)
+    assert e4 == e1.evaluate(variables, memory_references, partial=True)
 
 
 def test_substitute_memref() -> None:
     """We can perform substitution with memory references."""
 
     expr = Expression.parse(r"%x + y[1]")
-    assert expr.substitute(cast(VarMap, dict(x=1, y=(2, 3)))) == 4+0j
-    assert expr.substitute(cast(VarMap, dict(x=1))) == Expression.parse("1 + y[1]")
-    assert expr.substitute(cast(VarMap, dict(x=1, y=(2,)))) == Expression.parse("1 + y[1]")
-    assert expr.substitute(cast(VarMap, dict(y=(2,3)))) == Expression.parse(r"%x + 3")
+    with pytest.deprecated_call():
+        assert expr.substitute(cast(VarMap, dict(x=1, y=(2, 3)))) == 4+0j
+        assert expr.substitute(cast(VarMap, dict(x=1))) == Expression.parse("1 + y[1]")
+        assert expr.substitute(cast(VarMap, dict(x=1, y=(2,)))) == Expression.parse("1 + y[1]")
+        assert expr.substitute(cast(VarMap, dict(y=(2,3)))) == Expression.parse(r"%x + 3")
 
 
 def test_gate_definition() -> None:
