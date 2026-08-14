@@ -1,9 +1,6 @@
 use numpy::{PyArray, PyArrayDescr, PyArrayDescrMethods};
 use pyo3::{
-    exceptions::PyNotImplementedError,
-    prelude::*,
-    types::{PyAnyMethods, PyComplex, PyFloat, PyInt},
-    IntoPyObjectExt,
+    IntoPyObjectExt, exceptions::{PyDeprecationWarning, PyNotImplementedError}, prelude::*, types::{PyAnyMethods, PyComplex, PyFloat, PyInt},
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -73,6 +70,7 @@ impl_to_quil!(Expression);
 #[derive(Debug, Clone, FromPyObject)]
 pub(crate) enum ExpressionLike {
     Variable(String),
+    MemoryReference(MemoryReference),
     Expression(Expression),
     Int(i64),
     Float(f64),
@@ -83,6 +81,7 @@ impl From<ExpressionLike> for Expression {
     fn from(value: ExpressionLike) -> Self {
         match value {
             ExpressionLike::Variable(name) => Expression::Variable(name),
+            ExpressionLike::MemoryReference(memref) => Expression::Address(memref),
             ExpressionLike::Expression(expr) => expr,
             ExpressionLike::Int(v) => Expression::Number(Complex64::new(v as f64, 0.0)),
             ExpressionLike::Float(v) => Expression::Number(v.into()),
@@ -133,7 +132,7 @@ mod stubs {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl_stub_type!(ExpressionLike = Expression | MemoryReference | i64 | f64 | Complex64);
+    impl_stub_type!(ExpressionLike = Expression | MemoryReference | String | i64 | f64 | Complex64);
     impl_stub_type!(SubstitutionKey = String | MemoryReference);
     impl_stub_type!(SubstitutionValue = Complex64 | Vec<Complex64>);
     impl_stub_type!(Evaluated = Expression | Complex64);
@@ -161,8 +160,8 @@ mod stubs {
                 @overload
                 def evaluate(
                     self,
-                    variables: typing.Optional[builtins.dict[str, complex]] = None,
-                    memory_references: typing.Optional[builtins.dict[str, list[float]]] = None,
+                    variables: typing.Optional[typing.Mapping[builtins.str, builtins.complex]] = None,
+                    memory_references: typing.Optional[typing.Mapping[builtins.str, builtins.list[builtins.float]]] = None,
                     /,
                     partial: typing.Literal[False] = False
                 ) -> complex:
@@ -185,6 +184,10 @@ impl_newargs!(
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Expression {
+    /// Create a new `Expression`.
+    ///
+    /// This constructor accepts existing `Expression` objects, `MemoryReference`s, 
+    /// numberic types (int, float, complex), or strings, which are interpreted as variable names.
     #[new]
     fn __new__(expression: ExpressionLike) -> Self {
         expression.into()
@@ -307,7 +310,8 @@ impl Expression {
     /// Returns a complex number (if possible) or a partially simplified `Expression`.
     #[pyo3(name = "substitute", signature = (d=None, /))]
     #[pyo3(warn(
-        message = "`substitute` is deprecated; use `evaluate(..., partial=True)` instead."
+        message = "`substitute` is deprecated; use `evaluate(..., partial=True)` instead.",
+        category = PyDeprecationWarning
     ))]
     fn py_substitute(
         &self,
