@@ -1,3 +1,14 @@
+## 0.14.1 (2026-08-17)
+
+### Features
+
+- add `RaisedCosine` builtin waveform (#517)
+
+### Fixes
+
+- parse raised cosine waveform (#519)
+- `py.typed` file and pyproject authors fix (#522)
+
 ## 0.14.1-rc.2 (2026-08-14)
 
 ### Features
