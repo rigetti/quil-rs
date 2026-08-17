@@ -258,6 +258,8 @@ impl<S: WaveformData> Waveform<S> {
     ///         scale: None,
     ///         phase: None,
     ///         detuning: None,
+    ///         pad_left: None,
+    ///         pad_right: None,
     ///     },
     /// };
     ///
@@ -277,6 +279,8 @@ impl<S: WaveformData> Waveform<S> {
     ///             scale: None,
     ///             phase: None,
     ///             detuning: None,
+    ///             pad_left: None,
+    ///             pad_right: None,
     ///         },
     ///     }),
     /// );
@@ -297,6 +301,8 @@ impl<S: WaveformData> Waveform<S> {
     ///             scale: None,
     ///             phase: None,
     ///             detuning: None,
+    ///             pad_left: None,
+    ///             pad_right: None,
     ///         },
     ///     }),
     /// );

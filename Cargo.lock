@@ -1432,6 +1432,7 @@ dependencies = [
  "nom",
  "nom_locate",
  "num-complex",
+ "num-traits",
  "numpy",
  "once_cell",
  "optipy",

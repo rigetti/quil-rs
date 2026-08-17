@@ -146,7 +146,8 @@ const _GUARANTEE_ITER_TRAIT_IMPLS: () =
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize, thiserror::Error)]
 pub enum SamplingError {
     #[error(
-        "A duration of {duration} s cannot be discretized with a sample rate of {sample_rate} Hz, \
+        "duration={duration} s, pad_left={pad_left} s, pad_right={pad_right} s: \
+         cannot be discretized with a sample rate of {sample_rate} Hz, \
          as the resulting number of samples ({sample_count}) \
          is not in the representable range \u{5B}0, 2³²)."
         // U+005B is `[` (i.e., LEFT SQUARE BRACKET), but we have to hide it with an escape so as
@@ -154,12 +155,15 @@ pub enum SamplingError {
     )]
     SampleCountOutOfRange {
         duration: f64,
+        pad_left: f64,
+        pad_right: f64,
         sample_rate: f64,
         sample_count: f64,
     },
 
     #[error(
-        "A duration of {duration} s cannot be produced with a sample rate of {sample_rate} Hz.  \
+        "duration={duration} s, pad_left={pad_left} s, pad_right={pad_right} s: \
+         cannot be discretized with a sample rate of {sample_rate} Hz. \
          There is a {misalignment_type} of {abs_misalignment} s that is not accounted for, \
          but the largest allowed gap or surplus is is {max_misalignment} s.",
         misalignment_type = if *misalignment < 0.0 { "gap" } else { "surplus" },
@@ -167,6 +171,8 @@ pub enum SamplingError {
     )]
     MisalignedDuration {
         duration: f64,
+        pad_left: f64,
+        pad_right: f64,
         sample_rate: f64,
         misalignment: f64,
         max_misalignment: f64,

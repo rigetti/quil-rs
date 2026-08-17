@@ -44,6 +44,7 @@ numpy = { version = "0.29", optional = true }
 # Enabled with the "stubs" feature.
 pyo3-stub-gen = { version = "0.23.0", features = ["numpy"], optional = true }
 anyhow = { version = "1.0.103", optional = true }
+num-traits = "0.2.19"
 
 [dev-dependencies]
 clap = { workspace = true, features = ["derive", "string"] }

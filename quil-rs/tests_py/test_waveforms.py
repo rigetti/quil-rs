@@ -79,17 +79,23 @@ def common_builtin_parameters(draw: DrawFn) -> CommonBuiltinParameters[float, co
     s = draw(scale())
     phi = draw(phase())
     d = draw(detuning())
+    pl = draw(time())
+    pr = draw(time())
     common: CommonBuiltinParameters[float, complex] = CommonBuiltinParameters(
         duration=t,
         scale=s,
         phase=phi,
         detuning=d,
+        pad_left=pl,
+        pad_right=pr,
     )
     assert type(common) == CommonBuiltinParameters
     assert common.duration == t
     assert common.scale == s
     assert common.phase == phi
     assert common.detuning == d
+    assert common.pad_left == pl
+    assert common.pad_right == pr
     return common
 
 
@@ -105,6 +111,8 @@ def assert_builtin(
     #       scale: Optional[float],
     #       phase: Optional[float],
     #       detuning: Optional[float],
+    #       pad_left: Optional[float],
+    #       pad_right: Optional[float],
     #       **kwargs
     #     ) -> Waveform[float, complex]
     # ```
@@ -125,6 +133,8 @@ def assert_builtin(
         scale=common.scale,
         phase=common.phase,
         detuning=common.detuning,
+        pad_left=common.pad_left,
+        pad_right=common.pad_right,
         **parameters,
     )
     assert type(wf) == Waveform
@@ -185,26 +195,18 @@ def test_drag_gaussian(
 @given(
     common=common_builtin_parameters(),
     risetime=time(),
-    pad_left=time(),
-    pad_right=time(),
 )
 def test_erf_square(
     common: CommonBuiltinParameters[float, complex],
     risetime: float,
-    pad_left: float,
-    pad_right: float,
 ):
     erf_square = assert_builtin(
         Waveform.erf_square,
         common,
         risetime=risetime,
-        pad_left=pad_left,
-        pad_right=pad_right,
     )
     assert type(erf_square) == waveform.ErfSquare
     assert erf_square.risetime == risetime
-    assert erf_square.pad_left == pad_left
-    assert erf_square.pad_right == pad_right
 
 
 @given(
@@ -243,26 +245,18 @@ def test_hermite_gaussian(
 @given(
     common=common_builtin_parameters(),
     rolloff=in_range(-1, 1),
-    pad_left=time(),
-    pad_right=time(),
 )
 def test_raised_cosine(
     common: CommonBuiltinParameters[float, complex],
     rolloff: float,
-    pad_left: float,
-    pad_right: float,
 ):
     raised_cosine = assert_builtin(
         Waveform.raised_cosine,
         common,
         rolloff=rolloff,
-        pad_left=pad_left,
-        pad_right=pad_right,
     )
     assert type(raised_cosine) == waveform.RaisedCosine
     assert raised_cosine.rolloff == rolloff
-    assert raised_cosine.pad_left == pad_left
-    assert raised_cosine.pad_right == pad_right
 
 
 @given(common=common_builtin_parameters())
@@ -280,7 +274,7 @@ def test_parsed():
     PULSE 0 "tx" drag_gaussian(duration: 2.6e-7, phase: pi/2, fwhm: 0.5e-7, t0: 1e-7, anh: 1_000_000, alpha: 3)
     PULSE 0 "tx" erf_square(duration: 3e-7, detuning: 123_456_789, risetime: 12e-9, pad_left: 4e-9, pad_right: 8e-9)
     PULSE 0 "tx" hrm_gauss(duration: 4e-8, scale: 0.5, detuning: -1e8, fwhm: 1.5e-8, t0: 0.75e-8, anh: -1_000_000, alpha: -3, second_order_hrm_coeff: 0.42)
-    PULSE 0 "tx" raised_cosine(duration: 5e-7, rolloff: 0.3, pad_left: 6e-9, pad_right: 7e-9)
+    PULSE 0 "tx" raised_cosine(duration: 5e-7, rolloff: 0.3, pad_left: 6e-8, pad_right: 4e-8)
     PULSE 0 "tx" boxcar_kernel(duration: 6e-8, scale: 1.5, phase: pi, detuning: 987_654_321)
     PULSE 0 "tx" special(answer: 2*(21 + 0.5i))
     """
@@ -342,8 +336,8 @@ def test_parsed():
         Waveform.raised_cosine(
             duration=5e-7,
             rolloff=e("0.3"),
-            pad_left=6e-9,
-            pad_right=7e-9,
+            pad_left=6e-8,
+            pad_right=4e-8,
         ),
         Waveform.boxcar_kernel(duration=6e-8, scale=e("1.5"), phase=e("pi"), detuning=e("987_654_321")),
         Waveform.custom("special", {"answer": e("2*(21 + 0.5i)")}),
@@ -373,8 +367,8 @@ def test_parsed():
         Waveform.raised_cosine(
             duration=5e-7,
             rolloff=3e-1,
-            pad_left=6e-9,
-            pad_right=7e-9,
+            pad_left=6e-8,
+            pad_right=4e-8,
         ),
         Waveform.boxcar_kernel(duration=6e-8, scale=1.5, phase=pi, detuning=987_654_321),
         Waveform.custom("special", {"answer": 42 + 1j}),

@@ -19,6 +19,7 @@ use std::{
     fmt::Debug,
 };
 
+use num_traits::Zero;
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
@@ -30,7 +31,7 @@ use crate::{
     },
     program::{
         scheduling::{
-            schedule::{ComputedScheduleError, ComputedScheduleItem, Schedule, TimeSpan, Zero},
+            schedule::{ComputedScheduleError, ComputedScheduleItem, Schedule, TimeSpan},
             ScheduleError, ScheduledBasicBlock, Seconds,
         },
         ProgramError,
@@ -700,18 +701,18 @@ DEFFRAME 0 "b":
     ATTRIBUTE: 1
 
 DEFCAL A 0:
-    NONBLOCKING PULSE 0 "a" flat(duration: 1.0)
-    NONBLOCKING PULSE 0 "a" flat(duration: 1.0)
-    NONBLOCKING PULSE 0 "a" flat(duration: 1.0)
+    NONBLOCKING PULSE 0 "a" flat(duration: 1.0, iq: 1e-2)
+    NONBLOCKING PULSE 0 "a" flat(duration: 1.0, iq: 1e-2)
+    NONBLOCKING PULSE 0 "a" flat(duration: 1.0, iq: 1e-2)
 
 DEFCAL B 0:
-    NONBLOCKING PULSE 0 "b" flat(duration: 10.0)
+    NONBLOCKING PULSE 0 "b" flat(duration: 10.0, iq: 1e-2)
 
 A 0
 B 0
 FENCE
 B 0
-PULSE 0 "a" flat(duration: 1.0)
+PULSE 0 "a" flat(duration: 1.0, iq: 1e-2)
 "#;
 
         let program: Program = input.parse().unwrap();
@@ -830,8 +831,8 @@ DEFCAL CZ q0 q1:
     FENCE q0 q1
     SET-PHASE q0 "flux_tx_cz" 0.0
     SET-PHASE q1 "flux_tx_iswap" 0.0
-    NONBLOCKING PULSE q0 "flux_tx_cz" erf_square(duration: 6.000000000000001e-08, pad_left: 0, pad_right: 0)
-    NONBLOCKING PULSE q1 "flux_tx_iswap" erf_square(duration: 6.000000000000001e-08, pad_left: 0, pad_right: 0)
+    NONBLOCKING PULSE q0 "flux_tx_cz" erf_square(duration: 6.000000000000001e-08, pad_left: 0, pad_right: 0, risetime: 4e-9)
+    NONBLOCKING PULSE q1 "flux_tx_iswap" erf_square(duration: 6.000000000000001e-08, pad_left: 0, pad_right: 0, risetime: 4e-9)
     SHIFT-PHASE q0 "flux_tx_cz" 1.0
     SHIFT-PHASE q1 "flux_tx_iswap" 1.0
     FENCE q0 q1

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
+use num_traits::Zero;
 use petgraph::{
     visit::{EdgeFiltered, Topo},
     Direction,
@@ -12,6 +13,7 @@ use crate::{
         WaveformInvocation,
     },
     quil::Quil,
+    waveform::{builtin::CommonBuiltinParameters, Syntactic, Waveform},
     Program,
 };
 
@@ -37,17 +39,14 @@ impl std::ops::Sub<Seconds> for Seconds {
     }
 }
 
-pub trait Zero: PartialEq + Sized {
-    fn zero() -> Self;
-
-    fn is_zero(&self) -> bool {
-        self == &Self::zero()
-    }
-}
-
 impl Zero for Seconds {
     fn zero() -> Self {
         Self(0.0)
+    }
+
+    fn is_zero(&self) -> bool {
+        let Seconds(seconds) = self;
+        seconds.is_zero()
     }
 }
 
@@ -213,57 +212,62 @@ impl<'p> ScheduledBasicBlock<'p> {
     fn waveform_duration_seconds<H: InstructionHandler>(
         program: &Program,
         instruction: &Instruction,
-        WaveformInvocation { name, parameters }: &WaveformInvocation,
+        invocation: &WaveformInvocation,
         handler: &H,
     ) -> Option<Seconds> {
-        if let Some(definition) = program.waveforms.get(name) {
-            let sample_count = definition.matrix.len();
-            let common_sample_rate =
-                handler
-                    .matching_frames(program, instruction)
-                    .and_then(|frames| {
-                        frames
-                            .used
-                            .into_iter()
-                            .filter_map(|frame| {
-                                program
-                                    .frames
-                                    .get(frame)
-                                    .and_then(|frame_definition| {
-                                        frame_definition.get("SAMPLE-RATE")
-                                    })
-                                    .and_then(|sample_rate_expression| match sample_rate_expression
-                                    {
-                                        AttributeValue::String(_) => None,
-                                        AttributeValue::Expression(expression) => Some(expression),
-                                    })
-                                    .and_then(|expression| expression.to_real().ok())
-                            })
-                            .all_equal_value()
-                            .ok()
-                    });
+        let syntactic_waveform = Waveform::<Syntactic>::new(invocation.clone()).ok()?;
 
-            common_sample_rate
-                .map(|sample_rate| sample_count as f64 / sample_rate)
-                .map(Seconds)
-        } else {
-            // Per the Quil spec, all waveform templates have a "duration" parameter.
-            // "erf_square" and "raised_cosine" also has "pad_left" and "pad_right".
-            // We explicitly choose to be more flexible here, and allow any
-            // built-in waveform templates to have "pad_*" parameters, as well
-            // as allowing "erf_square" and "raised_cosine" to omit them.
-            let parameter = |parameter_name| {
-                parameters
-                    .get(parameter_name)
-                    .and_then(|v| v.to_real().ok())
-                    .map(Seconds)
-            };
-            Some(
-                parameter("duration")?
-                    + parameter("pad_left").unwrap_or(Seconds::zero())
-                    + parameter("pad_right").unwrap_or(Seconds::zero()),
-            )
-        }
+        let duration = match syntactic_waveform {
+            Waveform::Builtin {
+                waveform: _,
+                common_parameters,
+            } => {
+                let CommonBuiltinParameters {
+                    duration,
+                    pad_left,
+                    pad_right,
+                    scale: _,
+                    phase: _,
+                    detuning: _,
+                } = common_parameters;
+
+                pad_left.unwrap_or(CommonBuiltinParameters::<Syntactic>::DEFAULT_PADDING)
+                    + duration
+                    + pad_right.unwrap_or(CommonBuiltinParameters::<Syntactic>::DEFAULT_PADDING)
+            }
+
+            Waveform::Custom {
+                name,
+                parameters: _,
+            } => {
+                let definition = program.waveforms.get(&name)?;
+
+                let sample_count = definition.matrix.len();
+
+                let matching_frames = handler.matching_frames(program, instruction)?;
+
+                let common_sample_rate = matching_frames
+                    .used
+                    .into_iter()
+                    .filter_map(|frame| {
+                        program
+                            .frames
+                            .get(frame)
+                            .and_then(|frame_definition| frame_definition.get("SAMPLE-RATE"))
+                            .and_then(|sample_rate_expression| match sample_rate_expression {
+                                AttributeValue::String(_) => None,
+                                AttributeValue::Expression(expression) => Some(expression),
+                            })
+                            .and_then(|expression| expression.to_real().ok())
+                    })
+                    .all_equal_value()
+                    .ok()?;
+
+                sample_count as f64 / common_sample_rate
+            }
+        };
+
+        Some(Seconds(duration))
     }
 
     /// Compute the flattened schedule for this [`ScheduledBasicBlock`] in terms of seconds,
@@ -370,10 +374,10 @@ mod tests {
     use crate::{instruction::DefaultHandler, program::scheduling::TimeSpan, Program};
 
     #[rstest::rstest]
-    #[case("CAPTURE 0 \"a\" flat(duration: 1.0) ro", Some(1.0))]
+    #[case("CAPTURE 0 \"a\" flat(duration: 1.0, iq: 1e-2) ro", Some(1.0))]
     #[case("DELAY 0 \"a\" 1.0", Some(1.0))]
     #[case("FENCE", Some(0.0))]
-    #[case("PULSE 0 \"a\" flat(duration: 1.0)", Some(1.0))]
+    #[case("PULSE 0 \"a\" flat(duration: 1.0, iq: 1e-2)", Some(1.0))]
     #[case("RAW-CAPTURE 0 \"a\" 1.0 ro", Some(1.0))]
     #[case("RESET", None)]
     #[case("SET-FREQUENCY 0 \"a\" 1.0", Some(0.0))]
@@ -414,18 +418,18 @@ FENCE
     #[case(
         r#"DEFFRAME 0 "a":
     SAMPLE-RATE: 1e9
-PULSE 0 "a" flat(duration: 1.0)
-PULSE 0 "a" flat(duration: 1.0)
-PULSE 0 "a" flat(duration: 1.0)
+PULSE 0 "a" flat(duration: 1.0, iq: 1e-2)
+PULSE 0 "a" flat(duration: 1.0, iq: 1e-2)
+PULSE 0 "a" flat(duration: 1.0, iq: 1e-2)
 "#,
         Ok(vec![0.0, 1.0, 2.0])
     )]
     #[case(
         r#"DEFFRAME 0 "a":
     SAMPLE-RATE: 1e9
-PULSE 0 "a" erf_square(duration: 1.0, pad_left: 0.2, pad_right: 0.3)
-PULSE 0 "a" erf_square(duration: 0.1, pad_left: 0.7, pad_right: 0.7)
-PULSE 0 "a" erf_square(duration: 0.5, pad_left: 0.6, pad_right: 0.4)
+PULSE 0 "a" erf_square(duration: 1.0, pad_left: 0.2, pad_right: 0.3, risetime: 1e-2)
+PULSE 0 "a" erf_square(duration: 0.1, pad_left: 0.7, pad_right: 0.7, risetime: 1e-2)
+PULSE 0 "a" erf_square(duration: 0.5, pad_left: 0.6, pad_right: 0.4, risetime: 1e-2)
 FENCE
 "#,
         Ok(vec![0.0, 1.5, 3.0, 4.5])
@@ -435,12 +439,12 @@ FENCE
     SAMPLE-RATE: 1e9
 DEFFRAME 0 "b":
     SAMPLE-RATE: 1e9
-NONBLOCKING PULSE 0 "a" flat(duration: 1.0)
-NONBLOCKING PULSE 0 "b" flat(duration: 10.0)
+NONBLOCKING PULSE 0 "a" flat(duration: 1.0, iq: 1e-2)
+NONBLOCKING PULSE 0 "b" flat(duration: 10.0, iq: 1e-2)
 FENCE
-PULSE 0 "a" flat(duration: 1.0)
+PULSE 0 "a" flat(duration: 1.0, iq: 1e-2)
 FENCE
-PULSE 0 "a" flat(duration: 1.0)
+PULSE 0 "a" flat(duration: 1.0, iq: 1e-2)
 "#,
         Ok(vec![0.0, 0.0, 10.0, 10.0, 11.0, 11.0])
     )]
@@ -457,7 +461,7 @@ SET-FREQUENCY 0 "a" 1.0
 SHIFT-FREQUENCY 0 "a" 1.0
 SET-SCALE 0 "a" 1.0
 FENCE
-PULSE 0 "a" flat(duration: 1.0)
+PULSE 0 "a" flat(duration: 1.0, iq: 1e-2)
 "#,
         Ok(vec![0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
     )]

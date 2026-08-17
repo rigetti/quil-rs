@@ -217,7 +217,7 @@ pub struct PyCommonBuiltinParameters(pub CommonBuiltinParameters<Pythonic>);
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl PyCommonBuiltinParameters {
-    #[pyo3(signature = (*, duration, scale = None, phase = None, detuning = None))]
+    #[pyo3(signature = (*, duration, scale = None, phase = None, detuning = None, pad_left = None, pad_right = None))]
     #[gen_stub(override_return_type(type_repr = "$SELF"))]
     #[new]
     fn __new__(
@@ -228,12 +228,16 @@ impl PyCommonBuiltinParameters {
         phase: Option<PyAnyRust>,
         #[gen_stub(override_type(type_repr = "typing.Optional[_Real]", imports = ("typing")))]
         detuning: Option<PyAnyRust>,
+        pad_left: Option<f64>,
+        pad_right: Option<f64>,
     ) -> Self {
         Self(CommonBuiltinParameters {
             duration,
             scale,
             phase: phase.map(Cycles),
             detuning,
+            pad_left,
+            pad_right,
         })
     }
 
@@ -243,6 +247,8 @@ impl PyCommonBuiltinParameters {
             scale,
             phase,
             detuning,
+            pad_left,
+            pad_right,
         }) = self;
         let arguments = [
             ("duration", duration.into_bound_py_any(py)?),
@@ -270,6 +276,8 @@ impl PyCommonBuiltinParameters {
                     .transpose()?
                     .into_bound_py_any(py)?,
             ),
+            ("pad_left", pad_left.into_bound_py_any(py)?),
+            ("pad_right", pad_right.into_bound_py_any(py)?),
         ]
         .into_py_dict(py)?;
         (PyTuple::empty(py), arguments).into_pyobject(py)
@@ -330,6 +338,26 @@ impl PyCommonBuiltinParameters {
         self.0.detuning = detuning.map(PyAnyRust);
     }
 
+    #[getter(pad_left)]
+    fn py_get_pad_left(&self) -> Option<f64> {
+        self.0.pad_left
+    }
+
+    #[setter(pad_left)]
+    fn py_set_pad_left(&mut self, pad_left: Option<f64>) {
+        self.0.pad_left = pad_left;
+    }
+
+    #[getter(pad_right)]
+    fn py_get_pad_right(&self) -> Option<f64> {
+        self.0.pad_right
+    }
+
+    #[setter(pad_right)]
+    fn py_set_pad_right(&mut self, pad_right: Option<f64>) {
+        self.0.pad_right = pad_right;
+    }
+
     #[pyo3(name = "resolve_with_sample_rate")]
     fn py_resolve_with_sample_rate<'py>(
         &self,
@@ -372,6 +400,8 @@ impl CommonBuiltinParameters<Pythonic> {
             scale,
             phase,
             detuning,
+            pad_left,
+            pad_right,
         } = self.as_ref();
 
         let Self {
@@ -379,21 +409,32 @@ impl CommonBuiltinParameters<Pythonic> {
             scale: other_scale,
             phase: other_phase,
             detuning: other_detuning,
+            pad_left: other_pad_left,
+            pad_right: other_pad_right,
         } = other;
 
-        let eq = |opt1: Option<&PyAnyRust>, opt2: Option<PyAnyRust>| match (opt1.as_ref(), opt2) {
+        let eq_py = |opt1: Option<&PyAnyRust>, opt2: Option<PyAnyRust>| match (opt1.as_ref(), opt2)
+        {
             (Some(any1), Some(any2)) => any1.py_eq(py, &any2),
             (None, None) => Ok(true),
             (Some(_), None) | (None, Some(_)) => Ok(false),
         };
 
+        let eq_f64 = |opt1: Option<f64>, opt2: Option<f64>| match (opt1, opt2) {
+            (Some(float1), Some(float2)) => float1 == float2,
+            (None, None) => true,
+            (Some(_), None) | (None, Some(_)) => false,
+        };
+
         Ok(duration == other_duration
-            && eq(scale, other_scale)?
-            && eq(
+            && eq_py(scale, other_scale)?
+            && eq_py(
                 phase.map(|Cycles(phase)| phase),
                 other_phase.map(|Cycles(other_phase)| other_phase),
             )?
-            && eq(detuning, other_detuning)?)
+            && eq_py(detuning, other_detuning)?
+            && eq_f64(pad_left, other_pad_left)
+            && eq_f64(pad_right, other_pad_right))
     }
 
     pub(crate) fn py_repr<'py>(&self, py: Python<'py>) -> PyResult<String> {
@@ -402,6 +443,8 @@ impl CommonBuiltinParameters<Pythonic> {
             scale,
             phase,
             detuning,
+            pad_left,
+            pad_right,
         } = self;
 
         let mut output = format!("CommonBuiltinParameters(duration={duration}");
@@ -417,6 +460,12 @@ impl CommonBuiltinParameters<Pythonic> {
             output.push_str(", detuning=");
             output.push_str(detuning.bind(py).repr()?.to_str()?);
         }
+        if let Some(pad_left) = pad_left {
+            output.push_str(format!(", pad_left={pad_left}").as_str());
+        }
+        if let Some(pad_right) = pad_right {
+            output.push_str(format!(", pad_right={pad_right}").as_str());
+        }
         output.push(')');
         Ok(output)
     }
@@ -425,14 +474,23 @@ impl CommonBuiltinParameters<Pythonic> {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl ExplicitCommonBuiltinParameters {
-    #[pyo3(signature = (*, sample_count, scale, phase, detuning))]
+    #[pyo3(signature = (*, sample_count, scale, phase, detuning, pad_left, pad_right))]
     #[new]
-    fn __new__(sample_count: u32, scale: f64, phase: f64, detuning: f64) -> Self {
+    fn __new__(
+        sample_count: u32,
+        scale: f64,
+        phase: f64,
+        detuning: f64,
+        pad_left: u32,
+        pad_right: u32,
+    ) -> Self {
         Self {
             sample_count,
             scale,
             phase: Cycles(phase),
             detuning,
+            pad_left,
+            pad_right,
         }
     }
 
@@ -440,14 +498,18 @@ impl ExplicitCommonBuiltinParameters {
         let Self {
             sample_count,
             scale,
-            phase,
+            phase: Cycles(phase),
             detuning,
+            pad_left,
+            pad_right,
         } = *self;
         let arguments = [
             ("sample_count", sample_count.into_bound_py_any(py)?),
             ("scale", scale.into_bound_py_any(py)?),
-            ("phase", phase.0.into_bound_py_any(py)?),
+            ("phase", phase.into_bound_py_any(py)?),
             ("detuning", detuning.into_bound_py_any(py)?),
+            ("pad_left", pad_left.into_bound_py_any(py)?),
+            ("pad_right", pad_right.into_bound_py_any(py)?),
         ]
         .into_py_dict(py)?;
         (PyTuple::empty(py), arguments).into_pyobject(py)
@@ -459,6 +521,8 @@ impl ExplicitCommonBuiltinParameters {
             scale,
             phase: Cycles(phase),
             detuning,
+            pad_left,
+            pad_right,
         } = self;
 
         format!(
@@ -466,7 +530,9 @@ impl ExplicitCommonBuiltinParameters {
                  sample_count={sample_count}, \
                  scale={scale}, \
                  phase={phase}, \
-                 detuning={detuning}
+                 detuning={detuning}, \
+                 pad_left={pad_left}, \
+                 pad_right={pad_right}
              )"
         )
     }
