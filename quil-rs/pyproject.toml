@@ -1,12 +1,12 @@
 [project]
 name = "quil"
-version = "0.37.1-rc.1"
+version = "0.37.1-rc.2"
 requires-python = ">=3.10,<4"
 description = "A Python package for building and parsing Quil programs."
 documentation = "https://rigetti.github.io/quil-rs/quil.html"
 readme = "README-py.md"
 license = { text = "Apache-2.0" }
-authors = [{ name = "Rigetti Computing", email = "softapps@rigetti.com" }]
+authors = [{ name = "Rigetti QPU Software", email = "qpu-software@rigetti.com" }]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "License :: OSI Approved :: Apache Software License",
