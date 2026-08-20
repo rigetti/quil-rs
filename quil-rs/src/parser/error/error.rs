@@ -18,7 +18,6 @@ use nom::error::{Error as NomError, ParseError};
 use std::convert::Infallible;
 use std::fmt;
 use std::sync::Arc;
-use thiserror::__private::AsDynError;
 
 /// An error that may occur while parsing.
 ///
@@ -162,7 +161,9 @@ where
     Self: fmt::Display + fmt::Debug,
 {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        self.previous.as_ref().map(|prev| prev.as_dyn_error())
+        self.previous
+            .as_ref()
+            .map(|prev| &**prev as &(dyn std::error::Error + 'static))
     }
 }
 
