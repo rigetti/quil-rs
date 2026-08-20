@@ -231,7 +231,7 @@ macro_rules! impl_concretizable {
 #[cfg(feature = "python")]
 macro_rules! python_get_set {
     ($ty_name:ident, $field:ident, ConcreteReal) => {
-        paste::paste! {
+        pastey::paste! {
             #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
             #[pyo3::pymethods]
             impl $ty_name {
@@ -257,7 +257,7 @@ macro_rules! python_get_set {
     };
 
     ($ty_name:ident, $field:ident, PyAny($type_name:literal)) => {
-        paste::paste! {
+        pastey::paste! {
             #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
             #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
             #[pyo3::pymethods]
@@ -461,7 +461,7 @@ macro_rules! define_python_waveform {
     };
 
     ($name:ident { $($field:ident: $ty:ident $(($ty_str:literal))?),+ }) => {
-        paste::paste! {
+        pastey::paste! {
             #[derive(Clone, Debug)]
             #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
             #[pyo3::pyclass(module = "quil._quil.waveform", generic, subclass, from_py_object)]
@@ -608,7 +608,7 @@ macro_rules! define_python_waveform {
 #[cfg(feature = "python")]
 macro_rules! add_python_waveform_convenience_constructor {
     ($name:ident $({ $($field:ident: $ty:ident $(($ty_str:literal))?),+ })?) => {
-        paste::paste! {
+        pastey::paste! {
             #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
             #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
             #[pyo3::pymethods]
@@ -749,7 +749,7 @@ macro_rules! define_waveform {
                 mut real: impl FnMut(P::Value) -> Result<T::Real, ER>,
                 mut complex: impl FnMut(P::Value) -> Result<T::Complex, EC>,
             ) -> Result<Self, GeneralWaveformParameterError<EF64, ER, EC>> {
-                paste::paste! {
+                pastey::paste! {
                     $(
                         let $field = parse::mandatory(
                             parameters,
@@ -933,7 +933,7 @@ macro_rules! define_waveforms {
                 $(define_python_interop!($name $({ $($field: $ty),+ })?);)*
             }
 
-            paste::paste! {
+            pastey::paste! {
                 $(reexport_python_waveform! {
                     waveform_types::$name $({ $($field: $ty),+ })? as [<Py$name>]
                 })*

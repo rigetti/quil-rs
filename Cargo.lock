@@ -1435,7 +1435,7 @@ dependencies = [
  "numpy",
  "once_cell",
  "optipy",
- "paste",
+ "pastey",
  "petgraph",
  "pretty_assertions",
  "proptest",

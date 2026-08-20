@@ -917,7 +917,7 @@ pub mod interned {
 
     macro_rules! expression_wrappers {
         ($($func:ident: $atom:ident($ctor:ident { $($field:ident: $field_ty:ty),*$(,)? })),+ $(,)?) => {
-            paste::paste! { $(
+            pastey::paste! { $(
                 #[doc = concat!(
                     "A wrapper around [`Expression::", stringify!([<$func:camel>]), "`] ",
                     "that takes the contents of the inner expression type as arguments directly ",

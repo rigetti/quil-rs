@@ -1,6 +1,6 @@
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
-use paste::paste;
+use pastey::paste;
 use pyo3::{
     prelude::*,
     types::{IntoPyDict as _, PyDict, PyTuple},
