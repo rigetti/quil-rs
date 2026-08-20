@@ -1,3 +1,9 @@
+## 0.37.2 (2026-08-20)
+
+### Fixes
+
+- remove 'paste' from dependency tree (#524)
+
 ## 0.37.2-rc.0 (2026-08-20)
 
 ### Fixes

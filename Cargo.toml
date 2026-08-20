@@ -31,7 +31,7 @@ proptest-derive = "0.5.1"
 pyo3 = "0.29"
 pyo3-build-config = "0.29"
 pyo3-stub-gen = "0.23.0"
-quil-rs = { version = "0.37.2-rc.0", path = "quil-rs" }
+quil-rs = { version = "0.37.2", path = "quil-rs" }
 rand = "0.8.5"
 rasciigraph = "0.2.0"
 regex = "1.7.1"

@@ -1,6 +1,6 @@
 [package]
 name = "quil-cli"
-version = "0.14.2-rc.0"
+version = "0.14.2"
 edition = "2021"
 license = "Apache-2.0"
 
