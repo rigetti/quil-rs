@@ -44,10 +44,10 @@
                                 <a class="variable" href="#BasicBlock.instructions">instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BasicBlock.terminator">terminator</a>
+                                <a class="variable" href="#BasicBlock.label">label</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BasicBlock.label">label</a>
+                                <a class="variable" href="#BasicBlock.terminator">terminator</a>
                         </li>
                 </ul>
 
@@ -77,15 +77,6 @@
                     <a class="class" href="#CalibrationSet">CalibrationSet</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#CalibrationSet.expand">expand</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#CalibrationSet.get_match_for_measurement">get_match_for_measurement</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#CalibrationSet.get_match_for_gate">get_match_for_gate</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#CalibrationSet.is_empty">is_empty</a>
                         </li>
                         <li>
@@ -101,10 +92,19 @@
                                 <a class="function" href="#CalibrationSet.to_instructions">to_instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationSet.measure_calibrations">measure_calibrations</a>
+                                <a class="function" href="#CalibrationSet.expand">expand</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#CalibrationSet.get_match_for_measurement">get_match_for_measurement</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#CalibrationSet.get_match_for_gate">get_match_for_gate</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CalibrationSet.calibrations">calibrations</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#CalibrationSet.measure_calibrations">measure_calibrations</a>
                         </li>
                 </ul>
 
@@ -149,18 +149,6 @@
                     <a class="class" href="#FrameSet">FrameSet</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#FrameSet.get">get</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#FrameSet.get_keys">get_keys</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#FrameSet.get_all_frames">get_all_frames</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#FrameSet.intersection">intersection</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#FrameSet.insert">insert</a>
                         </li>
                         <li>
@@ -171,6 +159,18 @@
                         </li>
                         <li>
                                 <a class="function" href="#FrameSet.to_instructions">to_instructions</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#FrameSet.get">get</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#FrameSet.get_keys">get_keys</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#FrameSet.get_all_frames">get_all_frames</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#FrameSet.intersection">intersection</a>
                         </li>
                 </ul>
 
@@ -236,10 +236,10 @@
                     <a class="class" href="#MemoryRegion">MemoryRegion</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
+                                <a class="variable" href="#MemoryRegion.size">size</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryRegion.size">size</a>
+                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
                         </li>
                 </ul>
 
@@ -326,22 +326,10 @@
                                 <a class="variable" href="#Program.used_qubits">used_qubits</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Program.circuits">circuits</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Program.instructions">instructions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.pragma_extern_map">pragma_extern_map</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.declarations">declarations</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.frames">frames</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.waveforms">waveforms</a>
@@ -353,7 +341,19 @@
                                 <a class="variable" href="#Program.calibrations">calibrations</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.circuits">circuits</a>
+                                <a class="variable" href="#Program.declarations">declarations</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.frames">frames</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.pragma_extern_map">pragma_extern_map</a>
                         </li>
                 </ul>
 
@@ -374,10 +374,10 @@
                     <a class="class" href="#ScheduleSeconds">ScheduleSeconds</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#ScheduleSeconds.items">items</a>
+                                <a class="variable" href="#ScheduleSeconds.duration">duration</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ScheduleSeconds.duration">duration</a>
+                                <a class="variable" href="#ScheduleSeconds.items">items</a>
                         </li>
                 </ul>
 
@@ -527,21 +527,6 @@ for it to be counted in the depth.</li>
 
 
                             </div>
-                            <div id="BasicBlock.terminator" class="classattr">
-                                <div class="attr variable">
-            <span class="name">terminator</span>
-
-        
-    </div>
-    <a class="headerlink" href="#BasicBlock.terminator"></a>
-    
-            <div class="docstring"><p>The control flow terminator instruction of the block, if any.</p>
-
-<p>If this is <code>None</code>, the implicit behavior is to "continue" to the subsequent block.</p>
-</div>
-
-
-                            </div>
                             <div id="BasicBlock.label" class="classattr">
                                 <div class="attr variable">
             <span class="name">label</span>
@@ -553,6 +538,21 @@ for it to be counted in the depth.</li>
             <div class="docstring"><p>The label of the block, if any.</p>
 
 <p>This is used to target this block in control flow.</p>
+</div>
+
+
+                            </div>
+                            <div id="BasicBlock.terminator" class="classattr">
+                                <div class="attr variable">
+            <span class="name">terminator</span>
+
+        
+    </div>
+    <a class="headerlink" href="#BasicBlock.terminator"></a>
+    
+            <div class="docstring"><p>The control flow terminator instruction of the block, if any.</p>
+
+<p>If this is <code>None</code>, the implicit behavior is to "continue" to the subsequent block.</p>
 </div>
 
 
@@ -658,78 +658,6 @@ so see the documentation there for more information.</p>
 </div>
 
 
-                            <div id="CalibrationSet.expand" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">expand</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">instruction</span>, </span><span class="param"><span class="n">previous_calibrations</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationSet.expand"></a>
-    
-            <div class="docstring"><p>Given an instruction, return the instructions to which it is expanded if there is a match.
-Recursively calibrate instructions, returning an error if a calibration directly or indirectly
-expands into itself.</p>
-
-<p>Return only the expanded instructions; for more information about the expansion process,
-see [<code>Self::expand_with_detail</code>].</p>
-</div>
-
-
-                            </div>
-                            <div id="CalibrationSet.get_match_for_measurement" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">get_match_for_measurement</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">measurement</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationSet.get_match_for_measurement"></a>
-    
-            <div class="docstring"><p>Returns the last-specified <code>MeasureCalibrationDefinition</code> that matches the target
-qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
-
-<p>If multiple calibrations match the measurement, the precedence is as follows:</p>
-
-<ol>
-<li>Match fixed qubit.</li>
-<li>Match variable qubit.</li>
-<li>Match no qubit.</li>
-</ol>
-
-<p>In the case of multiple calibrations with equal precedence, the last one wins.</p>
-</div>
-
-
-                            </div>
-                            <div id="CalibrationSet.get_match_for_gate" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">get_match_for_gate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">gate</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationSet.get_match_for_gate"></a>
-    
-            <div class="docstring"><p>Return the final calibration which matches the gate per the <code>QuilT</code> specification:</p>
-
-<p>A calibration matches a gate if:</p>
-
-<ol>
-<li>It has the same name</li>
-<li>It has the same modifiers</li>
-<li>It has the same qubit count (any mix of fixed &amp; variable)</li>
-<li>It has the same parameter count (both specified and unspecified)</li>
-<li>All fixed qubits in the calibration definition match those in the gate</li>
-<li>All specified parameters in the calibration definition match those in the gate</li>
-</ol>
-</div>
-
-
-                            </div>
                             <div id="CalibrationSet.is_empty" class="classattr">
                                 <div class="attr function">
             
@@ -814,15 +742,74 @@ overwritten by the ones in the given set.</p>
 
 
                             </div>
-                            <div id="CalibrationSet.measure_calibrations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">measure_calibrations</span>
+                            <div id="CalibrationSet.expand" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">expand</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">instruction</span>, </span><span class="param"><span class="n">previous_calibrations</span></span><span class="return-annotation">):</span></span>
 
         
     </div>
-    <a class="headerlink" href="#CalibrationSet.measure_calibrations"></a>
+    <a class="headerlink" href="#CalibrationSet.expand"></a>
     
-            <div class="docstring"><p>Return a list of all [<code>MeasureCalibrationDefinition</code>]s in the set.</p>
+            <div class="docstring"><p>Given an instruction, return the instructions to which it is expanded if there is a match.
+Recursively calibrate instructions, returning an error if a calibration directly or indirectly
+expands into itself.</p>
+
+<p>Return only the expanded instructions; for more information about the expansion process,
+see [<code>Self::expand_with_detail</code>].</p>
+</div>
+
+
+                            </div>
+                            <div id="CalibrationSet.get_match_for_measurement" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_match_for_measurement</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">measurement</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationSet.get_match_for_measurement"></a>
+    
+            <div class="docstring"><p>Returns the last-specified <code>MeasureCalibrationDefinition</code> that matches the target
+qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
+
+<p>If multiple calibrations match the measurement, the precedence is as follows:</p>
+
+<ol>
+<li>Match fixed qubit.</li>
+<li>Match variable qubit.</li>
+<li>Match no qubit.</li>
+</ol>
+
+<p>In the case of multiple calibrations with equal precedence, the last one wins.</p>
+</div>
+
+
+                            </div>
+                            <div id="CalibrationSet.get_match_for_gate" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_match_for_gate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">gate</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationSet.get_match_for_gate"></a>
+    
+            <div class="docstring"><p>Return the final calibration which matches the gate per the <code>QuilT</code> specification:</p>
+
+<p>A calibration matches a gate if:</p>
+
+<ol>
+<li>It has the same name</li>
+<li>It has the same modifiers</li>
+<li>It has the same qubit count (any mix of fixed &amp; variable)</li>
+<li>It has the same parameter count (both specified and unspecified)</li>
+<li>All fixed qubits in the calibration definition match those in the gate</li>
+<li>All specified parameters in the calibration definition match those in the gate</li>
+</ol>
 </div>
 
 
@@ -836,6 +823,19 @@ overwritten by the ones in the given set.</p>
     <a class="headerlink" href="#CalibrationSet.calibrations"></a>
     
             <div class="docstring"><p>Return a list of all [<code>CalibrationDefinition</code>]s in the set.</p>
+</div>
+
+
+                            </div>
+                            <div id="CalibrationSet.measure_calibrations" class="classattr">
+                                <div class="attr variable">
+            <span class="name">measure_calibrations</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationSet.measure_calibrations"></a>
+    
+            <div class="docstring"><p>Return a list of all [<code>MeasureCalibrationDefinition</code>]s in the set.</p>
 </div>
 
 
@@ -999,66 +999,6 @@ This may be a sequence of basic blocks with fixed <code>JUMP</code>s or without 
 </div>
 
 
-                            <div id="FrameSet.get" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">get</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">identifier</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameSet.get"></a>
-    
-            <div class="docstring"><p>Retrieve the <code>FrameAttributes</code> of a <code>Frame</code> by its <code>FrameIdentifier</code>.</p>
-</div>
-
-
-                            </div>
-                            <div id="FrameSet.get_keys" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">get_keys</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameSet.get_keys"></a>
-    
-            <div class="docstring"><p>Return a list of all <code>FrameIdentifier</code>s described by this <code><a href="#FrameSet">FrameSet</a></code>.</p>
-</div>
-
-
-                            </div>
-                            <div id="FrameSet.get_all_frames" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">get_all_frames</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameSet.get_all_frames"></a>
-    
-            <div class="docstring"><p>The type of the None singleton.</p>
-</div>
-
-
-                            </div>
-                            <div id="FrameSet.intersection" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">intersection</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">identifiers</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameSet.intersection"></a>
-    
-            <div class="docstring"><p>Return a new <code><a href="#FrameSet">FrameSet</a></code> which describes only the given <code>FrameIdentifier</code>s.</p>
-</div>
-
-
-                            </div>
                             <div id="FrameSet.insert" class="classattr">
                                 <div class="attr function">
             
@@ -1115,6 +1055,66 @@ This may be a sequence of basic blocks with fixed <code>JUMP</code>s or without 
     <a class="headerlink" href="#FrameSet.to_instructions"></a>
     
             <div class="docstring"><p>Return the Quil instructions which describe the contained frames.</p>
+</div>
+
+
+                            </div>
+                            <div id="FrameSet.get" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">identifier</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameSet.get"></a>
+    
+            <div class="docstring"><p>Retrieve the <code>FrameAttributes</code> of a <code>Frame</code> by its <code>FrameIdentifier</code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="FrameSet.get_keys" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_keys</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameSet.get_keys"></a>
+    
+            <div class="docstring"><p>Return a list of all <code>FrameIdentifier</code>s described by this <code><a href="#FrameSet">FrameSet</a></code>.</p>
+</div>
+
+
+                            </div>
+                            <div id="FrameSet.get_all_frames" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_all_frames</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameSet.get_all_frames"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
+                            <div id="FrameSet.intersection" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">intersection</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">identifiers</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameSet.intersection"></a>
+    
+            <div class="docstring"><p>Return a new <code><a href="#FrameSet">FrameSet</a></code> which describes only the given <code>FrameIdentifier</code>s.</p>
 </div>
 
 
@@ -1386,17 +1386,6 @@ within the resulting program's body instructions.</li>
     
     
 
-                            <div id="MemoryRegion.sharing" class="classattr">
-                                <div class="attr variable">
-            <span class="name">sharing</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MemoryRegion.sharing"></a>
-    
-    
-
-                            </div>
                             <div id="MemoryRegion.size" class="classattr">
                                 <div class="attr variable">
             <span class="name">size</span>
@@ -1404,6 +1393,17 @@ within the resulting program's body instructions.</li>
         
     </div>
     <a class="headerlink" href="#MemoryRegion.size"></a>
+    
+    
+
+                            </div>
+                            <div id="MemoryRegion.sharing" class="classattr">
+                                <div class="attr variable">
+            <span class="name">sharing</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MemoryRegion.sharing"></a>
     
     
 
@@ -2018,6 +2018,17 @@ and definitions which are executed; effectively, perform dead code removal.</p>
     
 
                             </div>
+                            <div id="Program.circuits" class="classattr">
+                                <div class="attr variable">
+            <span class="name">circuits</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.circuits"></a>
+    
+    
+
+                            </div>
                             <div id="Program.instructions" class="classattr">
                                 <div class="attr variable">
             <span class="name">instructions</span>
@@ -2025,61 +2036,6 @@ and definitions which are executed; effectively, perform dead code removal.</p>
         
     </div>
     <a class="headerlink" href="#Program.instructions"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.pragma_extern_map" class="classattr">
-                                <div class="attr variable">
-            <span class="name">pragma_extern_map</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.pragma_extern_map"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.gate_definitions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">gate_definitions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.gate_definitions"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.declarations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">declarations</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.declarations"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.memory_regions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">memory_regions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.memory_regions"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.frames" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frames</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.frames"></a>
     
     
 
@@ -2117,13 +2073,57 @@ and definitions which are executed; effectively, perform dead code removal.</p>
     
 
                             </div>
-                            <div id="Program.circuits" class="classattr">
+                            <div id="Program.declarations" class="classattr">
                                 <div class="attr variable">
-            <span class="name">circuits</span>
+            <span class="name">declarations</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.circuits"></a>
+    <a class="headerlink" href="#Program.declarations"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.memory_regions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">memory_regions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.memory_regions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.frames" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frames</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.frames"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.gate_definitions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">gate_definitions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.gate_definitions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.pragma_extern_map" class="classattr">
+                                <div class="attr variable">
+            <span class="name">pragma_extern_map</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.pragma_extern_map"></a>
     
     
 
@@ -2202,19 +2202,6 @@ each of which is assigned a start time and duration.</p>
 </div>
 
 
-                            <div id="ScheduleSeconds.items" class="classattr">
-                                <div class="attr variable">
-            <span class="name">items</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ScheduleSeconds.items"></a>
-    
-            <div class="docstring"><p>Scheduled items, in an unspecified order.</p>
-</div>
-
-
-                            </div>
                             <div id="ScheduleSeconds.duration" class="classattr">
                                 <div class="attr variable">
             <span class="name">duration</span>
@@ -2226,6 +2213,19 @@ each of which is assigned a start time and duration.</p>
             <div class="docstring"><p>The schedule duration, in seconds.</p>
 
 <p>This is the maximum end time among all scheduled items.</p>
+</div>
+
+
+                            </div>
+                            <div id="ScheduleSeconds.items" class="classattr">
+                                <div class="attr variable">
+            <span class="name">items</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ScheduleSeconds.items"></a>
+    
+            <div class="docstring"><p>Scheduled items, in an unspecified order.</p>
 </div>
 
 
