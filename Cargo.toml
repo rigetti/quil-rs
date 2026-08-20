@@ -38,7 +38,7 @@ regex = "1.7.1"
 rigetti-pyo3 = "0.7.1"
 rstest = "0.18.2"
 serde = "1.0.125"
-statrs = "0.16.0"
+statrs = "0.19.1"
 strum = "0.26.0"
 thiserror = "1.0.56"
 
