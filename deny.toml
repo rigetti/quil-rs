@@ -16,7 +16,6 @@ db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
 
 ignore = [
-  { id = "RUSTSEC-2024-0436", reason = "We use `paste` to generate type stubs." },
   # `pyo3-stub-gen` uses `rustpython-parser` which uses `rust-unic` crates, which are now unmaintained.
   # Hopefully `pyo3-stub-gen` will switch to `ruff_python_parser`: https://github.com/Jij-Inc/pyo3-stub-gen/issues/359
   # We'll ignore it for now, since `pyo3-stub-gen` is effectively a build-time dependency anyway.

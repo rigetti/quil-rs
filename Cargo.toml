@@ -40,7 +40,7 @@ rstest = "0.18.2"
 serde = "1.0.125"
 statrs = "0.19.1"
 strum = "0.26.0"
-thiserror = "1.0.56"
+thiserror = "2.0.20"
 
 [profile.release]
 lto = true
