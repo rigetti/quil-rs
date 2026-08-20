@@ -1,3 +1,10 @@
+## 0.37.2-rc.0 (2026-08-20)
+
+### Fixes
+
+- #506: use 'pastey'
+- do dyn-error conversion without private thiserror internals
+
 ## 0.37.1 (2026-08-17)
 
 ### Features

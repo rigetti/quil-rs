@@ -353,7 +353,7 @@ macro_rules! def_radix {
         def_radix!($name, $radix, 0);
     };
     ($name:ident, $radix:literal, $prefix:literal $(,)?) => {
-        paste::paste! {
+        pastey::paste! {
             #[inline]
             fn [< lex_ $name _integer >](input: LexInput) -> InternalLexResult<u64> {
                 raw_lex_integer::<$prefix, { number_format($radix, NonZeroU8::new($prefix)) }>(
@@ -631,7 +631,7 @@ mod tests {
             },
             $($rest:tt)*
         ) => {
-            paste::paste! {
+            pastey::paste! {
                 number_test_builder! {
                     {
                         $($cases)*
