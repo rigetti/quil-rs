@@ -286,28 +286,25 @@ fn gate_matrix(gate: &mut Gate) -> Result<Matrix, GateError> {
                 parameterized: false,
             })
     } else {
-        match gate.parameters.len() {
-            1 => {
-                if let Expression::Number(x) = gate.parameters[0].clone().into_simplified() {
-                    PARAMETERIZED_GATE_MATRICES
-                        .get(&gate.name)
-                        .map(|f| f(x))
-                        .ok_or_else(|| GateError::UndefinedGate {
-                            name: gate.name.clone(),
-                            parameterized: true,
-                        })
-                } else {
-                    Err(GateError::MatrixNonConstantParams {
-                        name: gate.name.clone(),
-                        parameters: gate.parameters.clone(),
-                    })
-                }
-            }
-            actual => Err(GateError::MatrixArgumentLength {
-                expected: 1,
-                actual,
-            }),
-        }
+        let parameters = gate
+            .parameters
+            .iter()
+            .map(|parameter| match parameter.clone().into_simplified() {
+                Expression::Number(x) => Some(x),
+                _ => None,
+            })
+            .collect::<Option<Vec<_>>>()
+            .ok_or_else(|| GateError::MatrixNonConstantParams {
+                name: gate.name.clone(),
+                parameters: gate.parameters.clone(),
+            })?;
+        PARAMETERIZED_GATE_MATRICES
+            .get(&gate.name)
+            .ok_or_else(|| GateError::UndefinedGate {
+                name: gate.name.clone(),
+                parameterized: true,
+            })?
+            .to_matrix(&parameters)
     }
 }
 
@@ -534,7 +531,89 @@ static CONSTANT_GATE_MATRICES: Lazy<HashMap<String, Matrix>> = Lazy::new(|| {
     ])
 });
 
-type ParameterizedMatrix = fn(Complex64) -> Matrix;
+/// The matrix of a parameterized gate, as a function of that gate's parameters.
+///
+/// Each variant fixes how many parameters the gate takes, so that a gate applied with the wrong
+/// number of parameters is reported as such rather than being applied to the wrong ones.
+#[derive(Clone, Copy)]
+enum ParameterizedMatrix {
+    OneParameter(fn(Complex64) -> Matrix),
+    ThreeParameters(fn(Complex64, Complex64, Complex64) -> Matrix),
+}
+
+impl ParameterizedMatrix {
+    fn parameter_count(self) -> usize {
+        match self {
+            Self::OneParameter(_) => 1,
+            Self::ThreeParameters(_) => 3,
+        }
+    }
+
+    /// Build the matrix from `parameters`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the number of parameters given isn't the number this gate takes.
+    fn to_matrix(self, parameters: &[Complex64]) -> Result<Matrix, GateError> {
+        match (self, parameters) {
+            (Self::OneParameter(matrix), [theta]) => Ok(matrix(*theta)),
+            (Self::ThreeParameters(matrix), [alpha, beta, gamma]) => {
+                Ok(matrix(*alpha, *beta, *gamma))
+            }
+            _ => Err(GateError::MatrixArgumentLength {
+                expected: self.parameter_count(),
+                actual: parameters.len(),
+            }),
+        }
+    }
+}
+
+/// Unfortunately, `Complex64::cis` takes a _float_ argument.
+fn cis(theta: Complex64) -> Complex64 {
+    theta.cos() + imag!(1.0) * theta.sin()
+}
+
+/// The matrix shared by the `XY` and `PISWAP` gates, which the Quil specification defines to be
+/// the same operator.
+fn xy_matrix(theta: Complex64) -> Matrix {
+    let (zero, one) = (real!(0.0), real!(1.0));
+    let t = theta / 2.0;
+    let (cos, i_sin) = (t.cos(), imag!(1.0) * t.sin());
+    array![
+        [one, zero, zero, zero],
+        [zero, cos, i_sin, zero],
+        [zero, i_sin, cos, zero],
+        [zero, zero, zero, one],
+    ]
+}
+
+/// The matrix of the `CAN` (canonical) gate, transcribed from the gate definition given in [§4.3
+/// of the Quil specification](https://quil-lang.github.io/#4-3Standard-Gate-Definitions).
+fn can_matrix(alpha: Complex64, beta: Complex64, gamma: Complex64) -> Matrix {
+    let zero = real!(0.0);
+    let (corner_first, corner_second) = (
+        cis((alpha + beta - gamma) / 2.0),
+        cis((alpha - beta + gamma) / 2.0),
+    );
+    let (center_first, center_second) = (
+        cis(-(alpha + beta + gamma) / 2.0),
+        cis((beta + gamma - alpha) / 2.0),
+    );
+    let (corner_sum, corner_difference) = (
+        (corner_first + corner_second) / 2.0,
+        (corner_second - corner_first) / 2.0,
+    );
+    let (center_sum, center_difference) = (
+        (center_first + center_second) / 2.0,
+        (center_first - center_second) / 2.0,
+    );
+    array![
+        [corner_sum, zero, zero, corner_difference],
+        [zero, center_sum, center_difference, zero],
+        [zero, center_difference, center_sum, zero],
+        [corner_difference, zero, zero, corner_sum],
+    ]
+}
 
 /// Gates matrices that use parameters.
 ///
@@ -542,73 +621,72 @@ type ParameterizedMatrix = fn(Complex64) -> Matrix;
 /// specification](https://quil-lang.github.io/#4-3Standard-Gate-Definitions); see also
 /// [`CONSTANT_GATE_MATRICES`].
 static PARAMETERIZED_GATE_MATRICES: Lazy<HashMap<String, ParameterizedMatrix>> = Lazy::new(|| {
-    // Unfortunately, Complex::cis takes a _float_ argument.
     HashMap::from([
         (
             "RX".to_string(),
-            (|theta: Complex64| {
+            ParameterizedMatrix::OneParameter(|theta: Complex64| {
                 let _i = imag!(1.0);
                 let t = theta / 2.0;
                 array![[t.cos(), -_i * t.sin()], [-_i * t.sin(), t.cos()]]
-            }) as ParameterizedMatrix,
+            }),
         ),
         (
             "RY".to_string(),
-            (|theta: Complex64| {
+            ParameterizedMatrix::OneParameter(|theta: Complex64| {
                 let t = theta / 2.0;
                 array![[t.cos(), -t.sin()], [t.sin(), t.cos()]]
-            }) as ParameterizedMatrix,
+            }),
         ),
         (
             "RZ".to_string(),
-            (|theta: Complex64| {
+            ParameterizedMatrix::OneParameter(|theta: Complex64| {
                 let t = theta / 2.0;
                 array![[t.cos(), -t.sin()], [t.sin(), t.cos()]]
-            }) as ParameterizedMatrix,
+            }),
         ),
         (
             "PHASE".to_string(),
-            (|alpha: Complex64| {
+            ParameterizedMatrix::OneParameter(|alpha: Complex64| {
                 let mut p = Array2::eye(2);
                 p[[1, 1]] = alpha.cos() + imag!(1.0) * alpha.sin();
                 p
-            }) as ParameterizedMatrix,
+            }),
         ),
         (
             "CPHASE00".to_string(),
-            (|alpha: Complex64| {
+            ParameterizedMatrix::OneParameter(|alpha: Complex64| {
                 let mut p = Array2::eye(4);
                 p[[0, 0]] = alpha.cos() + imag!(1.0) * alpha.sin();
                 p
-            }) as ParameterizedMatrix,
+            }),
         ),
         (
             "CPHASE01".to_string(),
-            (|alpha: Complex64| {
+            ParameterizedMatrix::OneParameter(|alpha: Complex64| {
                 let mut p = Array2::eye(4);
                 p[[1, 1]] = alpha.cos() + imag!(1.0) * alpha.sin();
                 p
-            }) as ParameterizedMatrix,
+            }),
         ),
         (
             "CPHASE10".to_string(),
-            (|alpha: Complex64| {
+            ParameterizedMatrix::OneParameter(|alpha: Complex64| {
                 let mut p = Array2::eye(4);
                 p[[2, 2]] = alpha.cos() + imag!(1.0) * alpha.sin();
                 p
-            }) as ParameterizedMatrix,
+            }),
         ),
         (
             "CPHASE".to_string(),
-            (|alpha: Complex64| {
+            ParameterizedMatrix::OneParameter(|alpha: Complex64| {
                 let mut p = Array2::eye(4);
                 p[[3, 3]] = alpha.cos() + imag!(1.0) * alpha.sin();
                 p
-            }) as ParameterizedMatrix,
+            }),
         ),
         (
             "PSWAP".to_string(),
-            (|theta: Complex64| {
+            ParameterizedMatrix::OneParameter(|theta: Complex64| {
                 let (_0, _1, _c) = (real!(0.0), real!(1.0), theta.cos() + theta);
                 array![
                     [_1, _0, _0, _0],
@@ -616,7 +694,19 @@ static PARAMETERIZED_GATE_MATRICES: Lazy<HashMap<String, ParameterizedMatrix>> =
                     [_0, _c, _0, _0],
                     [_0, _0, _0, _1],
                 ]
-            }) as ParameterizedMatrix,
+            }),
+        ),
+        (
+            "XY".to_string(),
+            ParameterizedMatrix::OneParameter(xy_matrix),
+        ),
+        (
+            "PISWAP".to_string(),
+            ParameterizedMatrix::OneParameter(xy_matrix),
+        ),
+        (
+            "CAN".to_string(),
+            ParameterizedMatrix::ThreeParameters(can_matrix),
         ),
     ])
 });
@@ -656,9 +746,10 @@ impl Quil for GateModifier {
 #[cfg(test)]
 mod test_gate_into_matrix {
     use super::{
-        lifted_gate_matrix, permutation_arbitrary, qubit_adjacent_lifted_gate, two_swap_helper,
-        Expression::Number, Gate, GateModifier::*, Matrix, ParameterizedMatrix, Qubit::Fixed,
-        CONSTANT_GATE_MATRICES, PARAMETERIZED_GATE_MATRICES,
+        can_matrix, lifted_gate_matrix, permutation_arbitrary, qubit_adjacent_lifted_gate,
+        two_swap_helper, xy_matrix, Expression, Expression::Number, Gate, GateError,
+        GateModifier::*, Matrix, ParameterizedMatrix, Qubit::Fixed, CONSTANT_GATE_MATRICES,
+        PARAMETERIZED_GATE_MATRICES,
     };
     use crate::{imag, real};
     use approx::assert_abs_diff_eq;
@@ -666,11 +757,13 @@ mod test_gate_into_matrix {
     use num_complex::Complex64;
     use once_cell::sync::Lazy;
     use rstest::rstest;
+    use std::{collections::HashMap, str::FromStr};
 
     static _0: Complex64 = real!(0.0);
     static _1: Complex64 = real!(1.0);
     static _I: Complex64 = imag!(1.0);
     static PI: Complex64 = real!(std::f64::consts::PI);
+    static PI_2: Complex64 = real!(std::f64::consts::FRAC_PI_2);
     static PI_4: Complex64 = real!(std::f64::consts::FRAC_PI_4);
     static SWAP: Lazy<Matrix> = Lazy::new(|| CONSTANT_GATE_MATRICES.get("SWAP").cloned().unwrap());
     static X: Lazy<Matrix> = Lazy::new(|| array![[_0, _1], [_1, _0]]);
@@ -816,7 +909,7 @@ mod test_gate_into_matrix {
 
     #[rstest]
     #[case(&mut Gate::new("H", vec![], vec![Fixed(0)], vec![]).unwrap(), 4, &kron(&Array2::eye(8), &H))]
-    #[case(&mut Gate::new("RZ", vec![Number(PI_4)], vec![Fixed(0)], vec![Dagger]).unwrap(), 1, &RZ(-PI_4))]
+    #[case(&mut Gate::new("RZ", vec![Number(PI_4)], vec![Fixed(0)], vec![Dagger]).unwrap(), 1, &RZ.to_matrix(&[-PI_4]).unwrap())]
     #[case(&mut Gate::new("X", vec![], vec![Fixed(0)], vec![Dagger]).unwrap().controlled(Fixed(1)), 2, &CNOT)]
     #[case(
         &mut Gate::new("X", vec![], vec![Fixed(0)], vec![]).unwrap().dagger().controlled(Fixed(1)).dagger().dagger().controlled(Fixed(2)),
@@ -828,10 +921,128 @@ mod test_gate_into_matrix {
         2,
         &lifted_gate_matrix(&CZ, &[0, 1], 2)
     )]
+    #[case(&mut Gate::new("XY", vec![Number(PI_4)], vec![Fixed(1), Fixed(2)], vec![]).unwrap(), 3, &kron(&xy_matrix(PI_4), &Array2::eye(2)))]
+    #[case(
+        &mut Gate::new("CAN", vec![Number(PI_4), Number(PI_2), Number(PI)], vec![Fixed(0), Fixed(1)], vec![]).unwrap(),
+        3,
+        &kron(&Array2::eye(2), &can_matrix(PI_4, PI_2, PI))
+    )]
     fn test_to_unitary(#[case] gate: &mut Gate, #[case] n_qubits: u64, #[case] expected: &Matrix) {
         let result = gate.to_unitary(n_qubits);
         assert!(result.is_ok());
         assert_abs_diff_eq!(result.as_ref().unwrap(), expected);
+    }
+
+    /// `XY` and `PISWAP` are the same operator, as given in [§4.3 of the Quil
+    /// specification](https://quil-lang.github.io/#4-3Standard-Gate-Definitions).
+    #[rstest]
+    #[case(_0)]
+    #[case(PI_4)]
+    #[case(PI_2)]
+    #[case(PI)]
+    fn test_xy_and_piswap_matrices(#[case] theta: Complex64) {
+        let t = theta / 2.0;
+        let expected = array![
+            [_1, _0, _0, _0],
+            [_0, t.cos(), _I * t.sin(), _0],
+            [_0, _I * t.sin(), t.cos(), _0],
+            [_0, _0, _0, _1],
+        ];
+        for name in ["XY", "PISWAP"] {
+            let mut gate =
+                Gate::new(name, vec![Number(theta)], vec![Fixed(0), Fixed(1)], vec![]).unwrap();
+            assert_abs_diff_eq!(gate.to_unitary(2).unwrap(), expected);
+        }
+    }
+
+    /// The `CAN` gate definition given in [§4.3 of the Quil
+    /// specification](https://quil-lang.github.io/#4-3Standard-Gate-Definitions), as written there.
+    const CAN_SPECIFICATION_MATRIX: [&str; 16] = [
+        "(cis((%alpha+%beta-%gamma)/2)+cis((%alpha-%beta+%gamma)/2))/2",
+        "0",
+        "0",
+        "(cis((%alpha-%beta+%gamma)/2)-cis((%alpha+%beta-%gamma)/2))/2",
+        "0",
+        "(cis((%alpha+%beta+%gamma)/(-2))+cis((%beta+%gamma-%alpha)/2))/2",
+        "(cis((%alpha+%beta+%gamma)/(-2))-cis((%beta+%gamma-%alpha)/2))/2",
+        "0",
+        "0",
+        "(cis((%alpha+%beta+%gamma)/(-2))-cis((%beta+%gamma-%alpha)/2))/2",
+        "(cis((%alpha+%beta+%gamma)/(-2))+cis((%beta+%gamma-%alpha)/2))/2",
+        "0",
+        "(cis((%alpha-%beta+%gamma)/2)-cis((%alpha+%beta-%gamma)/2))/2",
+        "0",
+        "0",
+        "(cis((%alpha+%beta-%gamma)/2)+cis((%alpha-%beta+%gamma)/2))/2",
+    ];
+
+    #[rstest]
+    #[case(0.0, 0.0, 0.0)]
+    #[case(std::f64::consts::FRAC_PI_2, 0.0, 0.0)]
+    #[case(0.0, 0.0, std::f64::consts::FRAC_PI_3)]
+    #[case(0.3, 0.5, 0.7)]
+    #[case(std::f64::consts::PI, -std::f64::consts::FRAC_PI_4, std::f64::consts::FRAC_PI_3)]
+    fn test_can_matches_specification(#[case] alpha: f64, #[case] beta: f64, #[case] gamma: f64) {
+        let variables = HashMap::from([
+            ("alpha", real!(alpha)),
+            ("beta", real!(beta)),
+            ("gamma", real!(gamma)),
+        ]);
+        let memory_references = HashMap::<&str, Vec<f64>>::new();
+        let expected = Matrix::from_shape_vec(
+            (4, 4),
+            CAN_SPECIFICATION_MATRIX
+                .iter()
+                .map(|entry| {
+                    Expression::from_str(entry)
+                        .unwrap()
+                        .evaluate(&variables, &memory_references)
+                        .unwrap()
+                })
+                .collect(),
+        )
+        .unwrap();
+        let parameters = vec![
+            Number(real!(alpha)),
+            Number(real!(beta)),
+            Number(real!(gamma)),
+        ];
+        let mut gate = Gate::new("CAN", parameters, vec![Fixed(0), Fixed(1)], vec![]).unwrap();
+        assert_abs_diff_eq!(gate.to_unitary(2).unwrap(), expected, epsilon = 1e-12);
+    }
+
+    #[rstest]
+    #[case("XY", vec![Number(PI_4)])]
+    #[case("PISWAP", vec![Number(real!(0.3))])]
+    #[case("CAN", vec![Number(real!(0.3)), Number(real!(0.5)), Number(real!(0.7))])]
+    fn test_new_gates_are_unitary(#[case] name: &str, #[case] parameters: Vec<Expression>) {
+        let mut gate = Gate::new(name, parameters, vec![Fixed(0), Fixed(1)], vec![]).unwrap();
+        let matrix = gate.to_unitary(2).unwrap();
+        let adjoint = matrix.t().mapv(|entry| entry.conj());
+        assert_abs_diff_eq!(adjoint.dot(&matrix), Array2::eye(4), epsilon = 1e-12);
+    }
+
+    #[rstest]
+    // A gate that isn't a standard gate is reported as such, whatever its number of parameters.
+    #[case("FSIM", vec![Number(PI_4), Number(PI_4)], GateError::UndefinedGate { name: "FSIM".to_string(), parameterized: true })]
+    // A standard gate given the wrong number of parameters reports how many it takes.
+    #[case("CAN", vec![Number(PI_4), Number(PI_4)], GateError::MatrixArgumentLength { expected: 3, actual: 2 })]
+    #[case("RX", vec![Number(PI_4), Number(PI_4)], GateError::MatrixArgumentLength { expected: 1, actual: 2 })]
+    #[case(
+        "CAN",
+        vec![Number(PI_4), Number(PI_4), Expression::Variable("gamma".to_string())],
+        GateError::MatrixNonConstantParams {
+            name: "CAN".to_string(),
+            parameters: vec![Number(PI_4), Number(PI_4), Expression::Variable("gamma".to_string())],
+        }
+    )]
+    fn test_to_unitary_parameter_errors(
+        #[case] name: &str,
+        #[case] parameters: Vec<Expression>,
+        #[case] expected: GateError,
+    ) {
+        let mut gate = Gate::new(name, parameters, vec![Fixed(0), Fixed(1)], vec![]).unwrap();
+        assert_eq!(gate.to_unitary(2), Err(expected));
     }
 }
 
