@@ -1,6 +1,9 @@
 use numpy::{PyArray, PyArrayDescr, PyArrayDescrMethods};
 use pyo3::{
-    IntoPyObjectExt, exceptions::{PyDeprecationWarning, PyNotImplementedError}, prelude::*, types::{PyAnyMethods, PyComplex, PyFloat, PyInt},
+    exceptions::{PyDeprecationWarning, PyNotImplementedError},
+    prelude::*,
+    types::{PyAnyMethods, PyComplex, PyFloat, PyInt},
+    IntoPyObjectExt,
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -186,7 +189,7 @@ impl_newargs!(
 impl Expression {
     /// Create a new `Expression`.
     ///
-    /// This constructor accepts existing `Expression` objects, `MemoryReference`s, 
+    /// This constructor accepts existing `Expression` objects, `MemoryReference`s,
     /// numberic types (int, float, complex), or strings, which are interpreted as variable names.
     #[new]
     fn __new__(expression: ExpressionLike) -> Self {
