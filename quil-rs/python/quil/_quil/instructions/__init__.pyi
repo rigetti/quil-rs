@@ -1126,14 +1126,18 @@ class GateSpecification:
 
 @typing.final
 class HaltType(Instruction):
+    r"""
+    The type of the `Halt` [`Instruction`].
+    """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls) -> HaltType:
+    def __reduce__(self) -> str:
         r"""
-        Create a new instance of this instruction type.
+        Returns the name of the singleton instance relative its module.
         
-        Users should not call this method, but it is provided for `pickle` support.
+        Enables [`pickling`][] of singleton instances.
+        
+        [`pickling`]: https://docs.python.org/3/library/pickle.html#object.__reduce__
         """
 
 class Include(Instruction):
@@ -1152,6 +1156,16 @@ class Include(Instruction):
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Instruction:
+    r"""
+    Superclass for all [Instruction] variants in Python.
+    
+    Rather than expose the complex enum directly,
+    we annotate each variant `#[pyclass(parent = PyInstruction)]`
+    and add a constructor that attaches the parent class to new instances.
+    
+    Via the macros below, each variant implements `From<Bound<'_, T>>
+    for Instruction`
+    """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __hash__(self) -> builtins.int: ...
     def is_quil_t(self) -> builtins.bool:
@@ -1527,14 +1541,18 @@ class Move(Instruction):
 
 @typing.final
 class NopType(Instruction):
+    r"""
+    The type of the `Nop` [`Instruction`].
+    """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls) -> NopType:
+    def __reduce__(self) -> str:
         r"""
-        Create a new instance of this instruction type.
+        Returns the name of the singleton instance relative its module.
         
-        Users should not call this method, but it is provided for `pickle` support.
+        Enables [`pickling`][] of singleton instances.
+        
+        [`pickling`]: https://docs.python.org/3/library/pickle.html#object.__reduce__
         """
 
 class Offset:
@@ -2010,14 +2028,18 @@ class Vector:
 
 @typing.final
 class WaitType(Instruction):
+    r"""
+    The type of the `Wait` [`Instruction`].
+    """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls) -> WaitType:
+    def __reduce__(self) -> str:
         r"""
-        Create a new instance of this instruction type.
+        Returns the name of the singleton instance relative its module.
         
-        Users should not call this method, but it is provided for `pickle` support.
+        Enables [`pickling`][] of singleton instances.
+        
+        [`pickling`]: https://docs.python.org/3/library/pickle.html#object.__reduce__
         """
 
 class Waveform:
