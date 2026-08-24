@@ -1131,6 +1131,10 @@ class HaltType(Instruction):
     """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __hash__(self) -> builtins.int: ...
+    def __new__(cls) -> HaltType:
+        r"""
+        Get a reference to the singleton instance of this type.
+        """
     def __reduce__(self) -> str:
         r"""
         Returns the name of the singleton instance relative its module.
@@ -1171,6 +1175,11 @@ class Instruction:
     def is_quil_t(self) -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    @staticmethod
+    def parse(string: builtins.str) -> Instruction:
+        r"""
+        Parse an [`Instruction`] from a string.
         """
 
 class InstructionError(_quil.QuilError):
@@ -1546,6 +1555,10 @@ class NopType(Instruction):
     """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __hash__(self) -> builtins.int: ...
+    def __new__(cls) -> NopType:
+        r"""
+        Get a reference to the singleton instance of this type.
+        """
     def __reduce__(self) -> str:
         r"""
         Returns the name of the singleton instance relative its module.
@@ -2033,6 +2046,10 @@ class WaitType(Instruction):
     """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __hash__(self) -> builtins.int: ...
+    def __new__(cls) -> WaitType:
+        r"""
+        Get a reference to the singleton instance of this type.
+        """
     def __reduce__(self) -> str:
         r"""
         Returns the name of the singleton instance relative its module.

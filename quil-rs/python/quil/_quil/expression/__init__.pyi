@@ -102,7 +102,7 @@ class Expression:
         r"""
         Create a new `Expression`.
         
-        This constructor accepts existing `Expression` objects, `MemoryReference`s, 
+        This constructor accepts existing `Expression` objects, `MemoryReference`s,
         numberic types (int, float, complex), or strings, which are interpreted as variable names.
         """
     def __pos__(self) -> Expression: ...
