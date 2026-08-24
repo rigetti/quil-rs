@@ -452,7 +452,10 @@ impl PyModuleSingletonExt for Bound<'_, PyModule> {
     /// Add the class type and singleton instance of an instruction to a module.
     fn add_singleton<T: PySingleton>(&self) -> PyResult<()> {
         self.add_class::<T>()?;
-        self.add(<T as PySingleton>::NAME, <T as PySingleton>::get(self.py())?)
+        self.add(
+            <T as PySingleton>::NAME,
+            <T as PySingleton>::get(self.py())?,
+        )
     }
 }
 
