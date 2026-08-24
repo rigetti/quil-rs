@@ -1,3 +1,5 @@
+use std::{marker::PhantomData, sync::LazyLock};
+
 use indexmap::IndexMap;
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
@@ -141,10 +143,9 @@ pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     let py = m.py();
 
-    // Add singleton instances of Halt, Nop, and Wait to the module namespace.
-    m.add("Halt", HaltType::__new__(py)?)?;
-    m.add("Nop", NopType::__new__(py)?)?;
-    m.add("Wait", WaitType::__new__(py)?)?;
+    m.add_singleton::<HaltType>()?;
+    m.add_singleton::<NopType>()?;
+    m.add_singleton::<WaitType>()?;
 
     // Add TypeAliases for use in annotations.
     m.add("LabelTargetParameter", union!(py, PyString, Target, Label)?)?;
@@ -348,6 +349,14 @@ impl_instruction!([
     WaveformInvocation,
 ]);
 
+/// Superclass for all [Instruction] variants in Python.
+///
+/// Rather than expose the complex enum directly,
+/// we annotate each variant `#[pyclass(parent = PyInstruction)]`
+/// and add a constructor that attaches the parent class to new instances.
+///
+/// Via the macros below, each variant implements `From<Bound<'_, T>>
+/// for Instruction`
 #[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[pyclass(
@@ -368,6 +377,7 @@ impl PyInstruction {
     /// Returns true if the instruction is a Quil-T instruction.
     #[pyo3(name = "is_quil_t")]
     fn py_is_quil_t(&self) -> bool {
+        // Instruction::is_quil_t(self).unwrap_or(false)
         todo!()
     }
 }
@@ -376,6 +386,10 @@ impl PyInstruction {
 pyo3_stub_gen::impl_stub_type!(Instruction = PyInstruction);
 
 /// Implement [IntoPyObject] for a `pyclass` that subclasses [PyInstruction].
+///
+/// This generates an implementation of `From<$T> for PyClassInitializer<$T>`
+/// which returns a [`PyClassInitializer`] that subclasses [`PyInstruction`].
+/// The [`IntoPyObject`] implementation simply uses that initializer directly.
 macro_rules! py_instruction {
     ($T:ty) => {
         impl From<$T> for PyClassInitializer<$T> {
@@ -396,47 +410,135 @@ macro_rules! py_instruction {
     };
 }
 
-macro_rules! py_instruction_singleton {
-    ($name:ident, $T:ident, $cell:ident) => {
-        #[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Eq)]
-        #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-        #[pyclass(module = "quil._quil.instructions", extends = PyInstruction, from_py_object, frozen, eq, hash)]
-        #[doc = concat!("The type of the `", stringify!($name), "` `Instruction`.")]
-        pub(crate) struct $T;
+/// A trait for types that should be used as singletons in Python.
+///
+/// For example, in Python there's a single `None` value of type `NoneType`.
+/// You could model that in Rust as an empty struct type like so:
+///
+/// ```rust,ignore
+/// #[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Eq)]
+/// #[pyclass(frozen)]
+/// struct NoneType;
+///
+/// impl PySingleton for NoneType {
+///     const NAME: &'static str = "None";
+///     fn get(py: Python<'_>) -> PyResult<&Bound<'_, Self>> {
+///         static CELL: PyOnceLock<Py<NoneType>> = PyOnceLock::new();
+///         CELL.get_or_try_init(py, || Py::new(py, NoneType))
+///     }
+/// }
+///
+/// #[pymodule]
+/// fn builtins(m: &Bound<'_, PyModule>) -> PyResult<()> {
+///     m.add_class::<NoneType>()?;
+///     m.add(NoneType::NAME, NoneType::get(m.py())?)?;
+///     Ok(())
+/// }
+/// ```
+pub trait PySingleton: PyClass {
+    /// The Python name of the singleton value that inhabits this type.
+    const NAME: &'static str;
 
-        #[cfg(feature = "stubs")]
-    pyo3_stub_gen::module_variable!("quil._quil.instructions", stringify!($name), $T);
+    /// Get the singleton instance of the type.
+    fn get(py: Python<'_>) -> PyResult<&Bound<'_, Self>>;
+}
 
-        // Storage for a singleton instance of the type.
-        // This is populated on the first call to the `__new__` constructor,
-        // which should be called during module initialization
-        // to add the instance to the module namespace.
-        static $cell: PyOnceLock<Py<$T>> = PyOnceLock::new();
+pub trait PyModuleSingletonExt: private::Sealed {
+    /// Add the class type and singleton instance of an instruction to a module.
+    fn add_singleton<T: PySingleton>(&self) -> PyResult<()>;
+}
 
-        #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
-        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-        #[pymethods]
-        impl $T {
-            /// Create a new instance of this instruction type.
-            ///
-            /// Users should not call this method, but it is provided for `pickle` support.
-            #[new]
-            fn __new__(py: Python<'_>) -> PyResult<&Bound<'_, Self>> {
-                $cell.get_or_try_init(py, || {
-                    Py::new(py, PyClassInitializer::from(PyInstruction).add_subclass($T))
-                }).map(|inst| inst.bind(py))
-            }
+impl PyModuleSingletonExt for Bound<'_, PyModule> {
+    /// Add the class type and singleton instance of an instruction to a module.
+    fn add_singleton<T: PySingleton>(&self) -> PyResult<()> {
+        self.add_class::<T>()?;
+        self.add(<T as PySingleton>::NAME, <T as PySingleton>::get(self.py())?)
+    }
+}
 
-            fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-                Ok(PyTuple::empty(py))
+// Prevent external code from implementing `PyModuleSingletonExt`.
+mod private {
+    pub trait Sealed {}
+
+    impl Sealed for pyo3::Bound<'_, pyo3::types::PyModule> {}
+}
+
+/// Implement [`PySingleton`] for a `#[pyclass]`.
+macro_rules! py_singleton {
+    ($T:ty, $name:expr, |$py:ident| $($value:tt)+) => {
+        impl private::Sealed for $T {}
+
+        impl PySingleton for $T {
+            const NAME: &'static str = $name;
+
+            /// Get the singleton instance of the type, creating it if necessary.
+            fn get($py: Python<'_>) -> PyResult<&Bound<'_, Self>> {
+                static CELL: PyOnceLock<Py<$T>> = PyOnceLock::new();
+                CELL.get_or_try_init($py, || {
+                    let value = $($value)+;
+                    Py::new($py, value)
+                }).map(|inst| inst.bind($py))
             }
         }
     };
 }
 
-py_instruction_singleton!(Halt, HaltType, PY_HALT_CELL);
-py_instruction_singleton!(Nop, NopType, PY_NOP_CELL);
-py_instruction_singleton!(Wait, WaitType, PY_WAIT_CELL);
+/// Create a Python singleton instance for an instruction type that has no inner value.
+///
+/// This macro handles the setup for the Python equivalents of
+/// [Instruction::Halt], [Instruction::Nop], and [Instruction::Wait].
+macro_rules! py_instruction_singleton {
+    ($T:ident, $name:literal) => {
+        py_singleton!($T, $name, |py| $T);
+
+        // Add the constant value to the stubs.
+        #[cfg(feature = "stubs")]
+        pyo3_stub_gen::module_variable!("quil._quil.instructions", $name, $T);
+
+        // Enable pickling by just returning the instance name.
+        #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+        #[pymethods]
+        impl $T {
+            /// Returns the name of the singleton instance relative its module.
+            ///
+            /// Enables [`pickling`][] of singleton instances.
+            ///
+            /// [`pickling`]: https://docs.python.org/3/library/pickle.html#object.__reduce__
+            fn __reduce__<'py>(&self, py: Python<'py>) -> &Bound<'py, PyString> {
+                ::pyo3::intern!(py, <$T as PyClass>::NAME)
+            }
+        }
+    };
+}
+
+/// The type of the `Halt` [`Instruction`].
+#[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyclass(module = "quil._quil.instructions",
+    extends = PyInstruction, from_py_object, frozen, eq, hash
+)]
+pub(crate) struct HaltType;
+
+/// The type of the `Nop` [`Instruction`].
+#[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyclass(module = "quil._quil.instructions",
+    extends = PyInstruction, from_py_object, frozen, eq, hash
+)]
+pub(crate) struct NopType;
+
+/// The type of the `Wait` [`Instruction`].
+#[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyclass(module = "quil._quil.instructions",
+    extends = PyInstruction, from_py_object, frozen, eq, hash
+)]
+pub(crate) struct WaitType;
+
+py_instruction_singleton!(HaltType, "Halt");
+py_instruction_singleton!(NopType, "Nop");
+py_instruction_singleton!(WaitType, "Wait");
 
 /// A wrapper around an [`Instruction`] for use in Python-exposed functions and methods
 /// where we want to accept any `Instruction` variant.
@@ -525,7 +627,7 @@ macro_rules! instruction_getnewargs {
         }
     };
 
-    // Operate on the `ready` list once the names are processed.
+    // Generate the IntoPyObject implementation once all names are collected.
     (@into [] [$( $name:ident, )*]) => {
         impl<'py> IntoPyObject<'py> for Instruction {
             type Target = PyAny;
@@ -535,16 +637,13 @@ macro_rules! instruction_getnewargs {
            fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
                 match self {
                     Instruction::Halt() =>
-                        HaltType::__new__(py)
-                        .and_then(|inst| inst.into_bound_py_any(py)),
+                        HaltType::get(py).and_then(|inst| inst.into_bound_py_any(py)),
                     Instruction::Nop() =>
-                        NopType::__new__(py)
-                        .and_then(|inst| inst.into_bound_py_any(py)),
+                        NopType::get(py).and_then(|inst| inst.into_bound_py_any(py)),
                     Instruction::Wait() =>
-                        WaitType::__new__(py)
-                        .and_then(|inst| inst.into_bound_py_any(py)),
+                        WaitType::get(py).and_then(|inst| inst.into_bound_py_any(py)),
                     $(
-                    Instruction::$name(value) => value.into_bound_py_any(py),
+                        Instruction::$name(value) => value.into_bound_py_any(py),
                     )*
                 }
             }
