@@ -262,16 +262,12 @@ macro_rules! impl_instruction {
         impl_parse!($name);
         impl_instruction!(@one $name [$($tail)*]);
     };
-}
 
-impl_out!(
-    FrameIdentifier,
-    Gate,
-    Label,
-    MemoryReference,
-    WaveformInvocation
-);
-// FormatArgument / ? an arg in a DEFCIRCUIT / DEFGATE
+    (@one $name: ident [+ out $($tail: tt)*]) => {
+        impl_out!($name);
+        impl_instruction!(@one $name [$($tail)*]);
+    };
+}
 
 impl_instruction!([
     Arithmetic,
@@ -299,23 +295,22 @@ impl_instruction!([
     ExternSignature,
     Fence,
     FrameDefinition,
-    FrameIdentifier,
-    Gate,
+    FrameIdentifier[repr + quil + out],
+    Gate[repr + quil + out],
     GateDefinition,
     GateModifier,
     GateSpecification,
     GateType,
     Include,
-    // Instruction[repr + quil + parse],
     Jump,
     JumpUnless,
     JumpWhen,
-    Label,
+    Label[repr + quil + out],
     Load,
     MeasureCalibrationDefinition,
     MeasureCalibrationIdentifier,
     Measurement,
-    MemoryReference[repr + quil + parse],
+    MemoryReference[repr + quil + parse + out],
     Move,
     Offset,
     OwnedGateSignature[repr],
@@ -346,7 +341,7 @@ impl_instruction!([
     Vector,
     Waveform[repr],
     WaveformDefinition,
-    WaveformInvocation,
+    WaveformInvocation[repr + quil + out],
 ]);
 
 /// Superclass for all [Instruction] variants in Python.
@@ -379,6 +374,12 @@ impl PyInstruction {
     fn py_is_quil_t(&self) -> bool {
         // Instruction::is_quil_t(self).unwrap_or(false)
         todo!()
+    }
+
+    /// Parse an [`Instruction`] from a string.
+    #[staticmethod]
+    fn parse(string: &str) -> PyResult<Instruction> {
+        Ok(Instruction::from_str(string)?)
     }
 }
 
@@ -686,7 +687,6 @@ macro_rules! instruction_getnewargs {
             }
         }
     };
-
 }
 
 instruction_getnewargs!(
