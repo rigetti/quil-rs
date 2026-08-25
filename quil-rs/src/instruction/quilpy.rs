@@ -448,6 +448,7 @@ impl PyModuleSingletonExt for Bound<'_, PyModule> {
 }
 
 // Prevent external code from implementing `PyModuleSingletonExt`.
+#[doc(hidden)]
 mod private {
     pub trait Sealed {}
 
@@ -472,6 +473,16 @@ macro_rules! py_singleton {
             }
         }
 
+        impl<'py> IntoPyObject<'py> for $T {
+            type Target = Self;
+            type Output = Bound<'py, Self::Target>;
+            type Error = PyErr;
+
+            fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+                Ok(<$T as PySingleton>::get(py)?.to_owned())
+            }
+        }
+
         #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
         #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
         #[pymethods]
@@ -488,7 +499,7 @@ macro_rules! py_singleton {
             ///
             /// [`pickling`]: https://docs.python.org/3/library/pickle.html#object.__reduce__
             fn __reduce__<'py>(&self, py: Python<'py>) -> &Bound<'py, PyString> {
-                ::pyo3::intern!(py, <$T as PyClass>::NAME)
+                ::pyo3::intern!(py, <$T as PySingleton>::NAME)
             }
         }
     };
@@ -505,16 +516,6 @@ macro_rules! py_instruction_singleton {
         // Add the constant value to the stubs.
         #[cfg(feature = "stubs")]
         pyo3_stub_gen::module_variable!("quil._quil.instructions", $name, $T);
-
-        impl<'py> IntoPyObject<'py> for $T {
-            type Target = Self;
-            type Output = Bound<'py, Self::Target>;
-            type Error = PyErr;
-
-            fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
-                Ok($T::get(py)?.to_owned())
-            }
-        }
     };
 }
 
@@ -621,12 +622,8 @@ macro_rules! instruction_getnewargs {
 
            fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
                 match self {
-                    $(
-                        Instruction::$name(value) => value.into_bound_py_any(py),
-                    )*
-                    $(
-                        Instruction::$empty_variant() => $empty.into_bound_py_any(py),
-                    )*
+                    $(Instruction::$name(value) => value.into_bound_py_any(py),)*
+                    $(Instruction::$empty_variant() => $empty.into_bound_py_any(py),)*
                 }
             }
         }
