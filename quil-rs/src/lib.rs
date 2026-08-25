@@ -38,7 +38,7 @@
 // The `impl_instruction!` macro (see `instruction::quilpy`) expands a large list of
 // instruction-related types through several recursive helper rules, which exceeds the
 // default macro recursion limit.
-#![recursion_limit = "512"]
+#![recursion_limit = "400"]
 
 pub mod expression;
 mod floating_point_eq;
