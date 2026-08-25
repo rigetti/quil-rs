@@ -202,6 +202,35 @@ macro_rules! impl_out {
     };
 }
 
+/// Implement [IntoPyObject] for a `pyclass` that subclasses [PyInstruction].
+///
+/// Implement `From<$T> for PyClassInitializer<$T>`
+/// by returning a [`PyClassInitializer`] that subclasses [`PyInstruction`].
+macro_rules! py_instruction {
+    ($T:ty) => {
+        impl From<$T> for PyClassInitializer<$T> {
+            fn from(value: $T) -> Self {
+                PyClassInitializer::from(PyInstruction).add_subclass(value)
+            }
+        }
+    };
+}
+
+/// Trait for types that can be converted into an `Instruction`.
+trait ToInstruction {
+    fn to_instruction(&self) -> Instruction;
+}
+
+/// Convert bound python objects into their corresponding `Instruction` variant.
+impl<'py, T> From<Bound<'py, T>> for Instruction
+where
+    T: ToInstruction + PyClass,
+{
+    fn from(value: Bound<'py, T>) -> Self {
+        value.borrow().to_instruction()
+    }
+}
+
 /// Implement expected methods on each of the instruction-related types, given as a list.
 /// This makes it easy to see which classes make up the `instructions` module,
 /// to verify that those classes have necessary `#[pymethods]` implemented,
@@ -217,13 +246,25 @@ macro_rules! impl_out {
 ///     C [quil + parse],
 /// ]);
 /// ```
+///
+/// Types that are also variants of the [`Instruction`] enum should additionally
+/// include an `instruction` item in their sublist:
+///
+/// - `instruction` if the variant name matches the type name and holds an inner value
+/// - `instruction(Name)` if the variant name (`Name`) differs from the type name
+/// - `instruction(Name, Empty)` if the variant has no inner value (e.g., `Halt`, `Nop`, `Wait`)
+///
+/// This generates the `ToInstruction` implementation for the type, as well as the
+/// combined `IntoPyObject` and `FromPyObject` implementations for `Instruction` itself.
 macro_rules! impl_instruction {
     // Initial capture: this lets us grab all the names in one go,
-    // which we can then use to generate parts of the module initializer.
-    // After we generate that, the entire input is passed on to the @list rule,
-    // which will chew through the tokens recursively.
+    // which we can then use to generate parts of the module initializer,
+    // as well as the combined `IntoPyObject`/`FromPyObject` implementations for
+    // `Instruction` itself. After we generate that, the entire input is passed on
+    // to the @list rule, which will chew through the tokens recursively.
     ([$( $name:ident $([$($args: tt)*])? ),* ,]) => {
         impl_instruction!(@list [$($name $([$($args)*])? ,)*]);
+        impl_instruction!(@collect [$($name $([$($args)*])? ,)*] []);
     };
 
     // Terminal rule -- an empty list expands to nothing.
@@ -265,81 +306,256 @@ macro_rules! impl_instruction {
         impl_out!($name);
         impl_instruction!(@one $name [$($tail)*]);
     };
+
+    // Implement the `Instruction` variant conversions for a type whose variant name
+    // (given in parens) differs from the type name.
+    (@one $name: ident [+ instruction($variant: ident, Empty) $($tail: tt)*]) => {
+        impl_instruction!(@instr_one $name [variant=$variant, Empty]);
+        impl_instruction!(@one $name [$($tail)*]);
+    };
+
+    (@one $name: ident [+ instruction($variant: ident) $($tail: tt)*]) => {
+        impl_instruction!(@instr_one $name [variant=$variant]);
+        impl_instruction!(@one $name [$($tail)*]);
+    };
+
+    // Implement the `Instruction` variant conversions for a type,
+    // assuming the variant name matches the type name and holds an inner value.
+    (@one $name: ident [+ instruction $($tail: tt)*]) => {
+        impl_instruction!(@instr_one $name [variant=$name]);
+        impl_instruction!(@one $name [$($tail)*]);
+    };
+
+    // The `@instr_one` rules implement `ToInstruction` as `Instruction::$name(value.clone())`.
+
+    // Don't use `Clone` if there's no inner value.
+    (@instr_one $kind: ty [variant=$name: ident, Empty]) => {
+        py_instruction!($kind);
+
+        impl ToInstruction for $kind {
+            fn to_instruction(&self) -> Instruction {
+                //TODO(migration-guide): make this an empty variant and remove the `()`.
+                Instruction::$name()
+            }
+        }
+    };
+
+    // Otherwise, clone the inner value.
+    (@instr_one $kind: ident [variant=$name: ident]) => {
+        py_instruction!($kind);
+
+        impl ToInstruction for $kind {
+            fn to_instruction(&self) -> Instruction {
+                Instruction::$name(self.clone())
+            }
+        }
+
+        impl<'py> IntoPyObject<'py> for $kind {
+            type Target = Self;
+            type Output = Bound<'py, Self::Target>;
+            type Error = PyErr;
+
+            fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+                Ok(Py::new(py, PyClassInitializer::from(self))?.into_bound(py))
+            }
+        }
+    };
+
+    // The `@collect` rules filter the full list down to only the types that make up
+    // an `Instruction` variant (those with an `instruction` item in their sublist),
+    // recording their variant name and whether they hold an inner value. Once fully
+    // filtered, the result is used to generate the combined `IntoPyObject` and
+    // `FromPyObject` implementations for `Instruction` itself.
+
+    (@collect [] [$($ready: tt)*]) => {
+        impl_instruction!(@finalize [$($ready)*]);
+    };
+
+    // Bare names never carry an `instruction` item, so skip them.
+    (@collect [$name: ident, $($tail: tt)*] [$($ready: tt)*]) => {
+        impl_instruction!(@collect [$($tail)*] [$($ready)*]);
+    };
+
+    (@collect [$name: ident [$($args: tt)*], $($tail: tt)*] [$($ready: tt)*]) => {
+        impl_instruction!(@scan $name [+ $($args)*] [$($tail)*] [$($ready)*]);
+    };
+
+    // The `@scan` rules walk a single type's sublist looking for the `instruction` item,
+    // ignoring any other items (`repr`, `quil`, `parse`, `out`).
+
+    (@scan $name: ident [] [$($tail: tt)*] [$($ready: tt)*]) => {
+        impl_instruction!(@collect [$($tail)*] [$($ready)*]);
+    };
+
+    (@scan $name: ident [+ repr $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
+        impl_instruction!(@scan $name [$($rest)*] [$($tail)*] [$($ready)*]);
+    };
+
+    (@scan $name: ident [+ quil $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
+        impl_instruction!(@scan $name [$($rest)*] [$($tail)*] [$($ready)*]);
+    };
+
+    (@scan $name: ident [+ parse $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
+        impl_instruction!(@scan $name [$($rest)*] [$($tail)*] [$($ready)*]);
+    };
+
+    (@scan $name: ident [+ out $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
+        impl_instruction!(@scan $name [$($rest)*] [$($tail)*] [$($ready)*]);
+    };
+
+    (@scan $name: ident [+ instruction($variant: ident, Empty) $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
+        impl_instruction!(@collect [$($tail)*] [$($ready)* $name [variant=$variant, Empty] ,]);
+    };
+
+    (@scan $name: ident [+ instruction($variant: ident) $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
+        impl_instruction!(@collect [$($tail)*] [$($ready)* $name [variant=$variant] ,]);
+    };
+
+    (@scan $name: ident [+ instruction $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
+        impl_instruction!(@collect [$($tail)*] [$($ready)* $name [variant=$name] ,]);
+    };
+
+    // Once we have the filtered list of `Instruction` variants, generate the combined
+    // `FromPyObject` implementation for `Instruction`, and hand off to `@into` to build
+    // the combined `IntoPyObject` implementation.
+    (@finalize [$( $kind: tt [$($args: tt)*] ,)*]) => {
+        impl_instruction!(@into [$( $kind [$($args)*] ,)*] [] []);
+
+        impl<'a, 'py> pyo3::FromPyObject<'a, 'py> for Instruction {
+            type Error = pyo3::PyErr;
+
+            fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+                if false {
+                    unreachable!("this makes the macro easier to write");
+                }$( else if let Ok(value) = obj.cast::<$kind>() {
+                    Ok(<$kind as ToInstruction>::to_instruction(&value.borrow()))
+                })* else {
+                    Err(CastError::new(obj, PyInstruction::classinfo_object(obj.py())))?
+                }
+            }
+        }
+    };
+
+    // Once the left list is empty (see below for how that happens),
+    // we generate the `IntoPyObject` implementation from the names in the right list.
+    (@into [] [$( $name:ident, )*] [$( [$empty:ident, $empty_variant:ident], )* ]) => {
+        impl<'py> IntoPyObject<'py> for Instruction {
+            type Target = PyAny;
+            type Output = Bound<'py, Self::Target>;
+            type Error = PyErr;
+
+           fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+                match self {
+                    $(Instruction::$name(value) => value.into_bound_py_any(py),)*
+                    $(Instruction::$empty_variant() => $empty.into_bound_py_any(py),)*
+                }
+            }
+        }
+    };
+
+    // Put Empty variants into the `empty` list.
+    (@into
+         [ $kind:tt [variant=$name:tt, Empty], $($tail:tt)* ]
+         [ $( $ready:ident, )* ]
+         [ $( [ $empty:ident, $empty_variant:ident ], )* ]
+     ) => {
+        impl_instruction!(@into
+            [ $($tail)* ]
+            [ $($ready,)* ]
+            [ $([$empty, $empty_variant],)* [$kind, $name], ]
+            );
+    };
+
+    // Append all other `name`s to first list.
+    (@into
+        [ $_kind:tt [variant=$name:tt], $($tail:tt)* ]
+        [ $( $ready:ident, )* ]
+        [ $( [ $empty:ident, $empty_variant:ident ], )* ]
+     ) => {
+        impl_instruction!(@into
+            [ $($tail)* ]
+            [ $($ready,)* $name, ]
+            [ $( [$empty, $empty_variant], )* ]
+            );
+    };
 }
 
 impl_instruction!([
-    Arithmetic, // PyInstruction
+    Arithmetic[repr + quil + instruction],
     ArithmeticOperand,
     ArithmeticOperator,
     AttributeValue,
-    BinaryLogic, // PyInstruction
+    BinaryLogic[repr + quil + instruction],
     BinaryOperand,
     BinaryOperator,
-    CalibrationDefinition,
+    CalibrationDefinition[repr + quil + instruction],
     CalibrationIdentifier,
-    Call,              // PyInstruction
-    Capture,           // PyInstruction
-    CircuitDefinition, // PyInstruction
-    Comparison,        // PyInstruction
+    Call[repr + quil + instruction],
+    Capture[repr + quil + instruction],
+    CircuitDefinition[repr + quil + instruction],
+    Comparison[repr + quil + instruction],
     ComparisonOperand,
     ComparisonOperator,
-    Convert,     // PyInstruction
-    Declaration, // PyInstruction
-    Delay,       // PyInstruction
+    Convert[repr + quil + instruction],
+    Declaration[repr + quil + instruction],
+    Delay[repr + quil + instruction],
     DefGateSequence[repr],
-    Exchange, // PyInstruction
+    Exchange[repr + quil + instruction],
     ExternParameter,
     ExternParameterType,
     ExternSignature,
-    Fence,           // PyInstruction
-    FrameDefinition, // PyInstruction
+    Fence[repr + quil + instruction],
+    FrameDefinition[repr + quil + instruction],
     FrameIdentifier[repr + quil + out],
-    Gate[repr + quil + out], // PyInstruction
-    GateDefinition,          // PyInstruction
+    Gate[repr + quil + out + instruction],
+    GateDefinition[repr + quil + instruction],
     GateModifier,
     GateSpecification,
     GateType,
-    Include,                      // PyInstruction
-    Jump,                         // PyInstruction
-    JumpUnless,                   // PyInstruction
-    JumpWhen,                     // PyInstruction
-    Label[repr + quil + out],     // PyInstruction
-    Load,                         // PyInstruction
-    MeasureCalibrationDefinition, // PyInstruction
+    Include[repr + quil + instruction],
+    Jump[repr + quil + instruction],
+    JumpUnless[repr + quil + instruction],
+    JumpWhen[repr + quil + instruction],
+    Label[repr + quil + out + instruction],
+    Load[repr + quil + instruction],
+    MeasureCalibrationDefinition[repr + quil + instruction],
     MeasureCalibrationIdentifier,
-    Measurement, // PyInstruction
+    Measurement[repr + quil + instruction],
     MemoryReference[repr + quil + parse + out],
-    Move, // PyInstruction
+    Move[repr + quil + instruction],
     Offset,
     OwnedGateSignature[repr],
     PauliGate[repr],
     PauliTerm[repr],
     PauliSum[repr],
-    Pragma, // PyInstruction
+    Pragma[repr + quil + instruction],
     PragmaArgument,
-    Pulse, // PyInstruction
+    Pulse[repr + quil + instruction],
     Qubit,
     QubitPlaceholder[repr],
-    RawCapture, // PyInstruction
-    Reset,      // PyInstruction
+    RawCapture[repr + quil + instruction],
+    Reset[repr + quil + instruction],
     ScalarType,
-    SetFrequency, // PyInstruction
-    SetPhase,     // PyInstruction
-    SetScale,     // PyInstruction
+    SetFrequency[repr + quil + instruction],
+    SetPhase[repr + quil + instruction],
+    SetScale[repr + quil + instruction],
     Sharing[repr],
-    ShiftFrequency, // PyInstruction
-    ShiftPhase,     // PyInstruction
-    Store,          // PyInstruction
-    SwapPhases,     // PyInstruction
+    ShiftFrequency[repr + quil + instruction],
+    ShiftPhase[repr + quil + instruction],
+    Store[repr + quil + instruction],
+    SwapPhases[repr + quil + instruction],
     Target,
     TargetPlaceholder[repr],
-    UnaryLogic, // PyInstruction
+    UnaryLogic[repr + quil + instruction],
     UnaryOperator,
     UnresolvedCallArgument, // Python name: CallArgument
     Vector,
     Waveform[repr],
-    WaveformDefinition, // PyInstruction
+    WaveformDefinition[repr + quil + instruction],
     WaveformInvocation[repr + quil + out],
+    HaltType[instruction(Halt, Empty)],
+    NopType[instruction(Nop, Empty)],
+    WaitType[instruction(Wait, Empty)],
 ]);
 
 /// Superclass for all [Instruction] variants in Python.
@@ -383,20 +599,6 @@ impl PyInstruction {
 
 #[cfg(feature = "stubs")]
 pyo3_stub_gen::impl_stub_type!(Instruction = PyInstruction);
-
-/// Implement [IntoPyObject] for a `pyclass` that subclasses [PyInstruction].
-///
-/// Implement `From<$T> for PyClassInitializer<$T>`
-/// by returning a [`PyClassInitializer`] that subclasses [`PyInstruction`].
-macro_rules! py_instruction {
-    ($T:ty) => {
-        impl From<$T> for PyClassInitializer<$T> {
-            fn from(value: $T) -> Self {
-                PyClassInitializer::from(PyInstruction).add_subclass(value)
-            }
-        }
-    };
-}
 
 /// A trait for types that should be used as singletons in Python.
 ///
@@ -566,187 +768,6 @@ impl From<AnyInstruction> for Instruction {
         value.0
     }
 }
-
-/// Trait for types that can be converted into an `Instruction`.
-trait ToInstruction {
-    fn to_instruction(&self) -> Instruction;
-}
-
-/// Convert bound python objects into their corresponding `Instruction` variant.
-impl<'py, T> From<Bound<'py, T>> for Instruction
-where
-    T: ToInstruction + PyClass,
-{
-    fn from(value: Bound<'py, T>) -> Self {
-        value.borrow().to_instruction()
-    }
-}
-
-macro_rules! instruction_variant {
-    // This is the main entrypoint of the macro.
-    // It expects a list of `Instruction` types, optionally with a sublist of arguments:
-    //
-    // - use `[variant = $name]` if the variant name is different from the type name
-    // - use `[Empty]` if the variant has no inner value (e.g., `Halt`, `Nop`, or `Wait`)
-    ($($kind:tt $([$($args:tt)*])? ),* ,) => {
-        // Process the individual types to generate `ToInstruction` implementations.
-        $( instruction_variant!(@one $kind [$($($args)*)?]); )+
-
-        // Divide the list into those with inner values and those without,
-        // and use it to generate the `IntoPyObject` implementation for `Instruction`.
-        instruction_variant!(@into [$( $kind $([$($args)*])? ,)*] [] []);
-
-        impl<'a, 'py> pyo3::FromPyObject<'a, 'py> for Instruction {
-            type Error = pyo3::PyErr;
-
-            fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-                if false {
-                    unreachable!("this makes the macro easier to write");
-                }$( else if let Ok(value) = obj.cast::<$kind>() {
-                    Ok(<$kind as ToInstruction>::to_instruction(&value.borrow()))
-                })* else {
-                    Err(CastError::new(obj, PyInstruction::classinfo_object(obj.py())))?
-                }
-            }
-        }
-    };
-
-    // Once the left list is empty (see below for how that happens),
-    // we generate the `IntoPyObject` implementation from the names in the right list.
-    (@into [] [$( $name:ident, )*] [$( [$empty:ident, $empty_variant:ident], )* ]) => {
-        impl<'py> IntoPyObject<'py> for Instruction {
-            type Target = PyAny;
-            type Output = Bound<'py, Self::Target>;
-            type Error = PyErr;
-
-           fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
-                match self {
-                    $(Instruction::$name(value) => value.into_bound_py_any(py),)*
-                    $(Instruction::$empty_variant() => $empty.into_bound_py_any(py),)*
-                }
-            }
-        }
-    };
-
-    // Put Empty variants into the `empty` list.
-    (@into
-         [ $kind:tt[variant=$name:tt, Empty], $($tail:tt)* ]
-         [ $( $ready:ident, )* ]
-         [ $( [ $empty:ident, $empty_variant:ident ], )* ]
-     ) => {
-        instruction_variant!(@into
-            [ $($tail)* ]
-            [ $($ready,)* ]
-            [ $([$empty, $empty_variant],)* [$kind, $name], ]
-            );
-    };
-
-    // Append all other `name`s to first list.
-    (@into
-        [ $_kind:tt [variant=$name:tt], $($tail:tt)* ]
-        [ $( $ready:ident, )* ]
-        [ $( [ $empty:ident, $empty_variant:ident ], )* ]
-     ) => {
-        instruction_variant!(@into
-            [ $($tail)* ]
-            [ $($ready,)* $name, ],
-            [ $( [$empty, $empty_variant], )* ]
-            );
-    };
-    (@into
-        [ $name:ident, $($tail:tt)* ]
-        [ $($ready:ident,)* ]
-        [ $( [$empty:ident, $empty_variant:ident], )* ]
-     ) => {
-        instruction_variant!(@into
-            [ $($tail)* ]
-            [ $($ready,)* $name, ]
-            [ $( [$empty, $empty_variant], )* ]
-            );
-    };
-
-    // Below, we implement `ToInstruction` as `Instruction::$name(value.clone())`;
-    // If it's not specified otherwise, we assume the variant name matches the type name.
-    (@one $kind:tt []) => {
-        instruction_variant!(@one $kind [variant=$kind]);
-    };
-
-    // Don't use `Clone` if there's no inner value.
-    (@one $kind:ty [ variant=$name:ident, Empty ]) => {
-        py_instruction!($kind);
-
-        impl ToInstruction for $kind {
-            fn to_instruction(&self) -> Instruction {
-                //TODO(migration-guide): make this an empty variant and remove the `()`.
-                Instruction::$name()
-            }
-        }
-    };
-
-    // Otherwise, do `Clone` the inner value.
-    (@one $kind:ident [ variant=$name:ident ]) => {
-        py_instruction!($kind);
-
-        impl ToInstruction for $kind {
-            fn to_instruction(&self) -> Instruction {
-                Instruction::$name(self.clone())
-            }
-        }
-
-        impl<'py> IntoPyObject<'py> for $kind {
-            type Target = Self;
-            type Output = Bound<'py, Self::Target>;
-            type Error = PyErr;
-
-            fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
-                Ok(Py::new(py, PyClassInitializer::from(self))?.into_bound(py))
-            }
-        }
-    };
-}
-
-instruction_variant!(
-    Arithmetic,
-    BinaryLogic,
-    Call,
-    Capture,
-    CalibrationDefinition,
-    CircuitDefinition,
-    Comparison,
-    Convert,
-    Declaration,
-    Delay,
-    Exchange,
-    Fence,
-    FrameDefinition,
-    Gate,
-    GateDefinition,
-    Include,
-    Jump,
-    JumpUnless,
-    JumpWhen,
-    Label,
-    Load,
-    MeasureCalibrationDefinition,
-    Measurement,
-    Move,
-    Pragma,
-    Pulse,
-    RawCapture,
-    Reset,
-    SetFrequency,
-    SetPhase,
-    SetScale,
-    ShiftFrequency,
-    ShiftPhase,
-    Store,
-    SwapPhases,
-    UnaryLogic,
-    WaveformDefinition,
-    HaltType[variant = Halt, Empty],
-    NopType[variant = Nop, Empty],
-    WaitType[variant = Wait, Empty],
-);
 
 // The following types implement `__getnewargs__` manually because,
 // as (complex-)enums, they get their `__new__` methods from PyO3 directly,
