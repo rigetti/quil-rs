@@ -582,8 +582,7 @@ where
     }
 }
 
-// TODO: rename and document this macro
-macro_rules! instruction_getnewargs {
+macro_rules! instruction_variant {
     // This is the main entrypoint of the macro.
     // It expects a list of `Instruction` types, optionally with a sublist of arguments:
     //
@@ -591,11 +590,11 @@ macro_rules! instruction_getnewargs {
     // - use `[Empty]` if the variant has no inner value (e.g., `Halt`, `Nop`, or `Wait`)
     ($($kind:tt $([$($args:tt)*])? ),* ,) => {
         // Process the individual types to generate `ToInstruction` implementations.
-        $( instruction_getnewargs!(@one $kind [$($($args)*)?]); )+
+        $( instruction_variant!(@one $kind [$($($args)*)?]); )+
 
         // Divide the list into those with inner values and those without,
         // and use it to generate the `IntoPyObject` implementation for `Instruction`.
-        instruction_getnewargs!(@into [$( $kind $([$($args)*])? ,)*] [] []);
+        instruction_variant!(@into [$( $kind $([$($args)*])? ,)*] [] []);
 
         impl<'a, 'py> pyo3::FromPyObject<'a, 'py> for Instruction {
             type Error = pyo3::PyErr;
@@ -635,7 +634,7 @@ macro_rules! instruction_getnewargs {
          [ $( $ready:ident, )* ]
          [ $( [ $empty:ident, $empty_variant:ident ], )* ]
      ) => {
-        instruction_getnewargs!(@into
+        instruction_variant!(@into
             [ $($tail)* ]
             [ $($ready,)* ]
             [ $([$empty, $empty_variant],)* [$kind, $name], ]
@@ -648,7 +647,7 @@ macro_rules! instruction_getnewargs {
         [ $( $ready:ident, )* ]
         [ $( [ $empty:ident, $empty_variant:ident ], )* ]
      ) => {
-        instruction_getnewargs!(@into
+        instruction_variant!(@into
             [ $($tail)* ]
             [ $($ready,)* $name, ],
             [ $( [$empty, $empty_variant], )* ]
@@ -659,7 +658,7 @@ macro_rules! instruction_getnewargs {
         [ $($ready:ident,)* ]
         [ $( [$empty:ident, $empty_variant:ident], )* ]
      ) => {
-        instruction_getnewargs!(@into
+        instruction_variant!(@into
             [ $($tail)* ]
             [ $($ready,)* $name, ]
             [ $( [$empty, $empty_variant], )* ]
@@ -669,7 +668,7 @@ macro_rules! instruction_getnewargs {
     // Below, we implement `ToInstruction` as `Instruction::$name(value.clone())`;
     // If it's not specified otherwise, we assume the variant name matches the type name.
     (@one $kind:tt []) => {
-        instruction_getnewargs!(@one $kind [variant=$kind]);
+        instruction_variant!(@one $kind [variant=$kind]);
     };
 
     // Don't use `Clone` if there's no inner value.
@@ -706,7 +705,7 @@ macro_rules! instruction_getnewargs {
     };
 }
 
-instruction_getnewargs!(
+instruction_variant!(
     Arithmetic,
     BinaryLogic,
     Call,
