@@ -254,76 +254,89 @@ where
 /// - `instruction(Name)` if the variant name (`Name`) differs from the type name
 /// - `instruction(Name, Empty)` if the variant has no inner value (e.g., `Halt`, `Nop`, `Wait`)
 ///
+/// `instruction` (in any of its forms) must be the last item in a type's sublist, if present.
+///
 /// This generates the `ToInstruction` implementation for the type, as well as the
 /// combined `IntoPyObject` and `FromPyObject` implementations for `Instruction` itself.
 macro_rules! impl_instruction {
     // Initial capture: this lets us grab all the names in one go,
-    // which we can then use to generate parts of the module initializer,
-    // as well as the combined `IntoPyObject`/`FromPyObject` implementations for
-    // `Instruction` itself. After we generate that, the entire input is passed on
-    // to the @list rule, which will chew through the tokens recursively.
+    // which we can then use to generate parts of the module initializer.
+    // After we generate that, the entire input is passed on to the @list rule,
+    // which will chew through the tokens recursively.
+    //
+    // @list carries an accumulator (initially empty) of the types that make up an
+    // `Instruction` variant. It's filled in as we go by the @args rules below, so that
+    // by the time the whole list has been processed we can generate the combined
+    // `IntoPyObject`/`FromPyObject` implementations for `Instruction` itself without
+    // needing a second pass over the full list.
     ([$( $name:ident $([$($args: tt)*])? ),* ,]) => {
-        impl_instruction!(@list [$($name $([$($args)*])? ,)*]);
-        impl_instruction!(@collect [$($name $([$($args)*])? ,)*] []);
+        impl_instruction!(@list [$($name $([$($args)*])? ,)*] []);
     };
 
-    // Terminal rule -- an empty list expands to nothing.
-    (@list []) => {};
-
-    // Implements default methods for an instruction, then recursively expands the rest of the list.
-    (@list [$name:ident, $($tail: tt)*]) => {
-        impl_instruction!(@one $name [+ repr + quil]);
-        impl_instruction!(@list [$($tail)*]);
+    // Terminal rule -- once the list is empty, generate the `Instruction` impls
+    // from whichever types were collected along the way.
+    (@list [] [$($ready: tt)*]) => {
+        impl_instruction!(@finalize [$($ready)*]);
     };
 
-    // Implements specific methods for an instruction, then recursively expands the rest of the list.
-    (@list [$name: ident [$($args: tt)+], $($tail: tt)*]) => {
-        impl_instruction!(@one $name [+ $($args)*]);
-        impl_instruction!(@list [$($tail)*]);
+    // Expands a single type's default methods (`[repr + quil]`), then its args.
+    (@list [$name:ident, $($tail: tt)*] [$($ready: tt)*]) => {
+        impl_instruction!(@args $name [+ repr + quil] [$($tail)*] [$($ready)*]);
     };
 
-    // All the `@one` rules expand a single `$name` and its list of required methods.
+    // Expands a single type's specified methods, then its args.
+    (@list [$name: ident [$($args: tt)+], $($tail: tt)*] [$($ready: tt)*]) => {
+        impl_instruction!(@args $name [+ $($args)*] [$($tail)*] [$($ready)*]);
+    };
 
-    // Terminal rule -- an empty list expands to nothing.
-    (@one $name: ident []) => {};
+    // The `@args` rules walk a single type's sublist of items one at a time,
+    // implementing each one, then move on to the next type in `@list` once done.
+    // `instruction` (if present) is expected to be the last item in the sublist,
+    // since it also determines whether the type is added to the accumulator.
 
-    (@one $name: ident [+ repr $($tail: tt)*]) => {
+    // Terminal rule -- done with this type's args; move on to the next type.
+    (@args $name: ident [] [$($tail: tt)*] [$($ready: tt)*]) => {
+        impl_instruction!(@list [$($tail)*] [$($ready)*]);
+    };
+
+    (@args $name: ident [+ repr $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
         impl_repr!($name);
-        impl_instruction!(@one $name [$($tail)*]);
+        impl_instruction!(@args $name [$($rest)*] [$($tail)*] [$($ready)*]);
     };
 
-    (@one $name: ident [+ quil $($tail: tt)*]) => {
+    (@args $name: ident [+ quil $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
         impl_to_quil!($name);
-        impl_instruction!(@one $name [$($tail)*]);
+        impl_instruction!(@args $name [$($rest)*] [$($tail)*] [$($ready)*]);
     };
 
-    (@one $name: ident [+ parse $($tail: tt)*]) => {
+    (@args $name: ident [+ parse $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
         impl_parse!($name);
-        impl_instruction!(@one $name [$($tail)*]);
+        impl_instruction!(@args $name [$($rest)*] [$($tail)*] [$($ready)*]);
     };
 
-    (@one $name: ident [+ out $($tail: tt)*]) => {
+    (@args $name: ident [+ out $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
         impl_out!($name);
-        impl_instruction!(@one $name [$($tail)*]);
+        impl_instruction!(@args $name [$($rest)*] [$($tail)*] [$($ready)*]);
     };
 
-    // Implement the `Instruction` variant conversions for a type whose variant name
-    // (given in parens) differs from the type name.
-    (@one $name: ident [+ instruction($variant: ident, Empty) $($tail: tt)*]) => {
+    // Implement the `Instruction` variant conversions for a type with no inner value
+    // (e.g. `Halt`, `Nop`, `Wait`), whose variant name (given in parens) differs from
+    // the type name, and add it to the accumulator.
+    (@args $name: ident [+ instruction($variant: ident, Empty) $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
         impl_instruction!(@instr_one $name [variant=$variant, Empty]);
-        impl_instruction!(@one $name [$($tail)*]);
+        impl_instruction!(@args $name [$($rest)*] [$($tail)*] [$($ready)* $name [variant=$variant, Empty] ,]);
     };
 
-    (@one $name: ident [+ instruction($variant: ident) $($tail: tt)*]) => {
+    // As above, but the variant holds an inner value.
+    (@args $name: ident [+ instruction($variant: ident) $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
         impl_instruction!(@instr_one $name [variant=$variant]);
-        impl_instruction!(@one $name [$($tail)*]);
+        impl_instruction!(@args $name [$($rest)*] [$($tail)*] [$($ready)* $name [variant=$variant] ,]);
     };
 
-    // Implement the `Instruction` variant conversions for a type,
-    // assuming the variant name matches the type name and holds an inner value.
-    (@one $name: ident [+ instruction $($tail: tt)*]) => {
+    // As above, but the variant name matches the type name.
+    (@args $name: ident [+ instruction $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
         impl_instruction!(@instr_one $name [variant=$name]);
-        impl_instruction!(@one $name [$($tail)*]);
+        impl_instruction!(@args $name [$($rest)*] [$($tail)*] [$($ready)* $name [variant=$name] ,]);
     };
 
     // The `@instr_one` rules implement `ToInstruction` as `Instruction::$name(value.clone())`.
@@ -359,60 +372,6 @@ macro_rules! impl_instruction {
                 Ok(Py::new(py, PyClassInitializer::from(self))?.into_bound(py))
             }
         }
-    };
-
-    // The `@collect` rules filter the full list down to only the types that make up
-    // an `Instruction` variant (those with an `instruction` item in their sublist),
-    // recording their variant name and whether they hold an inner value. Once fully
-    // filtered, the result is used to generate the combined `IntoPyObject` and
-    // `FromPyObject` implementations for `Instruction` itself.
-
-    (@collect [] [$($ready: tt)*]) => {
-        impl_instruction!(@finalize [$($ready)*]);
-    };
-
-    // Bare names never carry an `instruction` item, so skip them.
-    (@collect [$name: ident, $($tail: tt)*] [$($ready: tt)*]) => {
-        impl_instruction!(@collect [$($tail)*] [$($ready)*]);
-    };
-
-    (@collect [$name: ident [$($args: tt)*], $($tail: tt)*] [$($ready: tt)*]) => {
-        impl_instruction!(@scan $name [+ $($args)*] [$($tail)*] [$($ready)*]);
-    };
-
-    // The `@scan` rules walk a single type's sublist looking for the `instruction` item,
-    // ignoring any other items (`repr`, `quil`, `parse`, `out`).
-
-    (@scan $name: ident [] [$($tail: tt)*] [$($ready: tt)*]) => {
-        impl_instruction!(@collect [$($tail)*] [$($ready)*]);
-    };
-
-    (@scan $name: ident [+ repr $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
-        impl_instruction!(@scan $name [$($rest)*] [$($tail)*] [$($ready)*]);
-    };
-
-    (@scan $name: ident [+ quil $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
-        impl_instruction!(@scan $name [$($rest)*] [$($tail)*] [$($ready)*]);
-    };
-
-    (@scan $name: ident [+ parse $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
-        impl_instruction!(@scan $name [$($rest)*] [$($tail)*] [$($ready)*]);
-    };
-
-    (@scan $name: ident [+ out $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
-        impl_instruction!(@scan $name [$($rest)*] [$($tail)*] [$($ready)*]);
-    };
-
-    (@scan $name: ident [+ instruction($variant: ident, Empty) $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
-        impl_instruction!(@collect [$($tail)*] [$($ready)* $name [variant=$variant, Empty] ,]);
-    };
-
-    (@scan $name: ident [+ instruction($variant: ident) $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
-        impl_instruction!(@collect [$($tail)*] [$($ready)* $name [variant=$variant] ,]);
-    };
-
-    (@scan $name: ident [+ instruction $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
-        impl_instruction!(@collect [$($tail)*] [$($ready)* $name [variant=$name] ,]);
     };
 
     // Once we have the filtered list of `Instruction` variants, generate the combined
