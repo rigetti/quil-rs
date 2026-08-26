@@ -5,13 +5,16 @@ use pyo3_stub_gen::derive::gen_stub_pyclass;
 
 use crate::{
     instruction::{
-        quilpy::PyInstruction, write_expression_parameter_string, write_instruction_block,
-        Expression, GateModifier, Instruction, Qubit,
+        write_expression_parameter_string, write_instruction_block, Expression, GateModifier,
+        Instruction, Qubit,
     },
     pickleable_new,
     quil::{Quil, INDENT},
     validation::identifier::{validate_identifier, IdentifierValidationError},
 };
+
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyInstruction;
 
 use super::{write_qubit_parameters, Gate};
 
