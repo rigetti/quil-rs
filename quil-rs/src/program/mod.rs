@@ -1008,7 +1008,7 @@ impl Program {
         let mut umat = Array2::eye(2usize.pow(n_qubits as u32));
         for instruction in self.instructions.clone() {
             match instruction {
-                Instruction::Halt() => {}
+                Instruction::Halt => {}
                 Instruction::Gate(mut gate) => {
                     umat = gate.to_unitary(n_qubits)?.dot(&umat);
                 }
@@ -1720,7 +1720,7 @@ I 0
     #[test]
     fn test_add_instructions() {
         let mut p = Program::new();
-        let instrs = vec![Instruction::Nop(), Instruction::Nop()];
+        let instrs = vec![Instruction::Nop, Instruction::Nop];
         p.add_instructions(instrs.clone());
         assert_eq!(p.instructions, instrs);
     }

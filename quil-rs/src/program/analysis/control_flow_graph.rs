@@ -427,7 +427,7 @@ impl BasicBlockTerminator<'_> {
             BasicBlockTerminator::Jump { target } => Some(Instruction::Jump(Jump {
                 target: target.clone(),
             })),
-            BasicBlockTerminator::Halt => Some(Instruction::Halt()),
+            BasicBlockTerminator::Halt => Some(Instruction::Halt),
         }
     }
 }
@@ -510,7 +510,7 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
                 | Instruction::Pragma(_)
                 | Instruction::Measurement(_)
                 | Instruction::Move(_)
-                | Instruction::Nop()
+                | Instruction::Nop
                 | Instruction::Pulse(_)
                 | Instruction::RawCapture(_)
                 | Instruction::Reset(_)
@@ -522,7 +522,7 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
                 | Instruction::Store(_)
                 | Instruction::SwapPhases(_)
                 | Instruction::UnaryLogic(_)
-                | Instruction::Wait() => current_block_instructions.push(instruction),
+                | Instruction::Wait => current_block_instructions.push(instruction),
 
                 Instruction::CalibrationDefinition(_)
                 | Instruction::CircuitDefinition(_)
@@ -552,7 +552,7 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
                 Instruction::Jump(_)
                 | Instruction::JumpUnless(_)
                 | Instruction::JumpWhen(_)
-                | Instruction::Halt() => {
+                | Instruction::Halt => {
                     let terminator = match instruction {
                         Instruction::Jump(jump) => BasicBlockTerminator::Jump {
                             target: &jump.target,
@@ -569,7 +569,7 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
                             target: &jump_when.target,
                             jump_if_condition_zero: false,
                         },
-                        Instruction::Halt() => BasicBlockTerminator::Halt,
+                        Instruction::Halt => BasicBlockTerminator::Halt,
                         _ => unreachable!(),
                     };
                     let block = BasicBlock {

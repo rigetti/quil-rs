@@ -90,50 +90,9 @@ pub enum ValidationError {
 
 /// A Quil instruction.
 ///
-/// Each variant (for Python users, each nested subclass)
-/// corresponds to a possible type of Quil instruction,
-/// which is accessible as a member within the variant.
-///
-/// # Python Users
-///
-/// The subclasses of this class are class attributes defined on it,
-/// and can be used to "wrap" instructions when they should be stored together.
-/// In particular, they are *NOT* the instruction classes you'd typically create,
-/// and instances of instruction classes are *NOT* subclasses of this class:
-///
-/// ```python
-/// >>> from quil.instructions import Instruction, Gate, Qubit
-/// >>> issubclass(Instruction.Gate, Instruction)
-/// True
-/// >>> issubclass(Gate, Instruction)
-/// False
-/// >>> g = Gate("X", (), (Qubit.Fixed(0),), ())
-/// >>> isinstance(g, Gate)
-/// True
-/// >>> isinstance(g, Instruction.Gate)
-/// False
-/// >>> g_instr = Instruction.Gate(g)
-/// >>> isinstance(g_instr, Gate)
-/// False
-/// >>> isinstance(g_instr, Instruction.Gate)
-/// True
-/// >>> isinstance(g_instr._0, Gate)
-/// True
-/// >>> g_instr._0 == g
-/// True
-/// ```
-///
-/// The point of this class is to wrap different kinds of instructions
-/// when stored together in a collection, all of which are of type `Instruction`.
-/// You can check for different instruction variants and destructure them using `match`:
-///
-/// ```python
-/// match g_instr:
-///     case Instruction.Gate(gate):
-///         assert isinstance(gate, Gate)
-///     case Instruction.Wait() | Instruction.Nop():
-///         # note the `()` -- these aren't like Python's enumerations!
-/// ```
+/// Each variant corresponds to a possible type of Quil instruction,
+/// which is accessible as a member within the variant,
+/// excepting the `Halt`, `Nop`, and `Wait` variants, which are unit variants.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Instruction {
     Arithmetic(Arithmetic),
@@ -151,16 +110,7 @@ pub enum Instruction {
     FrameDefinition(FrameDefinition),
     Gate(Gate),
     GateDefinition(GateDefinition),
-    // Developer note: In Rust, this could be just `Halt`,
-    // but to be compatible with PyO3's "complex enums",
-    // it was changed to be an empty tuple variant.
-    // The same restriction applied `Nop` and `Wait`,
-    // as well as those in the `Expression` enumeration.
-    // Now, we expose this as a dedicated pyclass and implement FromPyObject manually,
-    // so there is no longer a need for them to exist in this manner,
-    // but reverting it back is another breaking change for Rust users,
-    // and so it needs to be done with coordination with quil_rs consumers.
-    Halt(),
+    Halt,
     Include(Include),
     Jump(Jump),
     JumpUnless(JumpUnless),
@@ -170,7 +120,7 @@ pub enum Instruction {
     MeasureCalibrationDefinition(MeasureCalibrationDefinition),
     Measurement(Measurement),
     Move(Move),
-    Nop(),
+    Nop,
     Pragma(Pragma),
     Pulse(Pulse),
     RawCapture(RawCapture),
@@ -184,7 +134,7 @@ pub enum Instruction {
     SwapPhases(SwapPhases),
     UnaryLogic(UnaryLogic),
     WaveformDefinition(WaveformDefinition),
-    Wait(),
+    Wait,
 }
 
 impl Instruction {
@@ -217,7 +167,7 @@ impl Instruction {
             | Instruction::Exchange(_)
             | Instruction::Gate(_)
             | Instruction::GateDefinition(_)
-            | Instruction::Halt()
+            | Instruction::Halt
             | Instruction::Include(_)
             | Instruction::Jump(_)
             | Instruction::JumpUnless(_)
@@ -226,11 +176,11 @@ impl Instruction {
             | Instruction::Load(_)
             | Instruction::Measurement(_)
             | Instruction::Move(_)
-            | Instruction::Nop()
+            | Instruction::Nop
             | Instruction::Pragma(_)
             | Instruction::Reset(_)
             | Instruction::Store(_)
-            | Instruction::Wait()
+            | Instruction::Wait
             | Instruction::UnaryLogic(_) => false,
         }
     }
@@ -417,9 +367,9 @@ impl Quil for Instruction {
             Instruction::WaveformDefinition(waveform_definition) => {
                 waveform_definition.write(f, fall_back_to_debug)
             }
-            Instruction::Halt() => write!(f, "HALT").map_err(Into::into),
-            Instruction::Nop() => write!(f, "NOP").map_err(Into::into),
-            Instruction::Wait() => write!(f, "WAIT").map_err(Into::into),
+            Instruction::Halt => write!(f, "HALT").map_err(Into::into),
+            Instruction::Nop => write!(f, "NOP").map_err(Into::into),
+            Instruction::Wait => write!(f, "WAIT").map_err(Into::into),
             Instruction::Jump(jump) => jump.write(f, fall_back_to_debug),
             Instruction::JumpUnless(jump) => jump.write(f, fall_back_to_debug),
             Instruction::JumpWhen(jump) => jump.write(f, fall_back_to_debug),
@@ -659,7 +609,7 @@ impl Instruction {
             | Instruction::FrameDefinition(_)
             | Instruction::Gate(_)
             | Instruction::GateDefinition(_)
-            | Instruction::Halt()
+            | Instruction::Halt
             | Instruction::Include(_)
             | Instruction::Jump(_)
             | Instruction::JumpUnless(_)
@@ -669,12 +619,12 @@ impl Instruction {
             | Instruction::MeasureCalibrationDefinition(_)
             | Instruction::Measurement(_)
             | Instruction::Move(_)
-            | Instruction::Nop()
+            | Instruction::Nop
             | Instruction::Pragma(_)
             | Instruction::Store(_)
             | Instruction::UnaryLogic(_)
             | Instruction::WaveformDefinition(_)
-            | Instruction::Wait() => None,
+            | Instruction::Wait => None,
         }
     }
 
@@ -915,7 +865,7 @@ impl InstructionHandler for DefaultHandler {
     fn is_scheduled(&self, instruction: &Instruction) -> bool {
         match instruction {
             Instruction::Reset(_) => false,
-            Instruction::Wait() => true,
+            Instruction::Wait => true,
             _ => self.role(instruction) == InstructionRole::RFControl,
         }
     }
@@ -956,15 +906,15 @@ impl InstructionHandler for DefaultHandler {
             | Instruction::Move(_)
             | Instruction::Exchange(_)
             | Instruction::Load(_)
-            | Instruction::Nop()
+            | Instruction::Nop
             | Instruction::Pragma(_)
             | Instruction::Store(_) => InstructionRole::ClassicalCompute,
 
-            Instruction::Halt()
+            Instruction::Halt
             | Instruction::Jump(_)
             | Instruction::JumpWhen(_)
             | Instruction::JumpUnless(_)
-            | Instruction::Wait() => InstructionRole::ControlFlow,
+            | Instruction::Wait => InstructionRole::ControlFlow,
         }
     }
 
@@ -1288,12 +1238,12 @@ impl InstructionHandler for DefaultHandler {
             Instruction::Declaration(_)
             | Instruction::Fence(_)
             | Instruction::FrameDefinition(_)
-            | Instruction::Halt()
-            | Instruction::Wait()
+            | Instruction::Halt
+            | Instruction::Wait
             | Instruction::Include(_)
             | Instruction::Jump(_)
             | Instruction::Label(_)
-            | Instruction::Nop()
+            | Instruction::Nop
             | Instruction::Pragma(_)
             | Instruction::Reset(_)
             | Instruction::SwapPhases(_) => MemoryAccesses::none(),

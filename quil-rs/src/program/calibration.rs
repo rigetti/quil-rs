@@ -881,11 +881,11 @@ X 0
             .unwrap();
         let expected = CalibrationExpansionOutput {
             new_instructions: vec![
-                crate::instruction::Instruction::Nop(),
-                crate::instruction::Instruction::Wait(),
-                crate::instruction::Instruction::Halt(),
-                crate::instruction::Instruction::Nop(),
-                crate::instruction::Instruction::Wait(),
+                crate::instruction::Instruction::Nop,
+                crate::instruction::Instruction::Wait,
+                crate::instruction::Instruction::Halt,
+                crate::instruction::Instruction::Nop,
+                crate::instruction::Instruction::Wait,
             ],
             detail: CalibrationExpansion {
                 calibration_used: CalibrationSource::Calibration(CalibrationIdentifier {
