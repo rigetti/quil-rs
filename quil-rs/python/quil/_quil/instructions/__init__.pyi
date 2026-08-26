@@ -1168,14 +1168,32 @@ class Include(Instruction):
 
 class Instruction:
     r"""
-    Superclass for all [Instruction] variants in Python.
+    Superclass for all [`Instruction`] variants in Python.
     
-    Rather than expose the complex enum directly,
-    we annotate each variant `#[pyclass(parent = PyInstruction)]`
-    and add a constructor that attaches the parent class to new instances.
+    The subclasses of this class are the various Quil instructions types.
     
-    Via the macros below, each variant implements `From<Bound<'_, T>>
-    for Instruction`
+    ```python
+    >>> from quil.instructions import Instruction, Gate, Qubit
+    >>> g = Gate("X", (), (Qubit.Fixed(0),), ())
+    >>> isinstance(g, Gate)
+    True
+    >>> isinstance(g, Instruction)
+    True
+    ```
+    
+    You can check for different instruction variants and destructure them using `match`:
+    
+    ```python
+    match x:
+        case Gate():
+            print("A gate instruction!")
+        case Wait | Nop | Halt:
+            print("A singleton instruction!")
+        case Instruction():
+            print("Some other instruction!")
+        case _:
+            print("Not an instruction!")
+    ```
     """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __hash__(self) -> builtins.int: ...
