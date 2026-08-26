@@ -216,22 +216,24 @@ macro_rules! py_instruction {
     };
 }
 
-/// Trait for types that can be converted into an `Instruction`.
-trait ToInstruction {
-    fn to_instruction(&self) -> Instruction;
-}
+/// Implement [IntoPyObject] for a `#[pyclass(subclass)]`
+/// that has a `From<$T> for PyClassInitializer<$T>` implementation.
+macro_rules! impl_into_py_subclass {
+    ($kind:ty) => {
+        impl<'py> IntoPyObject<'py> for $kind {
+            type Target = Self;
+            type Output = Bound<'py, Self::Target>;
+            type Error = PyErr;
 
-/// Convert bound python objects into their corresponding `Instruction` variant.
-impl<'py, T> From<Bound<'py, T>> for Instruction
-where
-    T: ToInstruction + PyClass,
-{
-    fn from(value: Bound<'py, T>) -> Self {
-        value.borrow().to_instruction()
-    }
+            fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+                Ok(Py::new(py, PyClassInitializer::from(self))?.into_bound(py))
+            }
+        }
+    };
 }
 
 /// Implement expected methods on each of the instruction-related types, given as a list.
+///
 /// This makes it easy to see which classes make up the `instructions` module,
 /// to verify that those classes have necessary `#[pymethods]` implemented,
 /// and to see at a glance what differences they do have in their implementations.
@@ -243,142 +245,133 @@ where
 /// impl_instruction!([
 ///     A, // By default, [repr + quil]
 ///     B [repr + quil],
-///     C [quil + parse],
+///     *C [quil + parse],
 /// ]);
 /// ```
 ///
-/// Types that are also variants of the [`Instruction`] enum should additionally
-/// include an `instruction` item in their sublist:
+/// Those prefixed with `*` should be `PyInstruction` subclasses,
+/// and can optionally specify their variant name and/or if they lack an inner value
+/// using `*RustTypeName(variant=InstructionVariantName, empty=true)`.
 ///
-/// - `instruction` if the variant name matches the type name and holds an inner value
-/// - `instruction(Name)` if the variant name (`Name`) differs from the type name
-/// - `instruction(Name, Empty)` if the variant has no inner value (e.g., `Halt`, `Nop`, `Wait`)
-///
-/// `instruction` (in any of its forms) must be the last item in a type's sublist, if present.
-///
-/// This generates the `ToInstruction` implementation for the type, as well as the
-/// combined `IntoPyObject` and `FromPyObject` implementations for `Instruction` itself.
+/// Any type can override the default implementations produced by specifying a sublist
+/// of some combination of `repr`, `quil`, `parse`, and `out` separated by `+`s.
 macro_rules! impl_instruction {
-    // Initial capture: this lets us grab all the names in one go,
-    // which we can then use to generate parts of the module initializer.
-    // After we generate that, the entire input is passed on to the @list rule,
-    // which will chew through the tokens recursively.
+    // This macro has a lot of matching rules, but is conceptually very simple.
+    // Given a non-empty list of types, it outputs two new macro invocations:
+    // the first processes the head of the list, and the second processes the rest.
+    // Of course, that second invocation is a recursive call to this macro,
+    // so once the list is empty, it knows it has processed the full list.
     //
-    // @list carries an accumulator (initially empty) of the types that make up an
-    // `Instruction` variant. It's filled in as we go by the @args rules below, so that
-    // by the time the whole list has been processed we can generate the combined
-    // `IntoPyObject`/`FromPyObject` implementations for `Instruction` itself without
-    // needing a second pass over the full list.
-    ([$( $name:ident $([$($args: tt)*])? ),* ,]) => {
-        impl_instruction!(@list [$($name $([$($args)*])? ,)*] []);
+    // The rules to operate on a single item _could_ be pushed to another macro,
+    // but instead they are included here to just keep everything together.
+    // They are prefixed with the `@one` token and take a type name and list of args,
+    // and they operate essentially the same way as the broader macro:
+    // strip off and process the first arg to produce some output,
+    // then output another invocation with the remaining arguments.
+    //
+    // The internal process to handle the list is formed of rules prefixed with `@list`.
+    // In addition to kicking off the `@one` handling for each type,
+    // they also need to accumulate those types that are `Instruction` variants
+    // so that once the full list is processed, it can output additional methods
+    // implemented on `Instruction` that need to know about all of its variants.
+    // Because some of those variants have inner values and some do not,
+    // the macro needs to split them into two different accumulator lists,
+    // and hence the actual `@list` matching is a series of rules.
+    // Nevertheless, their basic output is as described above.
+
+    // The initial capture kicks off the recursive processing with empty accumulators.
+    ($tokens:tt) => {
+        impl_instruction!(@list $tokens [] []);
     };
 
-    // Terminal rule -- once the list is empty, generate the `Instruction` impls
-    // from whichever types were collected along the way.
-    (@list [] [$($ready: tt)*]) => {
-        impl_instruction!(@finalize [$($ready)*]);
+    // The terminal rule (empty input list) processes the accumulated lists,
+    // though the actual implementation is below to make this easier to grok.
+    (@list [] $variants:tt $empties:tt) => {
+        impl_instruction!(@finalize $variants $empties);
     };
 
-    // Expands a single type's default methods (`[repr + quil]`), then its args.
-    (@list [$name:ident, $($tail: tt)*] [$($ready: tt)*]) => {
-        impl_instruction!(@args $name [+ repr + quil] [$($tail)*] [$($ready)*]);
+    // Types without `*` are not `Instruction` variants and aren't accumulated.
+    (@list [$name:ident $([$($args:tt)*])?, $($tail:tt)*] $variants:tt $empties:tt) => {
+        impl_instruction!(@args $name $([$($args)*])?);
+        impl_instruction!(@list [$($tail)*] $variants $empties);
     };
 
-    // Expands a single type's specified methods, then its args.
-    (@list [$name: ident [$($args: tt)+], $($tail: tt)*] [$($ready: tt)*]) => {
-        impl_instruction!(@args $name [+ $($args)*] [$($tail)*] [$($ready)*]);
+    // Types prefixed with `*` are `Instruction` variants to accumulate.
+    // They can use specific arguments in `()` to specify an alternative variant name
+    // and whether or not the variant has an inner value.
+
+    // This has an explicit variant name and no inner value.
+    (@list [*$name:ident(variant=$variant:ident, empty=true)  $([$($args:tt)*])?, $($tail:tt)*]
+     $variants:tt [$($empties:tt)*]) => {
+        py_instruction!($name);
+        // Note: no need to `impl_into_py_class!` because it's handled by `py_singleton!`.
+        impl_instruction!(@args $name $([$($args)*])?);
+        impl_instruction!(@list [$($tail)*] $variants [$($empties)* [$name, $variant],]);
     };
 
-    // The `@args` rules walk a single type's sublist of items one at a time,
-    // implementing each one, then move on to the next type in `@list` once done.
-    // `instruction` (if present) is expected to be the last item in the sublist,
-    // since it also determines whether the type is added to the accumulator.
-
-    // Terminal rule -- done with this type's args; move on to the next type.
-    (@args $name: ident [] [$($tail: tt)*] [$($ready: tt)*]) => {
-        impl_instruction!(@list [$($tail)*] [$($ready)*]);
+    // This has an explicit variant name and has an inner value.
+    (@list [*$name:ident(variant=$variant:ident $(, empty=false)?) $([$($args:tt)*])?, $($tail:tt)*] [$($variants:tt)*] $empties:tt) => {
+        py_instruction!($name);
+        impl_into_py_subclass!($name);
+        impl_instruction!(@args $name $([$($args)*])?);
+        impl_instruction!(@list [$($tail)*] [$($variants)* [$name, $variant],] $empties);
     };
 
-    (@args $name: ident [+ repr $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
+    // This assumes the variant name matches the type name and expands to one of the above.
+    (@list [*$name:ident$((empty=$is_empty:literal))? $([$($args:tt)*])?, $($tail:tt)*] $variants:tt $empties:tt) => {
+        impl_instruction!(@list [*$name(variant=$name $(,empty=$is_empty)?) $([$($args)*])?, $($tail)*] $variants $empties);
+    };
+
+    // The `@args` rules walk a single type's sublist of arguments one at a time.
+
+    // Default rule when no args are given.
+    (@args $name: ident) => { impl_instruction!(@args $name [+ repr + quil]); };
+
+    // Terminal rule when done processing arguments.
+    (@args $name: ident []) => {};
+
+    (@args $name: ident [+repr $($rest:tt)*]) => {
         impl_repr!($name);
-        impl_instruction!(@args $name [$($rest)*] [$($tail)*] [$($ready)*]);
+        impl_instruction!(@args $name [$($rest)*]);
     };
 
-    (@args $name: ident [+ quil $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
+    (@args $name: ident [+quil $($rest:tt)*]) => {
         impl_to_quil!($name);
-        impl_instruction!(@args $name [$($rest)*] [$($tail)*] [$($ready)*]);
+        impl_instruction!(@args $name [$($rest)*]);
     };
 
-    (@args $name: ident [+ parse $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
+    (@args $name: ident [+parse $($rest:tt)*]) => {
         impl_parse!($name);
-        impl_instruction!(@args $name [$($rest)*] [$($tail)*] [$($ready)*]);
+        impl_instruction!(@args $name [$($rest)*]);
     };
 
-    (@args $name: ident [+ out $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
+    (@args $name: ident [+out $($rest:tt)*]) => {
         impl_out!($name);
-        impl_instruction!(@args $name [$($rest)*] [$($tail)*] [$($ready)*]);
+        impl_instruction!(@args $name [$($rest)*]);
     };
 
-    // Implement the `Instruction` variant conversions for a type with no inner value
-    // (e.g. `Halt`, `Nop`, `Wait`), whose variant name (given in parens) differs from
-    // the type name, and add it to the accumulator.
-    (@args $name: ident [+ instruction($variant: ident, Empty) $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
-        impl_instruction!(@instr_one $name [variant=$variant, Empty]);
-        impl_instruction!(@args $name [$($rest)*] [$($tail)*] [$($ready)* $name [variant=$variant, Empty] ,]);
+    // If it didn't start with a `+`, add one.
+    (@args $name: ident [$($rest:tt)*]) => {
+        impl_instruction!(@args $name [+ $($rest)*]);
     };
 
-    // As above, but the variant holds an inner value.
-    (@args $name: ident [+ instruction($variant: ident) $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
-        impl_instruction!(@instr_one $name [variant=$variant]);
-        impl_instruction!(@args $name [$($rest)*] [$($tail)*] [$($ready)* $name [variant=$variant] ,]);
-    };
-
-    // As above, but the variant name matches the type name.
-    (@args $name: ident [+ instruction $($rest: tt)*] [$($tail: tt)*] [$($ready: tt)*]) => {
-        impl_instruction!(@instr_one $name [variant=$name]);
-        impl_instruction!(@args $name [$($rest)*] [$($tail)*] [$($ready)* $name [variant=$name] ,]);
-    };
-
-    // The `@instr_one` rules implement `ToInstruction` as `Instruction::$name(value.clone())`.
-
-    // Don't use `Clone` if there's no inner value.
-    (@instr_one $kind: ty [variant=$name: ident, Empty]) => {
-        py_instruction!($kind);
-
-        impl ToInstruction for $kind {
-            fn to_instruction(&self) -> Instruction {
-                //TODO(migration-guide): make this an empty variant and remove the `()`.
-                Instruction::$name()
-            }
-        }
-    };
-
-    // Otherwise, clone the inner value.
-    (@instr_one $kind: ident [variant=$name: ident]) => {
-        py_instruction!($kind);
-
-        impl ToInstruction for $kind {
-            fn to_instruction(&self) -> Instruction {
-                Instruction::$name(self.clone())
-            }
-        }
-
-        impl<'py> IntoPyObject<'py> for $kind {
-            type Target = Self;
+    // Expand the collected accumulators into `Instruction` methods.
+    (@finalize
+        [$([$instr:ident, $instr_variant:ident],)*]
+        [$([$empty:ident, $empty_variant:ident],)*]
+    ) => {
+        impl<'py> IntoPyObject<'py> for Instruction {
+            type Target = PyAny;
             type Output = Bound<'py, Self::Target>;
             type Error = PyErr;
 
             fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
-                Ok(Py::new(py, PyClassInitializer::from(self))?.into_bound(py))
+                match self {
+                    $(Instruction::$instr_variant(value) => value.into_bound_py_any(py),)*
+                    $(Instruction::$empty_variant() => $empty.into_bound_py_any(py),)*
+                }
             }
         }
-    };
-
-    // Once we have the filtered list of `Instruction` variants, generate the combined
-    // `FromPyObject` implementation for `Instruction`, and hand off to `@into` to build
-    // the combined `IntoPyObject` implementation.
-    (@finalize [$( $kind: tt [$($args: tt)*] ,)*]) => {
-        impl_instruction!(@into [$( $kind [$($args)*] ,)*] [] []);
 
         impl<'a, 'py> pyo3::FromPyObject<'a, 'py> for Instruction {
             type Error = pyo3::PyErr;
@@ -386,135 +379,97 @@ macro_rules! impl_instruction {
             fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
                 if false {
                     unreachable!("this makes the macro easier to write");
-                }$( else if let Ok(value) = obj.cast::<$kind>() {
-                    Ok(<$kind as ToInstruction>::to_instruction(&value.borrow()))
+                }$( else if let Ok(value) = obj.cast::<$instr>() {
+                    Ok(Instruction::$instr_variant(value.extract()?))
+                })* $( else if let Ok(_) = obj.cast::<$empty>() {
+                    // TODO: remove the `()`s
+                    Ok(Instruction::$empty_variant())
                 })* else {
                     Err(CastError::new(obj, PyInstruction::classinfo_object(obj.py())))?
                 }
             }
         }
     };
-
-    // Once the left list is empty (see below for how that happens),
-    // we generate the `IntoPyObject` implementation from the names in the right list.
-    (@into [] [$( $name:ident, )*] [$( [$empty:ident, $empty_variant:ident], )* ]) => {
-        impl<'py> IntoPyObject<'py> for Instruction {
-            type Target = PyAny;
-            type Output = Bound<'py, Self::Target>;
-            type Error = PyErr;
-
-           fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
-                match self {
-                    $(Instruction::$name(value) => value.into_bound_py_any(py),)*
-                    $(Instruction::$empty_variant() => $empty.into_bound_py_any(py),)*
-                }
-            }
-        }
-    };
-
-    // Put Empty variants into the `empty` list.
-    (@into
-         [ $kind:tt [variant=$name:tt, Empty], $($tail:tt)* ]
-         [ $( $ready:ident, )* ]
-         [ $( [ $empty:ident, $empty_variant:ident ], )* ]
-     ) => {
-        impl_instruction!(@into
-            [ $($tail)* ]
-            [ $($ready,)* ]
-            [ $([$empty, $empty_variant],)* [$kind, $name], ]
-            );
-    };
-
-    // Append all other `name`s to first list.
-    (@into
-        [ $_kind:tt [variant=$name:tt], $($tail:tt)* ]
-        [ $( $ready:ident, )* ]
-        [ $( [ $empty:ident, $empty_variant:ident ], )* ]
-     ) => {
-        impl_instruction!(@into
-            [ $($tail)* ]
-            [ $($ready,)* $name, ]
-            [ $( [$empty, $empty_variant], )* ]
-            );
-    };
 }
 
+// Implement methods for instruction-related types:
+//
 impl_instruction!([
-    Arithmetic[repr + quil + instruction],
+    *Arithmetic,
     ArithmeticOperand,
     ArithmeticOperator,
     AttributeValue,
-    BinaryLogic[repr + quil + instruction],
+    *BinaryLogic,
     BinaryOperand,
     BinaryOperator,
-    CalibrationDefinition[repr + quil + instruction],
+    *CalibrationDefinition,
     CalibrationIdentifier,
-    Call[repr + quil + instruction],
-    Capture[repr + quil + instruction],
-    CircuitDefinition[repr + quil + instruction],
-    Comparison[repr + quil + instruction],
+    *Call,
+    *Capture,
+    *CircuitDefinition,
+    *Comparison,
     ComparisonOperand,
     ComparisonOperator,
-    Convert[repr + quil + instruction],
-    Declaration[repr + quil + instruction],
-    Delay[repr + quil + instruction],
+    *Convert,
+    *Declaration,
+    *Delay,
     DefGateSequence[repr],
-    Exchange[repr + quil + instruction],
+    *Exchange,
     ExternParameter,
     ExternParameterType,
     ExternSignature,
-    Fence[repr + quil + instruction],
-    FrameDefinition[repr + quil + instruction],
+    *Fence,
+    *FrameDefinition,
     FrameIdentifier[repr + quil + out],
-    Gate[repr + quil + out + instruction],
-    GateDefinition[repr + quil + instruction],
+    *Gate[repr + quil + out],
+    *GateDefinition,
     GateModifier,
     GateSpecification,
     GateType,
-    Include[repr + quil + instruction],
-    Jump[repr + quil + instruction],
-    JumpUnless[repr + quil + instruction],
-    JumpWhen[repr + quil + instruction],
-    Label[repr + quil + out + instruction],
-    Load[repr + quil + instruction],
-    MeasureCalibrationDefinition[repr + quil + instruction],
+    *Include,
+    *Jump,
+    *JumpUnless,
+    *JumpWhen,
+    *Label[repr + quil + out],
+    *Load,
+    *MeasureCalibrationDefinition,
     MeasureCalibrationIdentifier,
-    Measurement[repr + quil + instruction],
+    *Measurement,
     MemoryReference[repr + quil + parse + out],
-    Move[repr + quil + instruction],
+    *Move,
     Offset,
     OwnedGateSignature[repr],
     PauliGate[repr],
     PauliTerm[repr],
     PauliSum[repr],
-    Pragma[repr + quil + instruction],
+    *Pragma,
     PragmaArgument,
-    Pulse[repr + quil + instruction],
+    *Pulse,
     Qubit,
     QubitPlaceholder[repr],
-    RawCapture[repr + quil + instruction],
-    Reset[repr + quil + instruction],
+    *RawCapture,
+    *Reset,
     ScalarType,
-    SetFrequency[repr + quil + instruction],
-    SetPhase[repr + quil + instruction],
-    SetScale[repr + quil + instruction],
+    *SetFrequency,
+    *SetPhase,
+    *SetScale,
     Sharing[repr],
-    ShiftFrequency[repr + quil + instruction],
-    ShiftPhase[repr + quil + instruction],
-    Store[repr + quil + instruction],
-    SwapPhases[repr + quil + instruction],
+    *ShiftFrequency,
+    *ShiftPhase,
+    *Store,
+    *SwapPhases,
     Target,
     TargetPlaceholder[repr],
-    UnaryLogic[repr + quil + instruction],
+    *UnaryLogic,
     UnaryOperator,
     UnresolvedCallArgument, // Python name: CallArgument
     Vector,
     Waveform[repr],
-    WaveformDefinition[repr + quil + instruction],
+    *WaveformDefinition,
     WaveformInvocation[repr + quil + out],
-    HaltType[instruction(Halt, Empty)],
-    NopType[instruction(Nop, Empty)],
-    WaitType[instruction(Wait, Empty)],
+    *HaltType(variant = Halt, empty = true),
+    *NopType(variant = Nop, empty = true),
+    *WaitType(variant = Wait, empty = true),
 ]);
 
 /// Superclass for all [Instruction] variants in Python.
@@ -671,12 +626,23 @@ macro_rules! py_singleton {
 /// This macro handles the setup for the Python equivalents of
 /// [Instruction::Halt], [Instruction::Nop], and [Instruction::Wait].
 macro_rules! py_instruction_singleton {
-    ($T:ident, $name:literal) => {
-        py_singleton!($T, $name, |py| $T);
+    ($T:ident, $name:ident) => {
+        py_singleton!($T, stringify!($name), |py| $T);
 
         // Add the constant value to the stubs.
         #[cfg(feature = "stubs")]
-        pyo3_stub_gen::module_variable!("quil._quil.instructions", $name, $T);
+        pyo3_stub_gen::module_variable!("quil._quil.instructions", stringify!($name), $T);
+
+        impl Quil for $T {
+            fn write(
+                &self,
+                writer: &mut impl std::fmt::Write,
+                fall_back_to_debug: bool,
+            ) -> Result<(), crate::quil::ToQuilError> {
+                // TODO: remove the `()`s
+                Instruction::$name().write(writer, fall_back_to_debug)
+            }
+        }
     };
 }
 
@@ -704,9 +670,9 @@ pub(crate) struct NopType;
 )]
 pub(crate) struct WaitType;
 
-py_instruction_singleton!(HaltType, "Halt");
-py_instruction_singleton!(NopType, "Nop");
-py_instruction_singleton!(WaitType, "Wait");
+py_instruction_singleton!(HaltType, Halt);
+py_instruction_singleton!(NopType, Nop);
+py_instruction_singleton!(WaitType, Wait);
 
 /// A wrapper around an [`Instruction`] for use in Python-exposed functions and methods
 /// where we want to accept any `Instruction` variant.

@@ -1143,6 +1143,13 @@ class HaltType(Instruction):
         
         [`pickling`]: https://docs.python.org/3/library/pickle.html#object.__reduce__
         """
+    def __repr__(self) -> builtins.str:
+        r"""
+        Implements `__repr__` for Python in terms of the Rust
+        [`Debug`](std::fmt::Debug) implementation.
+        """
+    def to_quil(self) -> builtins.str: ...
+    def to_quil_or_debug(self) -> builtins.str: ...
 
 class Include(Instruction):
     @property
@@ -1567,6 +1574,13 @@ class NopType(Instruction):
         
         [`pickling`]: https://docs.python.org/3/library/pickle.html#object.__reduce__
         """
+    def __repr__(self) -> builtins.str:
+        r"""
+        Implements `__repr__` for Python in terms of the Rust
+        [`Debug`](std::fmt::Debug) implementation.
+        """
+    def to_quil(self) -> builtins.str: ...
+    def to_quil_or_debug(self) -> builtins.str: ...
 
 class Offset:
     @property
@@ -2058,6 +2072,13 @@ class WaitType(Instruction):
         
         [`pickling`]: https://docs.python.org/3/library/pickle.html#object.__reduce__
         """
+    def __repr__(self) -> builtins.str:
+        r"""
+        Implements `__repr__` for Python in terms of the Rust
+        [`Debug`](std::fmt::Debug) implementation.
+        """
+    def to_quil(self) -> builtins.str: ...
+    def to_quil_or_debug(self) -> builtins.str: ...
 
 class Waveform:
     @property
