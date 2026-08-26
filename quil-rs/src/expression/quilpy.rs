@@ -3,7 +3,6 @@ use pyo3::{
     exceptions::{PyDeprecationWarning, PyNotImplementedError},
     prelude::*,
     types::{PyAnyMethods, PyComplex, PyFloat, PyInt},
-    IntoPyObjectExt,
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 

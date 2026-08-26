@@ -175,7 +175,7 @@ type Result<T> = std::result::Result<T, ProgramError>;
     feature = "python",
     pyo3::pyclass(module = "quil._quil.program", eq, from_py_object)
 )]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
+#[cfg_attr(not(feature = "python"), optipy::strip_pyo3)]
 pub struct Program {
     #[pyo3(get, set)]
     pub calibrations: Calibrations,
@@ -199,7 +199,7 @@ pub struct Program {
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[cfg_attr(feature = "python", pyo3::pymethods)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
+#[cfg_attr(not(feature = "python"), optipy::strip_pyo3)]
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 impl Program {
     #[new]

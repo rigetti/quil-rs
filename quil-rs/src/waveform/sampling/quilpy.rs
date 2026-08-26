@@ -3,7 +3,7 @@ use numpy::{IntoPyArray as _, PyArray1, PyArrayDescr, PyArrayDescrMethods};
 use pyo3::{
     exceptions::{PyIndexError, PyStopIteration, PyValueError},
     prelude::*,
-    types::{PyComplex, PySlice, PySliceIndices},
+    types::{PySlice, PySliceIndices},
     IntoPyObjectExt,
 };
 

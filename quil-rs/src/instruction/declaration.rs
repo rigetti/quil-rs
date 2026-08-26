@@ -1,7 +1,5 @@
 #[cfg(feature = "python")]
 use crate::instruction::quilpy::PyInstruction;
-#[cfg(feature = "python")]
-use std::str::FromStr;
 
 use nom_locate::LocatedSpan;
 
@@ -305,7 +303,7 @@ impl std::fmt::Display for MemoryReference {
     }
 }
 
-impl FromStr for MemoryReference {
+impl std::str::FromStr for MemoryReference {
     type Err = SyntaxError<Self>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
