@@ -26,11 +26,13 @@ use crate::{
     quilpy::{
         deprecated_or_new, deprecated_param,
         errors::{self, PickleError},
-        from_sequence, impl_newargs, impl_to_quil, py_deprecated, py_friendly_enum, IntoNewArgs,
-        Like, NewArgs, NonZeroU64,
+        from_sequence, impl_newargs, impl_to_quil, py_deprecated, py_friendly_enum, singleton,
+        IntoNewArgs, Like, NewArgs, NonZeroU64,
     },
     validation::identifier::IdentifierValidationError,
 };
+
+use singleton::{py_singleton, PyModuleSingletonExt};
 
 create_init_submodule! {
     classes: [
@@ -202,10 +204,8 @@ macro_rules! impl_out {
     };
 }
 
-/// Implement [IntoPyObject] for a `pyclass` that subclasses [PyInstruction].
-///
-/// Implement `From<$T> for PyClassInitializer<$T>`
-/// by returning a [`PyClassInitializer`] that subclasses [`PyInstruction`].
+/// Implement [IntoPyObject] and `From<$T> for PyClassInitializer<$T>`
+/// for a `#[pyclass(extends = PyInstruction)]`.
 macro_rules! py_instruction {
     ($T:ty) => {
         impl From<$T> for PyClassInitializer<$T> {
@@ -213,20 +213,42 @@ macro_rules! py_instruction {
                 PyClassInitializer::from(PyInstruction).add_subclass(value)
             }
         }
-    };
-}
 
-/// Implement [IntoPyObject] for a `#[pyclass(subclass)]`
-/// that has a `From<$T> for PyClassInitializer<$T>` implementation.
-macro_rules! impl_into_py_subclass {
-    ($kind:ty) => {
-        impl<'py> IntoPyObject<'py> for $kind {
+        impl<'py> IntoPyObject<'py> for $T {
             type Target = Self;
             type Output = Bound<'py, Self::Target>;
             type Error = PyErr;
 
             fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
-                Ok(Py::new(py, PyClassInitializer::from(self))?.into_bound(py))
+                let init = PyClassInitializer::from(PyInstruction).add_subclass(self);
+                Ok(Py::new(py, init)?.into_bound(py))
+            }
+        }
+    };
+}
+
+/// Create a Python singleton instance for an instruction type that has no inner value.
+///
+/// This macro handles the setup for the Python equivalents of
+/// [`Instruction::Halt`], [`Instruction::Nop`], and [`Instruction::Wait`].
+macro_rules! py_instruction_singleton {
+    ($T:ident, $name:ident) => {
+        py_singleton!($T, stringify!($name), |py| PyClassInitializer::from(
+            PyInstruction
+        )
+        .add_subclass($T),);
+
+        // Add the constant value to the stubs.
+        #[cfg(feature = "stubs")]
+        pyo3_stub_gen::module_variable!("quil._quil.instructions", stringify!($name), $T);
+
+        impl Quil for $T {
+            fn write(
+                &self,
+                writer: &mut impl std::fmt::Write,
+                fall_back_to_debug: bool,
+            ) -> Result<(), crate::quil::ToQuilError> {
+                Instruction::$name.write(writer, fall_back_to_debug)
             }
         }
     };
@@ -303,8 +325,7 @@ macro_rules! impl_instruction {
     // This has an explicit variant name and no inner value.
     (@list [*$name:ident(variant=$variant:ident, empty=true)  $([$($args:tt)*])?, $($tail:tt)*]
      $variants:tt [$($empties:tt)*]) => {
-        py_instruction!($name);
-        // Note: no need to `impl_into_py_class!` because it's handled by `py_singleton!`.
+        py_instruction_singleton!($name, $variant);
         impl_instruction!(@args $name $([$($args)*])?);
         impl_instruction!(@list [$($tail)*] $variants [$($empties)* [$name, $variant],]);
     };
@@ -312,7 +333,6 @@ macro_rules! impl_instruction {
     // This has an explicit variant name and has an inner value.
     (@list [*$name:ident(variant=$variant:ident $(, empty=false)?) $([$($args:tt)*])?, $($tail:tt)*] [$($variants:tt)*] $empties:tt) => {
         py_instruction!($name);
-        impl_into_py_subclass!($name);
         impl_instruction!(@args $name $([$($args)*])?);
         impl_instruction!(@list [$($tail)*] [$($variants)* [$name, $variant],] $empties);
     };
@@ -538,137 +558,6 @@ impl PyInstruction {
 #[cfg(feature = "stubs")]
 pyo3_stub_gen::impl_stub_type!(Instruction = PyInstruction);
 
-/// A trait for types that should be used as singletons in Python.
-///
-/// For example, in Python there's a single `None` value of type `NoneType`.
-/// You could model that in Rust as an empty struct type like so:
-///
-/// ```rust,ignore
-/// #[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Eq)]
-/// #[pyclass(frozen)]
-/// struct NoneType;
-///
-/// impl PySingleton for NoneType {
-///     const NAME: &'static str = "None";
-///     fn get(py: Python<'_>) -> PyResult<&Bound<'_, Self>> {
-///         static CELL: PyOnceLock<Py<NoneType>> = PyOnceLock::new();
-///         CELL.get_or_try_init(py, || Py::new(py, NoneType))
-///     }
-/// }
-///
-/// #[pymodule]
-/// fn builtins(m: &Bound<'_, PyModule>) -> PyResult<()> {
-///     m.add_class::<NoneType>()?;
-///     m.add(NoneType::NAME, NoneType::get(m.py())?)?;
-///     Ok(())
-/// }
-/// ```
-pub trait PySingleton: PyClass {
-    /// The Python name of the singleton value that inhabits this type.
-    const NAME: &'static str;
-
-    /// Get the singleton instance of the type.
-    fn get(py: Python<'_>) -> PyResult<&Bound<'_, Self>>;
-}
-
-pub trait PyModuleSingletonExt: private::Sealed {
-    /// Add the class type and singleton instance of an instruction to a module.
-    fn add_singleton<T: PySingleton>(&self) -> PyResult<()>;
-}
-
-impl PyModuleSingletonExt for Bound<'_, PyModule> {
-    /// Add the class type and singleton instance of an instruction to a module.
-    fn add_singleton<T: PySingleton>(&self) -> PyResult<()> {
-        self.add_class::<T>()?;
-        self.add(
-            <T as PySingleton>::NAME,
-            <T as PySingleton>::get(self.py())?,
-        )
-    }
-}
-
-// Prevent external code from implementing `PyModuleSingletonExt`.
-#[doc(hidden)]
-mod private {
-    pub trait Sealed {}
-
-    impl Sealed for pyo3::Bound<'_, pyo3::types::PyModule> {}
-}
-
-/// Implement [`PySingleton`] for a `#[pyclass]`.
-macro_rules! py_singleton {
-    ($T:ty, $name:expr, |$py:ident| $($value:tt)+) => {
-        impl private::Sealed for $T {}
-
-        impl PySingleton for $T {
-            const NAME: &'static str = $name;
-
-            /// Get the singleton instance of the type, creating it if necessary.
-            fn get($py: Python<'_>) -> PyResult<&Bound<'_, Self>> {
-                static CELL: PyOnceLock<Py<$T>> = PyOnceLock::new();
-                CELL.get_or_try_init($py, || {
-                    let value = $($value)+;
-                    Py::new($py, value)
-                }).map(|inst| inst.bind($py))
-            }
-        }
-
-        impl<'py> IntoPyObject<'py> for $T {
-            type Target = Self;
-            type Output = Bound<'py, Self::Target>;
-            type Error = PyErr;
-
-            fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
-                Ok(<$T as PySingleton>::get(py)?.to_owned())
-            }
-        }
-
-        #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
-        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-        #[pymethods]
-        impl $T {
-            /// Get a reference to the singleton instance of this type.
-            #[new]
-            fn new(py: Python<'_>) -> PyResult<&Bound<'_, Self>> {
-                Self::get(py)
-            }
-
-            /// Returns the name of the singleton instance relative its module.
-            ///
-            /// Enables [`pickling`][] of singleton instances.
-            ///
-            /// [`pickling`]: https://docs.python.org/3/library/pickle.html#object.__reduce__
-            fn __reduce__<'py>(&self, py: Python<'py>) -> &Bound<'py, PyString> {
-                ::pyo3::intern!(py, <$T as PySingleton>::NAME)
-            }
-        }
-    };
-}
-
-/// Create a Python singleton instance for an instruction type that has no inner value.
-///
-/// This macro handles the setup for the Python equivalents of
-/// [Instruction::Halt], [Instruction::Nop], and [Instruction::Wait].
-macro_rules! py_instruction_singleton {
-    ($T:ident, $name:ident) => {
-        py_singleton!($T, stringify!($name), |py| $T);
-
-        // Add the constant value to the stubs.
-        #[cfg(feature = "stubs")]
-        pyo3_stub_gen::module_variable!("quil._quil.instructions", stringify!($name), $T);
-
-        impl Quil for $T {
-            fn write(
-                &self,
-                writer: &mut impl std::fmt::Write,
-                fall_back_to_debug: bool,
-            ) -> Result<(), crate::quil::ToQuilError> {
-                Instruction::$name.write(writer, fall_back_to_debug)
-            }
-        }
-    };
-}
-
 /// The type of the `Halt` [`Instruction`].
 #[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
@@ -692,10 +581,6 @@ pub(crate) struct NopType;
     extends = PyInstruction, from_py_object, frozen, eq, hash
 )]
 pub(crate) struct WaitType;
-
-py_instruction_singleton!(HaltType, Halt);
-py_instruction_singleton!(NopType, Nop);
-py_instruction_singleton!(WaitType, Wait);
 
 /// A wrapper around an [`Instruction`] for use in Python-exposed functions and methods
 /// where we want to accept any `Instruction` variant.

@@ -11,6 +11,7 @@ use crate::validation;
 use crate::waveform;
 
 pub(crate) mod errors;
+pub(crate) mod singleton;
 
 create_init_submodule! {
     errors: [
