@@ -368,7 +368,7 @@ macro_rules! impl_instruction {
             fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
                 match self {
                     $(Instruction::$instr_variant(value) => value.into_bound_py_any(py),)*
-                    $(Instruction::$empty_variant() => $empty.into_bound_py_any(py),)*
+                    $(Instruction::$empty_variant => $empty.into_bound_py_any(py),)*
                 }
             }
         }
@@ -382,8 +382,7 @@ macro_rules! impl_instruction {
                 }$( else if let Ok(value) = obj.cast::<$instr>() {
                     Ok(Instruction::$instr_variant(value.extract()?))
                 })* $( else if let Ok(_) = obj.cast::<$empty>() {
-                    // TODO: remove the `()`s
-                    Ok(Instruction::$empty_variant())
+                    Ok(Instruction::$empty_variant)
                 })* else {
                     Err(CastError::new(obj, PyInstruction::classinfo_object(obj.py())))?
                 }
@@ -472,14 +471,39 @@ impl_instruction!([
     *WaitType(variant = Wait, empty = true),
 ]);
 
-/// Superclass for all [Instruction] variants in Python.
+/// Superclass for all [`Instruction`] variants in Python.
 ///
-/// Rather than expose the complex enum directly,
-/// we annotate each variant `#[pyclass(parent = PyInstruction)]`
-/// and add a constructor that attaches the parent class to new instances.
+/// The subclasses of this class are the various Quil instructions types.
 ///
-/// Via the macros below, each variant implements `From<Bound<'_, T>>
-/// for Instruction`
+/// ```python
+/// >>> from quil.instructions import Instruction, Gate, Qubit
+/// >>> g = Gate("X", (), (Qubit.Fixed(0),), ())
+/// >>> isinstance(g, Gate)
+/// True
+/// >>> isinstance(g, Instruction)
+/// True
+/// ```
+///
+/// You can check for different instruction variants and destructure them using `match`:
+///
+/// ```python
+/// match x:
+///     case Gate():
+///         print("A gate instruction!")
+///     case Wait | Nop | Halt:
+///         print("A singleton instruction!")
+///     case Instruction():
+///         print("Some other instruction!")
+///     case _:
+///         print("Not an instruction!")
+/// ```
+///
+// Rust Developer Notes:
+//
+// Rather than expose the `Instruction` complex enum directly,
+// we annotate each variant's inner type as `#[pyclass(parent = PyInstruction)]`
+// and add a constructor that attaches the parent class to new instances.
+// For the unit variants, we create a new type and expose them as singleton instances.
 #[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[pyclass(
@@ -639,8 +663,7 @@ macro_rules! py_instruction_singleton {
                 writer: &mut impl std::fmt::Write,
                 fall_back_to_debug: bool,
             ) -> Result<(), crate::quil::ToQuilError> {
-                // TODO: remove the `()`s
-                Instruction::$name().write(writer, fall_back_to_debug)
+                Instruction::$name.write(writer, fall_back_to_debug)
             }
         }
     };
