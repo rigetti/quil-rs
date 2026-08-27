@@ -1,7 +1,6 @@
 use indexmap::IndexMap;
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
-use pastey::paste;
 use pyo3::{
     exceptions::{PyDeprecationWarning, PyIndexError, PyTypeError, PyValueError},
     prelude::*,
