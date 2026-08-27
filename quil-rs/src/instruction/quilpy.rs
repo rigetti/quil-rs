@@ -7,7 +7,7 @@ use pyo3::{
     prelude::*,
     sync::PyOnceLock,
     types::{IntoPyDict as _, PyDict, PyInt, PyList, PyString, PyTuple},
-    CastError, IntoPyObjectExt, PyClass, PyTraverseError, PyTypeCheck, PyVisit,
+    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit,
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -204,6 +204,22 @@ macro_rules! impl_out {
     };
 }
 
+/// Add an `is_quil_t` method to the `#[pyclass]`.
+macro_rules! impl_is_quil_t {
+    ($name:ident, $bool:literal) => {
+        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+        #[pyo3::pymethods]
+        impl $name {
+            /// Returns true if the instruction is a Quil-T instruction.
+            #[staticmethod]
+            #[pyo3(name = "is_quil_t")]
+            fn is_quil_t() -> bool {
+                $bool
+            }
+        }
+    };
+}
+
 /// Implement [IntoPyObject] and `From<$T> for PyClassInitializer<$T>`
 /// for a `#[pyclass(extends = PyInstruction)]`.
 macro_rules! py_instruction {
@@ -220,8 +236,7 @@ macro_rules! py_instruction {
             type Error = PyErr;
 
             fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
-                let init = PyClassInitializer::from(PyInstruction).add_subclass(self);
-                Ok(Py::new(py, init)?.into_bound(py))
+                Ok(Py::new(py, PyClassInitializer::from(self))?.into_bound(py))
             }
         }
     };
@@ -233,10 +248,9 @@ macro_rules! py_instruction {
 /// [`Instruction::Halt`], [`Instruction::Nop`], and [`Instruction::Wait`].
 macro_rules! py_instruction_singleton {
     ($T:ident, $name:ident) => {
-        py_singleton!($T, stringify!($name), |py| PyClassInitializer::from(
-            PyInstruction
-        )
-        .add_subclass($T),);
+        py_singleton!($T, stringify!($name), |py| {
+            PyClassInitializer::from(PyInstruction).add_subclass($T)
+        });
 
         // Add the constant value to the stubs.
         #[cfg(feature = "stubs")]
@@ -300,6 +314,24 @@ macro_rules! impl_instruction {
     // the macro needs to split them into two different accumulator lists,
     // and hence the actual `@list` matching is a series of rules.
     // Nevertheless, their basic output is as described above.
+    //
+    // Because the `IntoPyObject` and `FromPyObject` implementations for `Instruction`
+    // should only happen _once_, after all the variants are accumulated,
+    // we can't easily include arguments to modify it within the `@one` rules
+    // without adopting an approach that trades expansions between `@one` and `@list`;
+    // doing that would work fine, but would end up with a deeply-nested expansion,
+    // and we'd have to raise the recursion limit just to get it to compile.
+    //
+    // Instead, we use a small set of `@list` rules to match a `*`-prefix,
+    // and accept additional modifiers within a separate `()`-style sublist.
+    // Although it'd be nifty to token-munch those arguments too,
+    // it'd be a lot more work for not much syntactic sugar,
+    // so we should aim to keep those options simple and explicit.
+    //
+    // In other words, the args in square brackets are for the "per-type" expansions,
+    // while the those in parentheses are for the "at-the-end" expansion.
+    // Processing the former is done independently of the list recursion,
+    // so each type expands at a depth only one (or a few) levels deeper than the last.
 
     // The initial capture kicks off the recursive processing with empty accumulators.
     ($tokens:tt) => {
@@ -314,7 +346,7 @@ macro_rules! impl_instruction {
 
     // Types without `*` are not `Instruction` variants and aren't accumulated.
     (@list [$name:ident $([$($args:tt)*])?, $($tail:tt)*] $variants:tt $empties:tt) => {
-        impl_instruction!(@args $name $([$($args)*])?);
+        impl_instruction!(@one $name $([$($args)*])?);
         impl_instruction!(@list [$($tail)*] $variants $empties);
     };
 
@@ -323,56 +355,83 @@ macro_rules! impl_instruction {
     // and whether or not the variant has an inner value.
 
     // This has an explicit variant name and no inner value.
-    (@list [*$name:ident(variant=$variant:ident, empty=true)  $([$($args:tt)*])?, $($tail:tt)*]
-     $variants:tt [$($empties:tt)*]) => {
+    (@list [*$name:ident(variant=$variant:ident, empty=true)  $([$($args:tt)*])?, $($tail:tt)*] $variants:tt [$($empties:tt)*]) => {
         py_instruction_singleton!($name, $variant);
-        impl_instruction!(@args $name $([$($args)*])?);
+        impl_instruction!(@one * $name $([$($args)*])?);
         impl_instruction!(@list [$($tail)*] $variants [$($empties)* [$name, $variant],]);
     };
 
     // This has an explicit variant name and has an inner value.
     (@list [*$name:ident(variant=$variant:ident $(, empty=false)?) $([$($args:tt)*])?, $($tail:tt)*] [$($variants:tt)*] $empties:tt) => {
         py_instruction!($name);
-        impl_instruction!(@args $name $([$($args)*])?);
+        impl_instruction!(@one * $name $([$($args)*])?);
         impl_instruction!(@list [$($tail)*] [$($variants)* [$name, $variant],] $empties);
     };
 
     // This assumes the variant name matches the type name and expands to one of the above.
-    (@list [*$name:ident$((empty=$is_empty:literal))? $([$($args:tt)*])?, $($tail:tt)*] $variants:tt $empties:tt) => {
+    (@list [*$name:ident$((empty=$is_empty:tt))? $([$($args:tt)*])?, $($tail:tt)*] $variants:tt $empties:tt) => {
         impl_instruction!(@list [*$name(variant=$name $(,empty=$is_empty)?) $([$($args)*])?, $($tail)*] $variants $empties);
     };
 
-    // The `@args` rules walk a single type's sublist of arguments one at a time.
+    // The `@one` rules walk a single type's sublist of arguments one at a time.
 
-    // Default rule when no args are given.
-    (@args $name: ident) => { impl_instruction!(@args $name [+ repr + quil]); };
+    // Default rules when no args are given;
+    // `PyInstructions` get a different default than other types.
+    // These rules additionally expand `+ ..` to `repr + quil`.
+    (@one * $name:ident) => {
+        impl_instruction!(@one $name [+ repr + quil + is_quil_t(false)]);
+    };
+    (@one $name:ident $([+ ..])?) => {
+        impl_instruction!(@one $name [+ repr + quil]);
+    };
+
+    // Strip the instruction indicator prefix if explicit args were given.
+    (@one * $name:ident $args:tt) => {
+        impl_instruction!(@one $name $args);
+    };
 
     // Terminal rule when done processing arguments.
-    (@args $name: ident []) => {};
+    (@one $name:ident []) => {};
 
-    (@args $name: ident [+repr $($rest:tt)*]) => {
+    (@one $name:ident [+repr $($rest:tt)*]) => {
         impl_repr!($name);
-        impl_instruction!(@args $name [$($rest)*]);
+        impl_instruction!(@one $name [$($rest)*]);
     };
 
-    (@args $name: ident [+quil $($rest:tt)*]) => {
+    (@one $name:ident [+quil $($rest:tt)*]) => {
         impl_to_quil!($name);
-        impl_instruction!(@args $name [$($rest)*]);
+        impl_instruction!(@one $name [$($rest)*]);
     };
 
-    (@args $name: ident [+parse $($rest:tt)*]) => {
+    (@one $name:ident [+parse $($rest:tt)*]) => {
         impl_parse!($name);
-        impl_instruction!(@args $name [$($rest)*]);
+        impl_instruction!(@one $name [$($rest)*]);
     };
 
-    (@args $name: ident [+out $($rest:tt)*]) => {
+    (@one $name:ident [+is_quil_t($bool:literal) $($rest:tt)*]) => {
+        impl_is_quil_t!($name, $bool);
+        impl_instruction!(@one $name [$($rest)*]);
+    };
+
+    (@one $name:ident [+out $($rest:tt)*]) => {
         impl_out!($name);
-        impl_instruction!(@args $name [$($rest)*]);
+        impl_instruction!(@one $name [$($rest)*]);
     };
 
-    // If it didn't start with a `+`, add one.
-    (@args $name: ident [$($rest:tt)*]) => {
-        impl_instruction!(@args $name [+ $($rest)*]);
+    (@one $name:ident [+ $unknown:tt $($rest:tt)*]) => {
+        compile_error!(concat!(
+            "Unknown impl argument `",
+            stringify!($unknown),
+            "` when processing type `",
+            stringify!($name),
+            "`"
+        ));
+    };
+
+    // Add `+` to the front of the list if it was omitted.
+    // This has to be the last `@one` rule to avoid infinite recursion.
+    (@one $name:ident [$($rest:tt)*]) => {
+        impl_instruction!(@one $name [+ $($rest)*]);
     };
 
     // Expand the collected accumulators into `Instruction` methods.
@@ -411,8 +470,6 @@ macro_rules! impl_instruction {
     };
 }
 
-// Implement methods for instruction-related types:
-//
 impl_instruction!([
     *Arithmetic,
     ArithmeticOperand,
@@ -421,26 +478,26 @@ impl_instruction!([
     *BinaryLogic,
     BinaryOperand,
     BinaryOperator,
-    *CalibrationDefinition,
+    *CalibrationDefinition[is_quil_t(true) + ..],
     CalibrationIdentifier,
     *Call,
-    *Capture,
+    *Capture[is_quil_t(true) + ..],
     *CircuitDefinition,
     *Comparison,
     ComparisonOperand,
     ComparisonOperator,
     *Convert,
     *Declaration,
-    *Delay,
+    *Delay[is_quil_t(true) + ..],
     DefGateSequence[repr],
     *Exchange,
     ExternParameter,
     ExternParameterType,
     ExternSignature,
-    *Fence,
-    *FrameDefinition,
-    FrameIdentifier[repr + quil + out],
-    *Gate[repr + quil + out],
+    *Fence[is_quil_t(true) + ..],
+    *FrameDefinition[is_quil_t(true) + ..],
+    FrameIdentifier[out + ..],
+    *Gate[is_quil_t(false) + out + ..],
     *GateDefinition,
     GateModifier,
     GateSpecification,
@@ -449,12 +506,12 @@ impl_instruction!([
     *Jump,
     *JumpUnless,
     *JumpWhen,
-    *Label[repr + quil + out],
+    *Label[is_quil_t(false) + out + ..],
     *Load,
-    *MeasureCalibrationDefinition,
+    *MeasureCalibrationDefinition[is_quil_t(true) + ..],
     MeasureCalibrationIdentifier,
     *Measurement,
-    MemoryReference[repr + quil + parse + out],
+    MemoryReference[parse + out + ..],
     *Move,
     Offset,
     OwnedGateSignature[repr],
@@ -463,20 +520,20 @@ impl_instruction!([
     PauliSum[repr],
     *Pragma,
     PragmaArgument,
-    *Pulse,
+    *Pulse[is_quil_t(true) + ..],
     Qubit,
     QubitPlaceholder[repr],
-    *RawCapture,
+    *RawCapture[is_quil_t(true) + ..],
     *Reset,
     ScalarType,
-    *SetFrequency,
-    *SetPhase,
-    *SetScale,
+    *SetFrequency[is_quil_t(true) + ..],
+    *SetPhase[is_quil_t(true) + ..],
+    *SetScale[is_quil_t(true) + ..],
     Sharing[repr],
-    *ShiftFrequency,
+    *ShiftFrequency[is_quil_t(true) + ..],
     *ShiftPhase,
     *Store,
-    *SwapPhases,
+    *SwapPhases[is_quil_t(true) + ..],
     Target,
     TargetPlaceholder[repr],
     *UnaryLogic,
@@ -484,8 +541,8 @@ impl_instruction!([
     UnresolvedCallArgument, // Python name: CallArgument
     Vector,
     Waveform[repr],
-    *WaveformDefinition,
-    WaveformInvocation[repr + quil + out],
+    *WaveformDefinition[is_quil_t(true) + ..],
+    WaveformInvocation[out + ..],
     *HaltType(variant = Halt, empty = true),
     *NopType(variant = Nop, empty = true),
     *WaitType(variant = Wait, empty = true),
@@ -541,13 +598,6 @@ pub struct PyInstruction;
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl PyInstruction {
-    /// Returns true if the instruction is a Quil-T instruction.
-    #[pyo3(name = "is_quil_t")]
-    fn py_is_quil_t(&self) -> bool {
-        // Instruction::is_quil_t(self).unwrap_or(false)
-        todo!()
-    }
-
     /// Parse an [`Instruction`] from a string.
     #[staticmethod]
     fn parse(string: &str) -> PyResult<Instruction> {
