@@ -1133,6 +1133,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "optipy"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "861264739d9b482f654ce5bf9a7123dc2bc47b1f3c3820af990c0576ca3ecba7"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.118",
+]
+
+[[package]]
 name = "ordered-float"
 version = "5.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1458,7 +1469,7 @@ dependencies = [
  "num-complex",
  "numpy",
  "once_cell",
- "optipy",
+ "optipy 0.2.1",
  "pastey",
  "petgraph",
  "pretty_assertions",
@@ -1668,7 +1679,7 @@ checksum = "d679679d09a1d341c74d70ae6b35cb858a3ecaa55980f6a7d5b2c37360e28c20"
 dependencies = [
  "indexmap",
  "itertools 0.14.0",
- "optipy",
+ "optipy 0.1.4",
  "pastey",
  "pyo3",
  "pyo3-stub-gen",
