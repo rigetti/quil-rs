@@ -249,7 +249,13 @@ fn gate_matrix(gate: &mut Gate) -> Result<Matrix, GateError> {
         Lazy::new(|| array![[real!(1.0), real!(0.0)], [real!(0.0), real!(0.0)]]);
     static ONE: Lazy<Matrix> =
         Lazy::new(|| array![[real!(0.0), real!(0.0)], [real!(0.0), real!(1.0)]]);
-    if let Some(modifier) = gate.modifiers.pop() {
+    // Modifiers pair with qubits front-to-front: the leftmost (outermost)
+    // modifier consumes the leftmost qubit, per the Quil specification and
+    // the tree in this function's doc comment. Popping from the back here
+    // paired the innermost modifier with the outermost qubit, computing the
+    // wrong unitary for mixed stacks like `FORKED CONTROLLED Y 2 1 0`.
+    if !gate.modifiers.is_empty() {
+        let modifier = gate.modifiers.remove(0);
         match modifier {
             GateModifier::Controlled => {
                 gate.qubits = gate.qubits[1..].to_vec();
@@ -562,8 +568,41 @@ static PARAMETERIZED_GATE_MATRICES: Lazy<HashMap<String, ParameterizedMatrix>> =
         (
             "RZ".to_string(),
             (|theta: Complex64| {
+                // RZ(θ) = diag(e^{-iθ/2}, e^{iθ/2}); this was previously a
+                // copy of RY's real rotation matrix.
+                let _i = imag!(1.0);
                 let t = theta / 2.0;
-                array![[t.cos(), -t.sin()], [t.sin(), t.cos()]]
+                array![
+                    [(-_i * t).exp(), real!(0.0)],
+                    [real!(0.0), (_i * t).exp()]
+                ]
+            }) as ParameterizedMatrix,
+        ),
+        (
+            "XY".to_string(),
+            (|theta: Complex64| {
+                let _i = imag!(1.0);
+                let t = theta / 2.0;
+                array![
+                    [real!(1.0), real!(0.0), real!(0.0), real!(0.0)],
+                    [real!(0.0), t.cos(), _i * t.sin(), real!(0.0)],
+                    [real!(0.0), _i * t.sin(), t.cos(), real!(0.0)],
+                    [real!(0.0), real!(0.0), real!(0.0), real!(1.0)],
+                ]
+            }) as ParameterizedMatrix,
+        ),
+        (
+            // PISWAP(θ) is the same parameterized-iSWAP family as XY(θ).
+            "PISWAP".to_string(),
+            (|theta: Complex64| {
+                let _i = imag!(1.0);
+                let t = theta / 2.0;
+                array![
+                    [real!(1.0), real!(0.0), real!(0.0), real!(0.0)],
+                    [real!(0.0), t.cos(), _i * t.sin(), real!(0.0)],
+                    [real!(0.0), _i * t.sin(), t.cos(), real!(0.0)],
+                    [real!(0.0), real!(0.0), real!(0.0), real!(1.0)],
+                ]
             }) as ParameterizedMatrix,
         ),
         (
@@ -679,6 +718,72 @@ mod test_gate_into_matrix {
     static CNOT: Lazy<Matrix> = Lazy::new(|| CONSTANT_GATE_MATRICES.get("CNOT").cloned().unwrap());
     static ISWAP: Lazy<Matrix> =
         Lazy::new(|| CONSTANT_GATE_MATRICES.get("ISWAP").cloned().unwrap());
+
+    /// Literal-matrix regressions: these expectations are written out by
+    /// hand (not read back from the gate tables) because table bugs are
+    /// invisible to self-referential tests. RZ previously shipped RY's
+    /// real rotation matrix.
+    #[test]
+    fn rz_is_a_diagonal_phase_rotation() {
+        let theta = std::f64::consts::FRAC_PI_2;
+        let matrix = PARAMETERIZED_GATE_MATRICES.get("RZ").unwrap()(real!(theta));
+        let expected = array![
+            [Complex64::from_polar(1.0, -theta / 2.0), _0],
+            [_0, Complex64::from_polar(1.0, theta / 2.0)],
+        ];
+        assert_abs_diff_eq!(matrix, expected);
+    }
+
+    #[test]
+    fn xy_and_piswap_interpolate_iswap() {
+        for name in ["XY", "PISWAP"] {
+            let f = PARAMETERIZED_GATE_MATRICES
+                .get(name)
+                .unwrap_or_else(|| panic!("{name} missing from gate table"));
+            // At θ = π both must equal ISWAP exactly.
+            assert_abs_diff_eq!(f(PI), *ISWAP);
+        }
+    }
+
+    /// The leftmost modifier consumes the leftmost qubit: with no
+    /// parameters to fork on, `FORKED CONTROLLED Y 2 1 0` is CY(1, 0)
+    /// regardless of qubit 2, while `CONTROLLED FORKED Y 2 1 0` is
+    /// CY(2, 0) regardless of qubit 1. The old back-to-front pairing
+    /// computed these two swapped.
+    #[test]
+    fn mixed_modifiers_pair_front_to_front() {
+        static Y: Lazy<Matrix> = Lazy::new(|| array![[_0, -_I], [_I, _0]]);
+        let cy = kron(&P0, &Array2::eye(2)) + kron(&P1, &Y);
+        let eye2 = Array2::eye(2);
+
+        // Fresh gates per case: to_unitary(&mut self) drains its receiver.
+        let mut forked_controlled = Gate::new(
+            "Y",
+            vec![],
+            vec![Fixed(2), Fixed(1), Fixed(0)],
+            vec![Forked, Controlled],
+        )
+        .unwrap();
+        assert_abs_diff_eq!(
+            forked_controlled.to_unitary(3).unwrap(),
+            kron(&eye2, &cy),
+            epsilon = 1e-12
+        );
+
+        let mut controlled_forked = Gate::new(
+            "Y",
+            vec![],
+            vec![Fixed(2), Fixed(1), Fixed(0)],
+            vec![Controlled, Forked],
+        )
+        .unwrap();
+        let cy_2_0 = kron(&P0, &Array2::eye(4)) + kron(&P1, &kron(&eye2, &Y));
+        assert_abs_diff_eq!(
+            controlled_forked.to_unitary(3).unwrap(),
+            cy_2_0,
+            epsilon = 1e-12
+        );
+    }
     static H: Lazy<Matrix> = Lazy::new(|| CONSTANT_GATE_MATRICES.get("H").cloned().unwrap());
     static RZ: Lazy<ParameterizedMatrix> =
         Lazy::new(|| PARAMETERIZED_GATE_MATRICES.get("RZ").cloned().unwrap());
