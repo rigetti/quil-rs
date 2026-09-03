@@ -89,91 +89,34 @@ impl<'a> QubitGraph<'a> {
         QubitGraph::new(block.instructions().iter().copied(), handler)
     }
 
-    /// Fold over all paths over the graph, starting from sources (nodes with no incoming edges),
-    /// and ending at sinks (nodes with no outgoing edges).
-    ///
-    /// The `f` function is called for each instruction in each path, with the current accumulator value and the current
-    /// instruction.
-    ///
-    /// # Examples
-    ///
-    /// ## Tree
-    ///
-    /// ```text
-    /// CNOT 0 1
-    /// X 0
-    /// H 1
-    /// ```
-    ///
-    /// 1. `CNOT 0 1` is visited with the initial value, and a new accumulator `A` is returned from `f`.
-    /// 2. `X 0` is visited with accumulator `A`, and a result value `B` is returned from `f`.
-    /// 3. `H 1` is visited with accumulator `A`, and a second result value `C` is returned from `f`.
-    /// 4. The result values are collected into a [`Vec`] and returned as `[B, C]`.
-    ///
-    /// ## Diamond
-    ///
-    /// If the program graph forms a diamond shape (i.e. multiple paths converge to a single node), the `f` function
-    /// will be called multiple times with the same instruction, but with potentially different accumulator values.
-    ///
-    /// ```text
-    /// CNOT 0 1
-    /// X 0
-    /// H 1
-    /// CNOT 1 0
-    /// ```
-    ///
-    /// 1. `CNOT 0 1` is visited with the initial value, and a new accumulator `A` is returned from `f`.
-    /// 2. `X 0` is visited with accumulator `A`, and a new accumulator `B` is returned from `f`.
-    /// 3. `H 1` is visited with accumulator `A`, and a new accumulator `C` is returned from `f`.
-    /// 4. `CNOT 1 0` is visited with accumulator `B`, and a result value `D` is returned from `f`.
-    /// 5. `CNOT 1 0` is visited with accumulator `C`, and a result value `E` is returned from `f`.
-    /// 5. The result values are collected into a [`Vec`] and returned as `[D, E]`.
-    fn path_fold<T, F>(&self, initial_value: T, mut f: F) -> Vec<T>
-    where
-        T: Clone + std::fmt::Debug,
-        F: FnMut(T, &Instruction) -> T,
-    {
-        let nodes: Vec<_> = self.graph.externals(Direction::Incoming).collect();
-        let mut stack = vec![(initial_value, nodes)];
-        let mut result = Vec::new();
-
-        while let Some((acc, nodes)) = stack.pop() {
-            if nodes.is_empty() {
-                result.push(acc);
-                continue;
-            }
-
-            for node in nodes {
-                let instruction = &self.graph[node];
-                let value = f(acc.clone(), instruction);
-                stack.push((
-                    value,
-                    self.graph
-                        .neighbors_directed(node, Direction::Outgoing)
-                        .collect(),
-                ));
-            }
-        }
-
-        result
-    }
-
     /// Returns the length of the longest path from an initial instruction (one with no prerequisite instructions) to a final
     /// instruction (one with no dependent instructions), where the length of a path is the number of gate instructions in the path.
+    ///
+    /// Implemented as a longest-path dynamic program: nodes are added in
+    /// program order and edges always point from an earlier instruction to a
+    /// later one, so node indices are already topologically sorted and the
+    /// scan is `O(nodes + edges)`. (A previous implementation folded over
+    /// every source-to-sink path, which is exponential in the number of
+    /// branch-and-reconverge diamonds in the block.)
     ///
     /// # Arguments
     ///
     /// * `gate_minimum_qubit_count` - The minimum number of qubits in a gate for it to be counted in the depth.
     pub fn gate_depth(&self, gate_minimum_qubit_count: usize) -> usize {
-        let path_lengths = self.path_fold(0, |depth: usize, instruction: &Instruction| -> usize {
-            if let Instruction::Gate(gate) = instruction {
-                if gate.qubits.len() >= gate_minimum_qubit_count {
-                    return depth + 1;
-                }
+        let mut depth_at_entry = vec![0usize; self.graph.node_count()];
+        let mut max_depth = 0;
+        for node in self.graph.node_indices() {
+            let contribution = match self.graph[node] {
+                Instruction::Gate(gate) if gate.qubits.len() >= gate_minimum_qubit_count => 1,
+                _ => 0,
+            };
+            let depth = depth_at_entry[node.index()] + contribution;
+            max_depth = max_depth.max(depth);
+            for next in self.graph.neighbors_directed(node, Direction::Outgoing) {
+                depth_at_entry[next.index()] = depth_at_entry[next.index()].max(depth);
             }
-            depth
-        });
-        path_lengths.into_iter().max().unwrap_or_default()
+        }
+        max_depth
     }
 }
 
@@ -215,6 +158,20 @@ mod tests {
         let graph = QubitGraph::try_from_basic_block(&block, &DefaultHandler).unwrap();
         let depth = graph.gate_depth(2);
         assert_eq!(expected, depth);
+    }
+
+    #[test]
+    fn gate_depth_is_polynomial_in_diamonds() {
+        // 64 branch-and-reconverge diamonds: ~2^64 source-to-sink paths,
+        // which must not be enumerated.
+        let n = 64;
+        let source = "CNOT 0 1\nX 0\nH 1\n".repeat(n);
+        let program: Program = source.parse().unwrap();
+        let block: BasicBlock = (&program).try_into().unwrap();
+        let graph = QubitGraph::try_from_basic_block(&block, &DefaultHandler).unwrap();
+        // Longest path alternates CNOT and a 1Q gate: 2 gates per diamond.
+        assert_eq!(graph.gate_depth(1), 2 * n);
+        assert_eq!(graph.gate_depth(2), n);
     }
 
     #[rstest]
