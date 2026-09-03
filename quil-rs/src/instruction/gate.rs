@@ -640,7 +640,11 @@ static PARAMETERIZED_GATE_MATRICES: Lazy<HashMap<String, ParameterizedMatrix>> =
         (
             "PSWAP".to_string(),
             (|theta: Complex64| {
-                let (_0, _1, _c) = (real!(0.0), real!(1.0), theta.cos() + theta);
+                let (_0, _1, _c) = (
+                    real!(0.0),
+                    real!(1.0),
+                    theta.cos() + imag!(1.0) * theta.sin(),
+                );
                 array![
                     [_1, _0, _0, _0],
                     [_0, _0, _c, _0],
@@ -720,6 +724,26 @@ mod test_gate_into_matrix {
             [_0, Complex64::from_polar(1.0, theta / 2.0)],
         ];
         assert_abs_diff_eq!(matrix, expected);
+    }
+
+    #[test]
+    fn pswap_swaps_with_a_unit_phase() {
+        let theta = 0.7f64;
+        let matrix = PARAMETERIZED_GATE_MATRICES.get("PSWAP").unwrap()(real!(theta));
+        let phase = Complex64::from_polar(1.0, theta);
+        let expected = array![
+            [_1, _0, _0, _0],
+            [_0, _0, phase, _0],
+            [_0, phase, _0, _0],
+            [_0, _0, _0, _1],
+        ];
+
+        assert_abs_diff_eq!(matrix, expected);
+        // PSWAP(0) = SWAP exactly.
+        assert_abs_diff_eq!(
+            PARAMETERIZED_GATE_MATRICES.get("PSWAP").unwrap()(real!(0.0)),
+            *SWAP
+        );
     }
 
     #[test]
