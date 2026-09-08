@@ -859,6 +859,7 @@ pub enum PauliGate {
     Z,
 }
 
+/// A term is a product of Pauli operators on different qubits.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
@@ -914,26 +915,60 @@ pub struct PauliSum {
     pub terms: Vec<PauliTerm>,
 }
 
-pickleable_new! {
-    impl PauliSum {
-        pub fn new(arguments: Vec<String>, terms: Vec<PauliTerm>) -> Result<PauliSum, GateError> {
-            let diff = terms
-                .iter()
-                .flat_map(|t| t.arguments())
-                .collect::<HashSet<_>>()
-                .difference(&arguments.iter().collect::<HashSet<_>>())
-                .copied()
-                .collect::<Vec<_>>();
+impl PauliSum {
+    pub fn new(arguments: Vec<String>, terms: Vec<PauliTerm>) -> Result<PauliSum, GateError> {
+        let diff = PauliSum::infer_args(&terms)
+            .difference(&arguments.iter().map(|arg| arg.as_str()).collect::<HashSet<_>>())
+            .copied()
+            .collect::<Vec<_>>();
 
-            if !diff.is_empty() {
-                return Err(GateError::PauliSumArgumentMismatch {
-                    mismatches: diff.into_iter().cloned().collect(),
-                    expected_arguments: arguments,
-                });
-            }
-
-            Ok(Self { arguments, terms })
+        if !diff.is_empty() {
+            return Err(GateError::PauliSumArgumentMismatch {
+                mismatches: diff.into_iter().map(|arg| arg.to_string()).collect(),
+                expected_arguments: arguments,
+            });
         }
+
+        Ok(Self { arguments, terms })
+    }
+
+    /// Infer arguments from a collection of `PauliTerm`s.
+    pub(crate) fn infer_args(terms: &[PauliTerm]) -> HashSet<&str> {
+        terms.iter()
+            .flat_map(|term| term.arguments())
+            .map(|arg| arg.as_str())
+            .collect::<HashSet<_>>()
+    }
+
+    pub(crate) fn into_inferred_args(terms: &[PauliTerm]) -> Vec<String> {
+        PauliSum::infer_args(terms).iter().map(|&arg| arg.to_string()).collect()
+    }
+}
+
+#[cfg(test)]
+mod pauli_sum_tests {
+    use super::*;
+
+    const ONE: Expression = Expression::Number(Complex64::new(1.0, 0.0));
+
+    #[test]
+    fn test_infer_args() {
+        let terms = vec![
+            PauliTerm::new(vec![(PauliGate::X, "q0".to_string())], ONE),
+            PauliTerm::new(vec![(PauliGate::Y, "q1".to_string())], ONE),
+            PauliTerm::new(vec![(PauliGate::Z, "q0".to_string())], ONE),
+        ];
+
+        let inferred_args = PauliSum::infer_args(&terms);
+        let expected_args: HashSet<&str> = HashSet::from(["q0", "q1"]);
+        assert_eq!(inferred_args, expected_args);
+
+        // Check that it is consistent with the `PauliSum::new` constructor.
+        let expected_args = PauliSum::into_inferred_args(&terms);
+        let pauli_sum = PauliSum::new(expected_args.clone(), terms)
+            .expect("PauliSum::new should succeed with matching arguments");
+        // Sanity check that they are indeed the same.
+        assert_eq!(pauli_sum.arguments, expected_args);
     }
 }
 

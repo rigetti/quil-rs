@@ -4,6 +4,9 @@ use pyo3::types::PyType;
 use pyo3::{prelude::*, pyclass::boolean_struct::True, types::PyTuple, PyClass, PyTypeCheck};
 use rigetti_pyo3::create_init_submodule;
 
+#[cfg(feature = "stubs")]
+use pyo3_stub_gen::PyStubType;
+
 use crate::expression;
 use crate::instruction;
 use crate::program;
@@ -42,6 +45,31 @@ fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     program::quilpy::post_init(&py.import("quil._quil.program")?)?;
 
     Ok(())
+}
+
+/// A helper enum to migrate parameters from one signature to another.
+///
+/// Both `New` and `Old` must implement [`FromPyObject`].
+/// If they both implement [`PyStubType`], then so does `Migrate<New, Old>`.
+///
+/// Typically, you'll want to wrap this in [`Option`]
+/// and specify `#[pyo3(signature = (...))]` on the function with default `None`s.
+/// You should also provide type stub `@override`s for the different signatures.
+///
+/// For examples, see the types in [`crate::instruction::quilpy`],
+/// such as the constructor [`crate::instruction::PauliTerm::__new__`].
+#[derive(FromPyObject)]
+pub(crate) enum Migrate<New, Old> {
+    New(New),
+    Old(Old),
+}
+
+#[cfg(feature = "stubs")]
+impl<New: PyStubType, Old: PyStubType> PyStubType for Migrate<New, Old>
+{
+    fn type_output() -> pyo3_stub_gen::TypeInfo {
+        New::type_output() | Old::type_output()
+    }
 }
 
 /// Construct a union of Python types.

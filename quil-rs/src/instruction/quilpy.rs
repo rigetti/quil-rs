@@ -1,12 +1,10 @@
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use indexmap::IndexMap;
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
 use pyo3::{
-    exceptions::{PyDeprecationWarning, PyIndexError, PyTypeError, PyValueError},
-    prelude::*,
-    sync::PyOnceLock,
-    types::{IntoPyDict as _, PyDict, PyInt, PyList, PyString, PyTuple},
-    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit,
+    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit, exceptions::{PyDeprecationWarning, PyIndexError, PyKeyError, PyTypeError, PyValueError}, prelude::*, sync::PyOnceLock, types::{IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyString, PyTuple},
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -26,7 +24,7 @@ use crate::{
         deprecated_or_new, deprecated_param,
         errors::{self, PickleError},
         from_sequence, impl_newargs, impl_to_quil, py_deprecated, py_friendly_enum, singleton,
-        IntoNewArgs, Like, NewArgs, NonZeroU64,
+        IntoNewArgs, Like, Migrate, NewArgs, NonZeroU64,
     },
     validation::identifier::IdentifierValidationError,
 };
@@ -105,6 +103,8 @@ create_init_submodule! {
         HaltType,
         NopType,
         WaitType,
+
+        PauliTermIter,
     ],
 
     complex_enums: [
@@ -1872,23 +1872,146 @@ impl PauliGate {
     }
 }
 
+// Override the type signature for `PauliTerm.__new__`
+// which is only used for backwards compatibility.
+#[cfg(feature = "stubs")]
+pyo3_stub_gen::inventory::submit! {
+    gen_methods_from_python! {
+        r#"
+        import typing
+
+        from quil import _quil
+
+        class PauliTerm:
+            @typing.overload
+            def __new__(
+                cls,
+                arguments: pyo3_stub_gen.RustType["Vec<(PauliGate, String)>"],
+                expression: _quil.expression.Expression
+            ) -> PauliTerm: ...
+
+            @typing.overload
+            def __new__(
+                cls,
+                op: str,
+                index: Qubit | None,
+                coefficient: Expression = 1.0,
+            ) -> PauliTerm: ...
+        "#
+    }
+}
+
+const ONE: Expression = Expression::Number(Complex64::new(1.0, 0.0));
+
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl PauliTerm {
-    // This implements `__new__` and `__getnewargs__` manually
-    // to avoid a conflict in the generated stubs due to the type's `expression` `@property`.
-    // See: https://github.com/python/mypy/issues/4146
+    // TODO(migration-guide):
+    // - Rust users making use of the `python` feature need to update usage of `__new__`.
+    // - Python users should be aware of the combined API.
+    /// Construct a new `PauliTerm`.
+    ///
+    /// A `PauliTerm` is some coefficient multiplied by a tensor product of Pauli operators.
+    ///
+    /// This constructor supports two forms:
+    ///
+    /// - `(op: str, index: Qubit | None, coefficient: Expression = 1.0)`
+    ///   constructs a `PauliTerm` from a single operator.
+    /// - `(arguments: Sequence[tuple[PualiGate, str]], expression: Expression = 1.0)`
+    ///   constructs a `PauliTerm` from a sequence of operators
+    ///   and is functionally equivalent to multiplying individuals `PauliTerm`s,
+    ///   provided that the terms each have a coefficient of 1.0.
+    ///
+    /// Thus, you can use either of these forms:
+    ///
+    /// ```python
+    /// from quil.instructions import PauliTerm, PauliGate
+    /// from quil.expression import Expression
+    ///
+    /// # Using the first form
+    /// term1 = PauliTerm("X", 0, 1.5) * PauliTerm("Y", "q")
+    ///
+    /// # Using the second form
+    /// term2 = PauliTerm([(PauliGate.X, 0), (PauliGate.Y, "q")], 1.5)
+    /// ```
+    ///
+    /// To be valid `quil`, the  `expression` must be real-valued
+    /// and only referencee real numeric literals or parameters,
+    /// though at present, this is not enforced by the constructor.
+    // Developer note:
+    // The stubs for the documented constructors are added manually above.
+    // The reason for two constructors here is backwards compatibility:
+    // PyQuil v4 used the first form, while `quil` had used the second.
+    // Since both forms are useful and relatively easy to distinguish, we support both,
+    // with the downside that the constructor requries all arguments to be optional,
+    // since users may have used keyword-only arguments.
     #[new]
+    #[pyo3(signature = (
+            op=None,
+            index=None,
+            coefficient=None,
+            arguments=None,
+            expression=None,
+    ))]
     fn __new__(
-        arguments: Vec<(PauliGate, String)>,
-        #[gen_stub(override_type(
-            type_repr = "_quil.expression.Expression",
-            imports = ("quil._quil.expression")
-        ))]
-        expression: Expression,
-    ) -> PauliTerm {
-        Self::new(arguments, expression)
+        op: Option<Migrate<PauliGate, Vec<(PauliGate, Qubit)>>>,
+        index: Option<Migrate<Qubit, Expression>>,
+        coefficient: Option<Expression>,
+        arguments: Option<Vec<(PauliGate, Qubit)>>,
+        expression: Option<Expression>,
+    ) -> PyResult<Self> {
+        // Determine which constructor is in use, assuming users don't try to mix them.
+        // If they do, they'll get a typical Python error about unexpected arguments.
+        // In both constructors, the first argument is required
+        match (op, index, arguments, expression) {
+            // The PyQuil constructor allowed `index` to be `None` if `op` was `I`.
+            (Some(Migrate::New(PauliGate::I)), None, None, None) => {
+                let expression = coefficient.unwrap_or(ONE);
+                Ok(Self::new(Vec::new(), expression))
+            }
+
+            // Otherwise, given an `op`, we require an `index`.
+            (Some(Migrate::New(op)), Some(Migrate::New(index)), None, None) => {
+                let expression = coefficient.unwrap_or(ONE);
+                Ok(Self::new(vec![(op, index.to_quil()?)], expression))
+            }
+
+            // Second constructor, account for positional vs keyword arguments.
+            (
+                // all positional
+                Some(Migrate::Old(arguments)),
+                Some(Migrate::Old(expression)),
+                None,
+                None,
+            )
+            | (
+                // positional arguments, keyword expression
+                Some(Migrate::Old(arguments)),
+                None,
+                None,
+                Some(expression),
+            )
+            | (
+                // all keywords
+                None,
+                None,
+                Some(arguments),
+                Some(expression),
+            ) => Self::from_list(arguments, expression),
+
+            // Second constructor, with default expression of 1.0.
+            (Some(Migrate::Old(arguments)), None, None, None)
+            | (None, None, Some(arguments), None) => Self::from_list(arguments, ONE),
+
+            (Some(Migrate::New(_)), None, None, None) => Err(PyValueError::new_err(
+                "PauliTerm with non-identity operator must have an `index` qubit",
+            )),
+
+            _ => Err(PyValueError::new_err(
+                "invalid combination of arguments for PauliTerm constructor",
+            )),
+        }
     }
 
     #[gen_stub(override_return_type(
@@ -1900,6 +2023,300 @@ impl PauliTerm {
     ))]
     fn __getnewargs__(&self) -> (Vec<(PauliGate, String)>, Expression) {
         (self.arguments.clone(), self.expression.clone())
+    }
+
+    /// Construct a new `PauliTerm` from a list of operators and an optional coefficient.
+    #[pyo3(signature = (arguments, expression=ONE))]
+    #[staticmethod]
+    fn from_list(arguments: Vec<(PauliGate, Qubit)>, expression: Expression) -> PyResult<Self> {
+        let arguments = arguments
+            .into_iter()
+            .filter_map(|(gate, qubit)| {
+                // Drop identity operators.
+                match gate {
+                    PauliGate::I => None,
+                    _ => Some(qubit.to_quil().map(|qubit_str| (gate, qubit_str))),
+                }
+            })
+            .collect::<Result<_, _>>()?;
+        Ok(Self::new(arguments, expression))
+    }
+
+    /// Length of the PauliTerm is the number of Pauli operators in the term.
+    ///
+    /// A term that consists of only a scalar has a length of zero.
+    fn __len__(&self) -> usize {
+        self.arguments.len()
+    }
+
+    /// Create a new copy of this [`PauliTerm`].
+    #[pyo3(warn(
+        message = "`copy` is deprecated; use `copy.copy(term)` instead.",
+        category = PyDeprecationWarning
+    ))]
+    fn copy(&self) -> Self {
+        self.clone()
+    }
+
+    /// Create [`Program`] from the [`PauliTerm`].
+    #[getter]
+    fn program(&self) -> PyResult<Program> {
+        let mut program = Program::new();
+        for (op, qubit) in &self.arguments {
+            let name = match op {
+                PauliGate::X => "X",
+                PauliGate::Y => "Y",
+                PauliGate::Z => "Z",
+                PauliGate::I => "I",
+            };
+
+            let g = Gate::new(name, vec![], vec![Qubit::Variable(qubit.clone())], vec![])?;
+            program.add_instruction(Instruction::Gate(g));
+        }
+
+        Ok(program)
+    }
+
+    /// Get the arguments of the [`PauliTerm`] as [`Qubit`]s.
+    fn get_qubits(&self) -> Vec<Qubit> {
+        self.arguments.iter().map(|(_, q)| Qubit::Variable(q.clone())).collect()
+    }
+
+    /// Get the [`PauliGate`] for the first matching argument in the [`PauliTerm`].
+    fn __getitem__(&self, argument: String) -> PyResult<PauliGate> {
+        for (gate, qubit) in &self.arguments {
+            if qubit == &argument {
+                return Ok(*gate);
+            }
+        }
+        Err(PyKeyError::new_err(format!("no operator for argument {argument}")))
+    }
+
+    /// Iterate over the arguments in this [`PauliTerm`].
+    fn __iter__(slf: Bound<'_, Self>) -> PauliTermIter {
+        PauliTermIter::new(slf.unbind())
+    }
+
+    /// Return the product of this [`PauliTerm`] with another `PauliTerm`,
+    /// [`PauliSum`], or number according to the Pauli algebra rules.
+    fn __mul__(&self, other: Bound<'_, PyAny>) -> PyResult<Self> {
+
+        todo!()
+    }
+
+    /// Return an identifier string for the PauliTerm (ignoring the coefficient).
+    ///
+    /// For example, ``PauliTerm([("X", 0), ("Y", "q")]).id() == "X0Yq"``.
+    ///
+    /// Don't use this to compare terms (use ``pt0 == pt1`` or ``hash(pt0)`` for that).
+    /// By default, this function sorts the qubits in the term,
+    /// but you can pass ``sort_ops=False`` to disable sorting by qubit.
+    /// This is currently ``True`` by default, but will change in a future version.
+    ///
+    /// Note that if the term has no operators,
+    /// this function will return ``"I"`` if ``sort_ops=False`` and ``""`` otherwise
+    /// to maintain backwards compatibility with versions prior to adding ``sort_ops``;
+    /// this is expected to change in a future version and should not be relied upon.
+    /// If you need to check for identity, use ``term.is_identity()`` instead.
+    fn id(&self, sort_ops: bool) -> String {
+        if sort_ops {
+            self.arguments
+                .iter()
+                .sorted_by(|(_, a), (_, b)| a.cmp(b))
+                .map(|(g, q)| format!("{g}{q}"))
+                .join("")
+        } else if !self.arguments.is_empty() {
+            self.arguments
+                .iter()
+                .map(|(g, q)| format!("{g}{q}"))
+                .join("")
+        } else {
+            "I".to_string()
+        }
+    }
+
+    /// Return a frozenset of operations in this term.
+    ///
+    /// Use this in place of `id` if the order of operations in the term does not matter.
+    #[gen_stub(override_return_type(type_repr = "builtins.frozenset[builtins.tuple[PauliGate, builtins.str]]", imports = ("builtins")))]
+    #[pyo3(warn(
+        message = "`operations_as_set` is deprecated; use `frozenset(term.arguments)` instead.",
+        category = PyDeprecationWarning
+    ))]
+    fn operations_as_set<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyFrozenSet>> {
+        PyFrozenSet::new(py, self.arguments.clone())
+    }
+
+    /// Return `True` if and only if all operators are identity,
+    /// including the case in which the list of operators is empty.
+    fn is_identity(&self) -> bool {
+        self.arguments.iter().all(|(gate, _)| *gate == PauliGate::I)
+    }
+}
+
+/// An iterator over the qubit indices and Pauli operators in a [`PauliTerm`].
+#[pyclass(module = "_quil.instructions", frozen)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+struct PauliTermIter {
+    // Using `Py<_>` avoids cloning the entire `PauliTerm`, 
+    // and since that class is frozen, we can skip all the Python reference counting
+    // by using an atomic index.
+    term: Py<PauliTerm>,
+    index: AtomicUsize,
+}
+
+impl PauliTermIter {
+    fn new(term: Py<PauliTerm>) -> Self {
+        Self {
+            term,
+            index: AtomicUsize::new(0),
+        }
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl PauliTermIter {
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __next__(slf: PyRef<'_, Self>) -> Option<(PauliGate, String)> {
+        slf.term.get().arguments.get(slf.index.fetch_add(1, Ordering::Relaxed)).cloned()
+    }
+
+    #[gen_stub(skip)]
+    fn __traverse__(&self, visit: pyo3::PyVisit) -> Result<(), pyo3::PyTraverseError> {
+        visit.call(&self.term)
+    }
+}
+
+// PauliSum constructor stub overloads:
+// - the first is the new (PyQuil) preferred order `(terms, arguments=None)`
+// - the second is the old (`quil`) deprecated order `(arguments, terms)`
+// The former is preferred because `arguments` can (and should?) be inferred from `terms`.
+#[cfg(feature = "stubs")]
+pyo3_stub_gen::inventory::submit! {
+    gen_methods_from_python! {
+        r#"
+        import collections.abc
+        import typing
+        import typing_extensions
+
+        class PauliSum:
+            @typing.overload
+            def __new__(
+                cls,
+                terms: collections.abc.Sequence[PauliGate],
+                arguments: collections.abc.Sequence[str] | None = None,
+            ) -> PauliSum:
+                """Construct a new `PauliSum` from a list of `PauliTerm`s
+                and an optional list of arguments.
+                """
+
+            @typing.overload
+            @typing_extensions.deprecated("This parameter order is deprecated; use `(terms, arguments)` instead.")
+            def __new__(
+                cls,
+                arguments: collections.abc.Sequence[str],
+                terms: collections.abc.Sequence[PauliGate],
+            ) -> PauliSum:
+                """Construct a new `PauliSum` from arguments and `PauliTerm`s.
+
+                This constructor is deprecated; use `(terms, arguments)` instead.
+                """
+        "#
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl PauliSum {
+    // TODO(migration-guide):
+    //
+    // - Rust users of `quil-rs` with the `python` feature
+    //   should be aware that `PauliSum::new` is no longer shared directly with Python.
+    // - Python users of `quil` will receive deprecation warnings
+    //   for existing usage of the `PauliSum.__new__` constructor
+    //   and should update usage from `PauliSum(arguments, terms)` to `PauliSum(terms)`.
+    /// Construct a new `PauliSum` from a list of `PauliTerm`s and an optional list of arguments.
+    ///
+    /// For backwards compatibility, this constructor supports `(arguments, terms)`,
+    /// but if `arguments` are given, the preferred order is `(terms, arguments)`,
+    /// and the other order will issue a deprecation warning.
+    /// If not given, `arguments` are inferred from the `PauliTerm`s.
+    // Developer Note: The stubs for the documented constructors are added manually above.
+    // The two signatures are united in a backwards-compatible way
+    // by inserting a positional-only parameter that can work as `terms` or `arguments`;
+    // the second argument is still `terms` to support both positional and keyword usage,
+    // but likewise accepts either `terms` or `arguments`.
+    // Finally, the `arguments` parameter has been moved to the end
+    // to maintain compatibility with keyword-only usage.
+    //
+    // At some point, we'll act on the deprecation notice
+    // and stop accepting the `(arguments, terms)` order,
+    // and this whole constructor can be greatly simplified.
+    #[new]
+    #[pyo3(signature = (terms_or_args=None, /, terms=None, arguments=None))]
+    fn __new__(
+        py: Python<'_>,
+        terms_or_args: Option<Migrate<Vec<PauliTerm>, Vec<String>>>,
+        terms: Option<Migrate<Vec<PauliTerm>, Vec<String>>>,
+        arguments: Option<Vec<String>>,
+    ) -> PyResult<PauliSum> {
+        match (terms_or_args, terms, arguments) {
+            // Single-parameter `terms` as positional or keyword parameters.
+            (Some(Migrate::New(terms)), None, None)
+                | (None, Some(Migrate::New(terms)), None) => {
+                let arguments = PauliSum::into_inferred_args(&terms);
+                Ok(PauliSum { arguments, terms })
+            }
+
+            // New-style two-parameter new-style constructor `(terms, arguments)`,
+            // as positional, mixed, and keyword-only versions.
+            (Some(Migrate::New(terms)), Some(Migrate::Old(arguments)), None)
+                | (Some(Migrate::New(terms)), None, Some(arguments))
+                | (None, Some(Migrate::New(terms)), Some(arguments)) => {
+                // Let the existing constructor check for valid parameters.
+                Ok(PauliSum::new(arguments, terms)?)
+            }
+
+            // Old-style two-parameter constructor `(arguments, terms)`;
+            // the first covers both positional and mixed, the second keyword-only versions.
+            (Some(Migrate::Old(arguments)), Some(Migrate::New(terms)), None) => {
+                py_deprecated!(
+                    py,
+                    c"`PauliSum(arguments, terms)` is deprecated; use `PauliSum(terms, arguments)` instead."
+                )?;
+                // Let the existing constructor check for valid parameters.
+                Ok(PauliSum::new(arguments, terms)?)
+            }
+
+            // Only given `arguments`, by position or keyword,
+            (Some(Migrate::Old(_)), None, None) | (None, None, _) => {
+                Err(PyValueError::new_err("missing argument `terms`"))
+            }
+
+            // Given `terms=<list of strings>` or two lists of strings positionally.
+            (Some(Migrate::Old(_)), None, Some(_)) | (_, Some(Migrate::Old(_)), _) => {
+                Err(PyTypeError::new_err("`terms` must be a list of `PauliTerm`s"))
+            }
+
+            // Given two lists of `PauliTerm`s, but one should be `arguments`.
+            (Some(Migrate::New(_)), Some(Migrate::New(_)), None) => {
+                Err(PyTypeError::new_err("`arguments` must be a list of `str`s"))
+            },
+
+            (Some(_), Some(_), Some(_)) => Err(PyValueError::new_err(
+                "too many arguments; use `PauliSum(terms, arguments)`",
+            )),
+        }
+    }
+
+    fn __getnewargs__(&self) -> (Vec<PauliTerm>, Vec<String>) {
+        (self.terms.clone(), self.arguments.clone())
     }
 }
 
