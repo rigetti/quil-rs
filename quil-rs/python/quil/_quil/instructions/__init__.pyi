@@ -75,6 +75,7 @@ __all__ = [
     "ParseMemoryReferenceError",
     "PauliGate",
     "PauliSum",
+    "PauliTargetDesignator",
     "PauliTerm",
     "PauliTermIter",
     "Pragma",
@@ -109,6 +110,7 @@ __all__ = [
 
 LabelTargetParameter: TypeAlias = builtins.str  |  Target  |  Label
 MemoryReferenceDesignator: TypeAlias = MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]
+PauliTargetDesignator: TypeAlias = builtins.str  |  builtins.int  |  Qubit
 QubitDesignator: TypeAlias = Qubit  |  QubitPlaceholder  |  builtins.str  |  builtins.int
 Halt: HaltType
 Nop: NopType
@@ -1767,13 +1769,13 @@ class PauliSum:
     def __getnewargs__(self) -> tuple[builtins.list[PauliTerm], builtins.list[builtins.str]]: ...
     def __hash__(self) -> builtins.int: ...
     @typing.overload
-    def __new__(cls, terms: collections.abc.Sequence[PauliGate | str], arguments: collections.abc.Sequence[QubitDesignator] | None = None) -> PauliSum:
+    def __new__(cls, terms: collections.abc.Sequence[PauliTerm], arguments: collections.abc.Sequence[PauliTargetDesignator] | None = None) -> PauliSum:
         r"""
         Construct a new `PauliSum` from a list of `PauliTerm`s
         and an optional list of arguments.
         """
     @typing.overload
-    def __new__(cls, arguments: collections.abc.Sequence[QubitDesignator], terms: collections.abc.Sequence[PauliGate | str]) -> PauliSum:
+    def __new__(cls, arguments: collections.abc.Sequence[PauliTargetDesignator], terms: collections.abc.Sequence[PauliTerm]) -> PauliSum:
         r"""
         Construct a new `PauliSum` from arguments and `PauliTerm`s.
         
@@ -1835,28 +1837,33 @@ class PauliTerm:
         [`PauliSum`], or number according to the Pauli algebra rules.
         """
     @typing.overload
-    def __new__(cls, op: typing.Literal[PauliGate.I] | typing.Literal["I"], index: QubitDesignator | None, coefficient: ExpressionDesignator = 1) -> PauliTerm:
+    def __new__(cls, op: typing.Literal[PauliGate.I] | typing.Literal["I"], index: PauliTargetDesignator | None, coefficient: ExpressionDesignator = 1) -> PauliTerm:
         r"""
         Construct a `PauliTerm` for a single Identity operator.
         """
     @typing.overload
-    def __new__(cls, op: PauliGate | str, index: None, coefficient: ExpressionDesignator = 1) -> PauliTerm:
+    def __new__(cls, op: PauliGate | str, index: PauliTargetDesignator | None, coefficient: ExpressionDesignator = 1) -> PauliTerm:
         r"""
         Construct a `PauliTerm` for a single operator and argument.
         """
     @typing.overload
-    def __new__(cls, arguments: collections.abc.Sequence[tuple[PauliGate | str, QubitDesignator]], expression: ExpressionDesignator = 1) -> PauliTerm:
+    def __new__(cls, arguments: collections.abc.Sequence[tuple[PauliGate | str, PauliTargetDesignator]], expression: ExpressionDesignator = 1) -> PauliTerm:
         r"""
         Construct a `PauliTerm` from a sequence of arguments.
         """
     @typing.overload
-    def __new__(cls, op: typing.Optional[PauliGate  |  builtins.list[tuple[PauliGate, Qubit]]] = None, index: typing.Optional[Qubit  |  expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None, coefficient: typing.Optional[expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None, arguments: typing.Optional[typing.Sequence[tuple[PauliGate, Qubit]]] = None, expression: typing.Optional[expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None) -> PauliTerm:
+    def __new__(cls, op: typing.Optional[PauliGate  |  builtins.list[tuple[PauliGate, builtins.str  |  builtins.int  |  Qubit]]] = None, index: typing.Optional[builtins.str  |  builtins.int  |  Qubit  |  expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None, coefficient: typing.Optional[expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None, arguments: typing.Optional[typing.Sequence[tuple[PauliGate, builtins.str  |  builtins.int  |  Qubit]]] = None, expression: typing.Optional[expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None) -> PauliTerm:
         r"""
         Construct a new `PauliTerm` from a single operator and qubit index.
         
-        To construct a `PauliTerm`, provide a `PauliGate` operator and a `Qubit` index.
-        As a special case, if `op` is the identity operator, `index` may be `None`.
-        Optionally, you can provide a `coefficient` `Expression`.
+        To construct a `PauliTerm`, provide a `PauliGate` operator and an argument string.
+        As a special case, if `op` is the identity operator, the argument may be `None`.
+        Additionally, the argument parameter can be derived automatically 
+        from a non-placeholder `Qubit` instance or from a non-negative integer;
+        in the latter case, the argument will be formatted as ``"q{index}"``
+        to generate a valid Quil argument string.
+        Optionally, you can provide a `coefficient`,
+        either directly as an `Expression` or as a numeric literal.
         
         ```python
         from quil.instructions import PauliTerm, PauliGate
@@ -1887,7 +1894,7 @@ class PauliTerm:
         Create a new copy of this [`PauliTerm`].
         """
     @staticmethod
-    def from_list(arguments: typing.Sequence[tuple[PauliGate, Qubit]], coefficient: expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex = ...) -> PauliTerm:
+    def from_list(terms_list: typing.Sequence[tuple[PauliGate, builtins.str  |  builtins.int  |  Qubit]], coefficient: expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex = ...) -> PauliTerm:
         r"""
         Construct a new `PauliTerm` from a list of operators and an optional coefficient.
         """
