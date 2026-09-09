@@ -918,7 +918,7 @@ pub struct PauliSum {
 
 impl PauliSum {
     pub fn new(arguments: Vec<String>, terms: Vec<PauliTerm>) -> Result<PauliSum, GateError> {
-        let diff = PauliSum::infer_args(&terms)
+        let diff = PauliSum::extract_args(&terms)
             .difference(&arguments.iter().map(|arg| arg.as_str()).collect::<HashSet<_>>())
             .copied()
             .collect::<Vec<_>>();
@@ -933,16 +933,16 @@ impl PauliSum {
         Ok(Self { arguments, terms })
     }
 
-    /// Infer arguments from a collection of `PauliTerm`s.
-    pub(crate) fn infer_args(terms: &[PauliTerm]) -> HashSet<&str> {
+    /// Extract arguments from a collection of `PauliTerm`s.
+    pub(crate) fn extract_args(terms: &[PauliTerm]) -> HashSet<&str> {
         terms.iter()
             .flat_map(|term| term.arguments())
             .map(|arg| arg.as_str())
             .collect::<HashSet<_>>()
     }
 
-    pub(crate) fn into_inferred_args(terms: &[PauliTerm]) -> Vec<String> {
-        PauliSum::infer_args(terms).iter().map(|&arg| arg.to_string()).collect()
+    pub(crate) fn into_args(terms: &[PauliTerm]) -> Vec<String> {
+        PauliSum::extract_args(terms).iter().map(|&arg| arg.to_string()).collect()
     }
 }
 
@@ -960,12 +960,12 @@ mod pauli_sum_tests {
             PauliTerm::new(vec![(PauliGate::Z, "q0".to_string())], ONE),
         ];
 
-        let inferred_args = PauliSum::infer_args(&terms);
+        let inferred_args = PauliSum::extract_args(&terms);
         let expected_args: HashSet<&str> = HashSet::from(["q0", "q1"]);
         assert_eq!(inferred_args, expected_args);
 
         // Check that it is consistent with the `PauliSum::new` constructor.
-        let expected_args = PauliSum::into_inferred_args(&terms);
+        let expected_args = PauliSum::into_args(&terms);
         let pauli_sum = PauliSum::new(expected_args.clone(), terms)
             .expect("PauliSum::new should succeed with matching arguments");
         // Sanity check that they are indeed the same.

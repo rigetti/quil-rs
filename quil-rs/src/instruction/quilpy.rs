@@ -152,11 +152,13 @@ pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
         "QubitDesignator",
         union!(py, Qubit, QubitPlaceholder, PyInt, PyString)?,
     )?;
+    m.add("PauliTargetDesignator", union!(py, Qubit, PyInt, PyString)?)?;
 
     m.add(
         "MemoryReferenceDesignator",
         union!(py, MemoryReference, DeclarationAt, Declaration, PyTuple)?,
     )?;
+
 
     Ok(())
 }
@@ -1872,31 +1874,28 @@ impl PauliGate {
     }
 }
 
+/// Argument type when constructing a `PauliTerm` from Python. 
+///
+/// Technically, we only accept `Qubit::Variable` and `Qubit::Fixed` (or `str` and `int`),
+/// but this wraps `Qubit` and raises a type error if the input is `Qubit::Placeholder`.
 #[derive(FromPyObject)]
-enum PauliTargetDesignator {
-    String(String),
-    Qubit(Qubit),
-}
+struct PauliArg(Qubit);
 
-#[cfg(feature = "stubs")]
-pyo3_stub_gen::impl_stub_type!(PauliTargetDesignator = String | u64 | Qubit);
-
-impl TryFrom<PauliTargetDesignator> for String {
+impl TryFrom<PauliArg> for String {
     type Error = PyErr;
 
-    fn try_from(value: PauliTargetDesignator) -> Result<Self, Self::Error> {
-        match value {
-            PauliTargetDesignator::String(s) => Ok(s), 
-            PauliTargetDesignator::Qubit(Qubit::Variable(v)) => Ok(v),
-            PauliTargetDesignator::Qubit(Qubit::Fixed(v)) => Ok(v.to_string()),
-            PauliTargetDesignator::Qubit(Qubit::Placeholder(_)) => Err(PyValueError::new_err(
+    fn try_from(value: PauliArg) -> Result<Self, Self::Error> {
+        match value.0 {
+            Qubit::Variable(v) => Ok(v),
+            Qubit::Fixed(v) => Ok(format!("q{v}")),
+            Qubit::Placeholder(_) => Err(PyTypeError::new_err(
                 "cannot use Qubit::Placeholder as a PauliTerm target",
             )),
         }
     }
 }
 
-fn convert_pauli_targets(values: Vec<PauliTargetDesignator>) -> PyResult<Vec<String>> {
+fn convert_pauli_targets(values: Vec<PauliArg>) -> PyResult<Vec<String>> {
     let mut result = Vec::with_capacity(values.len());
     for value in values {
         result.push(String::try_from(value)?);
@@ -1919,7 +1918,7 @@ pyo3_stub_gen::inventory::submit! {
             def __new__(
                 cls,
                 op: typing.Literal[PauliGate.I] | typing.Literal["I"],
-                index: QubitDesignator | None,
+                index: PauliTargetDesignator | None,
                 coefficient: ExpressionDesignator = 1.0,
             ) -> PauliTerm:
                 """Construct a `PauliTerm` for a single Identity operator."""
@@ -1928,7 +1927,7 @@ pyo3_stub_gen::inventory::submit! {
             def __new__(
                 cls,
                 op: PauliGate | str,
-                index: None,
+                index: PauliTargetDesignator | None,
                 coefficient: ExpressionDesignator = 1.0,
             ) -> PauliTerm:
                 """Construct a `PauliTerm` for a single operator and argument."""
@@ -1937,7 +1936,7 @@ pyo3_stub_gen::inventory::submit! {
             @typing_extensions.deprecated("this constructor is deprecated; use `PauliTerm.from_list` instead")
             def __new__(
                 cls,
-                arguments: collections.abc.Sequence[tuple[PauliGate | str, QubitDesignator]],
+                arguments: collections.abc.Sequence[tuple[PauliGate | str, PauliTargetDesignator]],
                 expression: ExpressionDesignator = 1.0,
             ) -> PauliTerm:
                 """Construct a `PauliTerm` from a sequence of arguments."""
@@ -1953,16 +1952,26 @@ const ONE: Expression = Expression::Number(Complex64::new(1.0, 0.0));
 impl PauliTerm {
     // TODO(migration-guide):
     // - Rust users making use of the `python` feature need to update usage of `__new__`.
-    // - Python users should be aware of the combined API.
+    // - Python users should be aware of the (temporary) combined API.
+    // - The PyQuil v4 methods genereally accepted `Qubit` instances of any sort,
+    //   but typically `Qubit::Placeholder` was not actually allowed, or if it were,
+    //   it was a bug, since it wouldn't be properly resolved into a String.
+    //   Now, it'll explicitly raise an error if used. 
+    //
     // Developer note:
     // The stubs for the documented constructors are added manually above.
     // The reason for two constructors here is backwards compatibility:
     // PyQuil v4 used the first form, while `quil` had used the second.
     /// Construct a new `PauliTerm` from a single operator and qubit index.
     ///
-    /// To construct a `PauliTerm`, provide a `PauliGate` operator and a `Qubit` index.
-    /// As a special case, if `op` is the identity operator, `index` may be `None`.
-    /// Optionally, you can provide a `coefficient` `Expression`.
+    /// To construct a `PauliTerm`, provide a `PauliGate` operator and an argument string.
+    /// As a special case, if `op` is the identity operator, the argument may be `None`.
+    /// Additionally, the argument parameter can be derived automatically 
+    /// from a non-placeholder `Qubit` instance or from a non-negative integer;
+    /// in the latter case, the argument will be formatted as ``"q{index}"``
+    /// to generate a valid Quil argument string.
+    /// Optionally, you can provide a `coefficient`,
+    /// either directly as an `Expression` or as a numeric literal.
     ///
     /// ```python
     /// from quil.instructions import PauliTerm, PauliGate
@@ -1992,10 +2001,10 @@ impl PauliTerm {
     ))]
     fn __new__(
         py: Python<'_>,
-        op: Option<Migrate<PauliGate, Vec<(PauliGate, Qubit)>>>,
-        index: Option<Migrate<Qubit, ExpressionLike>>,
+        op: Option<Migrate<PauliGate, Vec<(PauliGate, PauliArg)>>>,
+        index: Option<Migrate<PauliArg, ExpressionLike>>,
         coefficient: Option<ExpressionLike>,
-        arguments: Option<Vec<(PauliGate, Qubit)>>,
+        arguments: Option<Vec<(PauliGate, PauliArg)>>,
         expression: Option<ExpressionLike>,
     ) -> PyResult<Self> {
         match (op, index, arguments, expression) {
@@ -2008,7 +2017,7 @@ impl PauliTerm {
             // Otherwise, given an `op`, we require an `index`.
             (Some(Migrate::New(op)), Some(Migrate::New(index)), None, None) => {
                 let expression = coefficient.map(Into::into).unwrap_or(ONE);
-                Ok(Self::new(vec![(op, index.to_quil()?)], expression))
+                Ok(Self::new(vec![(op, index.try_into()?)], expression))
             }
 
             // Second constructor, account for positional vs keyword arguments.
@@ -2072,16 +2081,16 @@ impl PauliTerm {
     }
 
     /// Construct a new `PauliTerm` from a list of operators and an optional coefficient.
-    #[pyo3(signature = (arguments, coefficient=ExpressionLike::Expression(ONE)))]
+    #[pyo3(signature = (terms_list, coefficient=ExpressionLike::Expression(ONE)))]
     #[staticmethod]
-    fn from_list(arguments: Vec<(PauliGate, Qubit)>, coefficient: ExpressionLike) -> PyResult<Self> {
-        let arguments = arguments
+    fn from_list(terms_list: Vec<(PauliGate, PauliArg)>, coefficient: ExpressionLike) -> PyResult<Self> {
+        let arguments = terms_list
             .into_iter()
             .filter_map(|(gate, qubit)| {
                 // Drop identity operators.
                 match gate {
                     PauliGate::I => None,
-                    _ => Some(qubit.to_quil().map(|qubit_str| (gate, qubit_str))),
+                    _ => Some(qubit.try_into().map(|qubit_str| (gate, qubit_str))),
                 }
             })
             .collect::<Result<_, _>>()?;
@@ -2254,8 +2263,8 @@ pyo3_stub_gen::inventory::submit! {
             @typing.overload
             def __new__(
                 cls,
-                terms: collections.abc.Sequence[PauliGate | str],
-                arguments: collections.abc.Sequence[QubitDesignator] | None = None,
+                terms: collections.abc.Sequence[PauliTerm],
+                arguments: collections.abc.Sequence[PauliTargetDesignator] | None = None,
             ) -> PauliSum:
                 """Construct a new `PauliSum` from a list of `PauliTerm`s
                 and an optional list of arguments.
@@ -2265,8 +2274,8 @@ pyo3_stub_gen::inventory::submit! {
             @typing_extensions.deprecated("This parameter order is deprecated; use `(terms, arguments)` instead.")
             def __new__(
                 cls,
-                arguments: collections.abc.Sequence[QubitDesignator],
-                terms: collections.abc.Sequence[PauliGate | str],
+                arguments: collections.abc.Sequence[PauliTargetDesignator],
+                terms: collections.abc.Sequence[PauliTerm],
             ) -> PauliSum:
                 """Construct a new `PauliSum` from arguments and `PauliTerm`s.
 
@@ -2308,15 +2317,15 @@ impl PauliSum {
     #[pyo3(signature = (terms_or_args=None, /, terms=None, arguments=None))]
     fn __new__(
         py: Python<'_>,
-        terms_or_args: Option<Migrate<Vec<PauliTerm>, Vec<PauliTargetDesignator>>>,
-        terms: Option<Migrate<Vec<PauliTerm>, Vec<PauliTargetDesignator>>>,
-        arguments: Option<Vec<PauliTargetDesignator>>,
+        terms_or_args: Option<Migrate<Vec<PauliTerm>, Vec<PauliArg>>>,
+        terms: Option<Migrate<Vec<PauliTerm>, Vec<PauliArg>>>,
+        arguments: Option<Vec<PauliArg>>,
     ) -> PyResult<PauliSum> {
         match (terms_or_args, terms, arguments) {
             // Single-parameter `terms` as positional or keyword parameters.
             (Some(Migrate::New(terms)), None, None)
                 | (None, Some(Migrate::New(terms)), None) => {
-                let arguments = PauliSum::into_inferred_args(&terms);
+                let arguments = PauliSum::into_args(&terms);
                 Ok(PauliSum { arguments, terms })
             }
 
@@ -2442,6 +2451,8 @@ mod stubs {
         MemoryReferenceLike = MemoryReference | DeclarationAt | Declaration | (String, u64)
     );
 
+    impl_stub_type!(PauliArg = String | u64 | Qubit);
+
     type_alias!(
         "quil._quil.instructions",
         LabelTargetParameter = String | Target | Label
@@ -2454,6 +2465,7 @@ mod stubs {
         "quil._quil.instructions",
         QubitDesignator = Qubit | QubitPlaceholder | String | u64
     );
+    type_alias!("quil._quil.instructions", PauliTargetDesignator = PauliArg);
 }
 
 pub(crate) type QubitLike<'a, 'py> = Like<'a, 'py, Qubit>;
