@@ -2,11 +2,13 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+import collections.abc
 import enum
 import numpy
 import numpy.typing
 from quil import _quil
 from quil._quil import expression
+from quil._quil import program
 import typing
 import typing_extensions
 from typing import TypeAlias
@@ -74,6 +76,7 @@ __all__ = [
     "PauliGate",
     "PauliSum",
     "PauliTerm",
+    "PauliTermIter",
     "Pragma",
     "PragmaArgument",
     "Pulse",
@@ -1761,9 +1764,31 @@ class PauliSum:
     @property
     def terms(self) -> builtins.list[PauliTerm]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[builtins.list[builtins.str], builtins.list[PauliTerm]]: ...
+    def __getnewargs__(self) -> tuple[builtins.list[PauliTerm], builtins.list[builtins.str]]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, arguments: typing.Sequence[builtins.str], terms: typing.Sequence[PauliTerm]) -> PauliSum: ...
+    @typing.overload
+    def __new__(cls, terms: collections.abc.Sequence[PauliGate | str], arguments: collections.abc.Sequence[QubitDesignator] | None = None) -> PauliSum:
+        r"""
+        Construct a new `PauliSum` from a list of `PauliTerm`s
+        and an optional list of arguments.
+        """
+    @typing.overload
+    def __new__(cls, arguments: collections.abc.Sequence[QubitDesignator], terms: collections.abc.Sequence[PauliGate | str]) -> PauliSum:
+        r"""
+        Construct a new `PauliSum` from arguments and `PauliTerm`s.
+        
+        This constructor is deprecated; use `(terms, arguments)` instead.
+        """
+    @typing.overload
+    def __new__(cls, terms_or_args: typing.Optional[builtins.list[PauliTerm]  |  builtins.list[builtins.str  |  builtins.int  |  Qubit]] = None, /, terms: typing.Optional[builtins.list[PauliTerm]  |  builtins.list[builtins.str  |  builtins.int  |  Qubit]] = None, arguments: typing.Optional[typing.Sequence[builtins.str  |  builtins.int  |  Qubit]] = None) -> PauliSum:
+        r"""
+        Construct a new `PauliSum` from a list of `PauliTerm`s and an optional list of arguments.
+        
+        For backwards compatibility, this constructor supports `(arguments, terms)`,
+        but if `arguments` are given, the preferred order is `(terms, arguments)`,
+        and the other order will issue a deprecation warning.
+        If not given, `arguments` are inferred from the `PauliTerm`s.
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1771,22 +1796,141 @@ class PauliSum:
         """
 
 class PauliTerm:
+    r"""
+    A `PauliTerm` is a coefficient multiplied by the tensor product of Pauli operators
+    operating on different qubit indices.
+    """
     @property
     def arguments(self) -> builtins.list[tuple[PauliGate, builtins.str]]: ...
     @property
     def expression(self) -> expression.Expression: ...
+    @property
+    def program(self) -> program.Program:
+        r"""
+        Create [`Program`] from the [`PauliTerm`].
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __getitem__(self, argument: builtins.str) -> PauliGate:
+        r"""
+        Get the [`PauliGate`] for the first matching argument in the [`PauliTerm`].
+        """
     def __getnewargs__(self) -> builtins.tuple[
             builtins.list[builtins.tuple[PauliGate, builtins.str]],
             _quil.expression.Expression
         ]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, arguments: typing.Sequence[tuple[PauliGate, builtins.str]], expression: _quil.expression.Expression) -> PauliTerm: ...
+    def __iter__(self) -> PauliTermIter:
+        r"""
+        Iterate over the arguments in this [`PauliTerm`].
+        """
+    def __len__(self) -> builtins.int:
+        r"""
+        Length of the PauliTerm is the number of Pauli operators in the term.
+        
+        A term that consists of only a scalar has a length of zero.
+        """
+    def __mul__(self, other: typing.Any) -> PauliTerm:
+        r"""
+        Return the product of this [`PauliTerm`] with another `PauliTerm`,
+        [`PauliSum`], or number according to the Pauli algebra rules.
+        """
+    @typing.overload
+    def __new__(cls, op: typing.Literal[PauliGate.I] | typing.Literal["I"], index: QubitDesignator | None, coefficient: ExpressionDesignator = 1) -> PauliTerm:
+        r"""
+        Construct a `PauliTerm` for a single Identity operator.
+        """
+    @typing.overload
+    def __new__(cls, op: PauliGate | str, index: None, coefficient: ExpressionDesignator = 1) -> PauliTerm:
+        r"""
+        Construct a `PauliTerm` for a single operator and argument.
+        """
+    @typing.overload
+    def __new__(cls, arguments: collections.abc.Sequence[tuple[PauliGate | str, QubitDesignator]], expression: ExpressionDesignator = 1) -> PauliTerm:
+        r"""
+        Construct a `PauliTerm` from a sequence of arguments.
+        """
+    @typing.overload
+    def __new__(cls, op: typing.Optional[PauliGate  |  builtins.list[tuple[PauliGate, Qubit]]] = None, index: typing.Optional[Qubit  |  expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None, coefficient: typing.Optional[expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None, arguments: typing.Optional[typing.Sequence[tuple[PauliGate, Qubit]]] = None, expression: typing.Optional[expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None) -> PauliTerm:
+        r"""
+        Construct a new `PauliTerm` from a single operator and qubit index.
+        
+        To construct a `PauliTerm`, provide a `PauliGate` operator and a `Qubit` index.
+        As a special case, if `op` is the identity operator, `index` may be `None`.
+        Optionally, you can provide a `coefficient` `Expression`.
+        
+        ```python
+        from quil.instructions import PauliTerm, PauliGate
+        term = PauliTerm("X", 0, 1.5) * PauliTerm(PauliGate.Y, "q") * PauliTerm("I", None)
+        ```
+        
+        At present and for compatibility purposes,
+        you can construct a `PauliTerm` using a sequence of `(operator, qubit)` pairs,
+        but doing so is deprecated in favor of the `PauliTerm.from_list` static method.
+        
+        ```python
+        # This will raise a deprecation warning in PyQuil v5.
+        term = PauliTerm([(PauliGate.X, 0), (PauliGate.Y, "q"), ("I", None)], 1.5)
+        # Prefer this form:
+        term = PauliTerm.from_list([(PauliGate.X, 0), (PauliGate.Y, "q"), ("I", None)], 1.5)
+        ```
+        
+        Note that to be valid `quil`, the  `coefficient` must be real-valued
+        and only reference real numeric literals or parameters.
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def copy(self) -> PauliTerm:
+        r"""
+        Create a new copy of this [`PauliTerm`].
+        """
+    @staticmethod
+    def from_list(arguments: typing.Sequence[tuple[PauliGate, Qubit]], coefficient: expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex = ...) -> PauliTerm:
+        r"""
+        Construct a new `PauliTerm` from a list of operators and an optional coefficient.
+        """
+    def get_qubits(self) -> builtins.list[Qubit]:
+        r"""
+        Get the arguments of the [`PauliTerm`] as [`Qubit`]s.
+        """
+    def id(self, sort_ops: builtins.bool) -> builtins.str:
+        r"""
+        Return an identifier string for the PauliTerm (ignoring the coefficient).
+        
+        For example, ``PauliTerm([("X", 0), ("Y", "q")]).id() == "X0Yq"``.
+        
+        Don't use this to compare terms (use ``pt0 == pt1`` or ``hash(pt0)`` for that).
+        By default, this function sorts the qubits in the term,
+        but you can pass ``sort_ops=False`` to disable sorting by qubit.
+        This is currently ``True`` by default, but will change in a future version.
+        
+        Note that if the term has no operators,
+        this function will return ``"I"`` if ``sort_ops=False`` and ``""`` otherwise
+        to maintain backwards compatibility with versions prior to adding ``sort_ops``;
+        this is expected to change in a future version and should not be relied upon.
+        If you need to check for identity, use ``term.is_identity()`` instead.
+        """
+    def is_identity(self) -> builtins.bool:
+        r"""
+        Return `True` if and only if all operators are identity,
+        including the case in which the list of operators is empty.
+        """
+    def operations_as_set(self) -> builtins.frozenset[builtins.tuple[PauliGate, builtins.str]]:
+        r"""
+        Return a frozenset of operations in this term.
+        
+        Use this in place of `id` if the order of operations in the term does not matter.
+        """
+
+@typing.final
+class PauliTermIter:
+    r"""
+    An iterator over the qubit indices and Pauli operators in a [`PauliTerm`].
+    """
+    def __iter__(self) -> PauliTermIter: ...
+    def __next__(self) -> typing.Optional[tuple[PauliGate, builtins.str]]: ...
 
 class Pragma(Instruction):
     @property

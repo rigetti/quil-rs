@@ -70,10 +70,14 @@ impl_to_quil!(Expression);
 /// A type that can be converted into an `Expression`,
 /// for use as a parameter in methods and functions exposed through Python bindings.
 #[derive(Debug, Clone, FromPyObject)]
+// Generally we don't want to return this as a Python type,
+// but the stub generator needs this when constructing default values in signatures. 
+#[cfg_attr(feature = "stubs", derive(IntoPyObject))]
 pub(crate) enum ExpressionLike {
     Variable(String),
     MemoryReference(MemoryReference),
     Expression(Expression),
+    // TODO: determine if we need all three of these, or if Complex is enough
     Int(i64),
     Float(f64),
     Complex(Complex64),

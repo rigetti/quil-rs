@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from dataclasses import dataclass
 
 import pytest
@@ -29,13 +30,13 @@ class TestTerm:
     coeff: ExpressionDesignator
     expr: Expression # what we expect Expression(coeff) to be
 
-    def __iter__(self) -> tuple[PauliGate, QubitDesignator, str, ExpressionDesignator, Expression]:
+    def __iter__(self) -> Iterator:
         """Facilitate automatic destructuring."""
-        return self.gate, self.qubit, self.qubit_str, self.coeff, self.expr
+        return iter((self.gate, self.qubit, self.qubit_str, self.coeff, self.expr))
 
 
 @pytest.fixture
-def terms() -> list[TestTerm]:
+def test_terms() -> list[TestTerm]:
     """Get a list of non-identity `PauliTerm` constructor arguments."""
     return [
         TestTerm(PauliGate.X, 0, "0", Expression.Pi(), Expression.Pi()),
@@ -43,11 +44,16 @@ def terms() -> list[TestTerm]:
     ]
 
 @pytest.fixture
-def terms_list(terms: list[TestTerm]) -> list[tuple[PauliGate, QubitDesignator]]:
-    return [(term.gate, term.qubit) for term in terms]
+def terms(test_terms) -> list[PauliTerm]:
+    return [PauliTerm(term.gate, term.qubit, term.coeff) for term in test_terms]
+
+@pytest.fixture
+def arguments(test_terms: list[TestTerm]) -> list[QubitDesignator]:
+    return [term.qubit for term in test_terms]
+
 
 class TestPauliTerm:
-    def test_from_list_matches_constructor(self, terms_list):
+    def test_from_list_matches_constructor(self, test_terms):
         """Confirm the ``from_list`` method is equivalent to using the constructor.
 
         The original ``quil`` constructor was the ``(list, coeff)`` version,
@@ -55,36 +61,47 @@ class TestPauliTerm:
         likewise, PyQuil had a ``from_list`` alternate constructor
         which acted more similarly to the original ``quil`` constructor.
         """
-        assert PauliTerm(terms_list) == PauliTerm.from_list(terms_list)
+        terms_list = [(term.gate, term.qubit) for term in test_terms]
+        with pytest.warns(DeprecationWarning):
+            from_constructor = PauliTerm(terms_list)
+        assert from_constructor == PauliTerm.from_list(terms_list)
 
-    def test_list_constructor(self, terms):
-        """Test the ``(list, coeff)`` version of the constructor."""
-        for gate, qubit, qubit_str, coeff, expr in terms:
-            pt = PauliTerm([(gate, qubit)], coeff)
-            assert pt.arguments == [(gate, qubit_str)]
+    def test_single_constructor(self, test_terms):
+        for op, index, qubit_str, coeff, expr in test_terms:
+            pt = PauliTerm(op, index, coeff)
+            assert pt.arguments == [(op, qubit_str)]
             assert pt.expression == expr
 
-    def test_single_constructor(self, terms):
-        """Test the ``(gate, qubit, coeff)`` version of the constructor."""
-        for gate, qubit, qubit_str, coeff, expr in terms:
-            pt = PauliTerm(gate, qubit, coeff)
-            assert pt.arguments == [(gate, qubit_str)]
-            assert pt.expression == expr
-
-    def test_list_default_coeff(self, terms):
-        """Test the ``(list, coeff)`` version of the constructor."""
-        for gate, qubit, qubit_str, coeff, expr in terms:
-            pt = PauliTerm([(gate, qubit)], coeff)
-            assert pt.arguments == [(gate, qubit_str)]
-            assert pt.expression == expr
-
-
-    def test_single_default_coeff(self, terms):
-        """Test the ``(gate, qubit)`` version of the constructor."""
-        for gate, qubit, qubit_str, _, _ in terms:
-            pt = PauliTerm(gate, qubit)
-            assert pt.arguments == [(gate, qubit_str)]
+    def test_single_default_coeff(self, test_terms):
+        for op, index, qubit_str, _, _ in test_terms:
+            pt = PauliTerm(op, index)
+            assert pt.arguments == [(op, qubit_str)]
             assert pt.expression == Expression.Number(1.0)
+
+    def test_single_ident_no_index(self):
+        pt = PauliTerm(PauliGate.I, None, 2.0)
+        assert pt.arguments == []
+        assert pt.expression == Expression.Number(2.0)
+
+    def test_single_ident_no_index_default_coeff(self):
+        pt = PauliTerm(PauliGate.I, None)
+        assert pt.arguments == []
+        assert pt.expression == Expression.Number(1.0)
+
+    def test_list_constructor(self, test_terms):
+        for op, index, qubit_str, coeff, expr in test_terms:
+            with pytest.warns(DeprecationWarning):
+                pt = PauliTerm([(op, index)], coeff)
+            assert pt.arguments == [(op, qubit_str)]
+            assert pt.expression == expr
+
+    def test_list_default_coeff(self, test_terms):
+        for op, index, qubit_str, _, expr in test_terms:
+            with pytest.warns(DeprecationWarning):
+                pt = PauliTerm([(op, index)])
+            assert pt.arguments == [(op, qubit_str)]
+            assert pt.expression == Expression.Number(1.0)
+
 
 
 class TestPauliSumConstructor:
