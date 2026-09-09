@@ -859,7 +859,8 @@ pub enum PauliGate {
     Z,
 }
 
-/// A term is a product of Pauli operators on different qubits.
+/// A `PauliTerm` is a coefficient multiplied by the tensor product of Pauli operators
+/// operating on different qubit indices.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(

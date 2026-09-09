@@ -493,6 +493,28 @@ where
     }
 }
 
+/// A Python object which may be a reference to an existing Python object
+/// or a new one constructed by converting Python data into a Rust-backed [`PyClass`].
+///
+/// When you use `Like<T>` as a parameter in a function exposed to Python,
+/// the function can accept existing instances of Python objects of (Rust) type `T`
+/// as well as Python data that can be used to constrct `T` (via [`FromPyObject::extract`]).
+/// This type provides an implementation of [`FromPyObject`]
+/// that first tries to cast the Python object to `E`, and if it doesn't work,
+/// then tries to extract `E` using its existing [`FromPyObject`] implementation.
+///
+/// When the Python object is an existing instance of `T`,
+/// the "extracted" instance borrows from the existing Python object,
+///
+///
+/// This type is most useful with complex enums that act as a simple list of types.
+/// For such a type `E`, a `#[pymethod]` or `#[pyfunction]` that accepts `E`
+/// requires a Python object that is already an instace of `E`,
+/// but often it makes sense to let Python users pass any of `E`'s variants directly,
+/// rather than forcing them to wrap the variant in a new instance of `E`.
+/// You can get around that by marking `#[pyclass(skip_from_py_object)]`
+/// and then applying `#[derive(FromPyObject)]` for its default implementation,
+/// but then you'll have the opposite problem: users can't pass existing instances of `E`!
 #[derive(Debug, Copy, Clone)]
 pub(crate) enum Like<'a, 'py, T> {
     Borrowed(Borrowed<'a, 'py, T>),
@@ -511,6 +533,73 @@ where
             .or_else(|_| obj.extract::<T>().map(Self::Extracted))
     }
 }
+
+impl<'a, 'py, T> Like<'a, 'py, T> {
+    pub(crate) fn into_inner(self) -> T
+    where
+        T: PyClass + std::borrow::ToOwned<Owned = T>,
+    {
+        match self {
+            Self::Borrowed(b) => b.borrow().to_owned(),
+            Self::Extracted(extracted) => extracted,
+        }
+    }
+
+    pub(crate) fn extract<O>(self) -> Result<O, O::Error>
+    where
+        O: FromPyObject<'a, 'py> + From<T>,
+    {
+        match self {
+            Self::Borrowed(b) => b.extract::<O>(),
+            Self::Extracted(extracted) => Ok(extracted.into()),
+        }
+    }
+
+    pub(crate) fn get(&self) -> &T
+    where
+        T: PyClass<Frozen = True> + Sync,
+    {
+        match self {
+            Self::Borrowed(bound) => bound.get(),
+            Self::Extracted(extracted) => extracted,
+        }
+    }
+
+    /// Get a bound instance of `T`, moving it to the Python heap if necessary.
+    pub(crate) fn into_bound(self, py: Python<'py>) -> Result<Bound<'py, T>, T::Error>
+        where T: PyClass + IntoPyObject<'py, Output = Bound<'py, T>>,
+    {
+        match self {
+            Self::Borrowed(bound) => Ok(bound.to_owned()),
+            Self::Extracted(extracted) => extracted.into_pyobject(py),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct MoreLike<'py, T> {
+    inner: Bound<'py, T>,
+}
+
+impl<'a, 'py, T> FromPyObject<'a, 'py> for MoreLike<'py, T>
+where
+    T: PyClass + FromPyObject<'a, 'py> + IntoPyObject<'py, Output = Bound<'py, T>>,
+{
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(inst) = obj.cast::<T>() {
+            Ok(Self { inner: inst.to_owned() })
+        } else {
+            let bound = obj.extract::<T>()
+                .map_err(|err| err.into())?
+                .into_pyobject(obj.py())
+                .map_err(|err| err.into())?;
+            Ok(Self { inner: bound })
+        }
+    }
+}
+
 
 macro_rules! impl_newargs {
     ($name:ident = $($typ:ty)|+) => {
@@ -621,38 +710,6 @@ macro_rules! py_friendly_enum {
 }
 
 pub(crate) use py_friendly_enum;
-
-impl<'a, 'py, T> Like<'a, 'py, T> {
-    pub(crate) fn into_inner(self) -> T
-    where
-        T: PyClass + std::borrow::ToOwned<Owned = T>,
-    {
-        match self {
-            Self::Borrowed(b) => b.borrow().to_owned(),
-            Self::Extracted(extracted) => extracted,
-        }
-    }
-
-    pub(crate) fn extract<O>(self) -> Result<O, O::Error>
-    where
-        O: FromPyObject<'a, 'py> + From<T>,
-    {
-        match self {
-            Self::Borrowed(b) => b.extract::<O>(),
-            Self::Extracted(extracted) => Ok(extracted.into()),
-        }
-    }
-
-    pub(crate) fn get(&self) -> &T
-    where
-        T: PyClass<Frozen = True> + Sync,
-    {
-        match self {
-            Self::Borrowed(bound) => bound.get(),
-            Self::Extracted(extracted) => extracted,
-        }
-    }
-}
 
 /// Add Python `to_quil` and `to_quil_or_debug` methods
 /// for types that implement [`Quil`](crate::quil::Quil).
