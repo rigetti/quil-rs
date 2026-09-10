@@ -1,10 +1,10 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::{f64::consts::PI, mem, ops::{Mul, MulAssign}, sync::atomic::{AtomicUsize, Ordering}};
 
 use indexmap::IndexMap;
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
 use pyo3::{
-    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit, exceptions::{PyDeprecationWarning, PyIndexError, PyKeyError, PyTypeError, PyValueError}, prelude::*, sync::PyOnceLock, types::{IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyString, PyTuple},
+    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit, exceptions::{PyDeprecationWarning, PyIndexError, PyKeyError, PyTypeError, PyValueError}, prelude::*, sync::PyOnceLock, types::{IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyNotImplemented, PyString, PyTuple},
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -1874,7 +1874,23 @@ impl PauliGate {
     }
 }
 
-/// Argument type when constructing a `PauliTerm` from Python. 
+impl PauliGate {
+    /// Return the product and a complex phase result of multiplying two gates.
+    fn product(self, other: PauliGate) -> (PauliGate, Complex64) {
+        match (self, other) {
+            (PauliGate::I, g) | (g, PauliGate::I) => (g, Complex64::new(1.0, 0.0)),
+            (PauliGate::X, PauliGate::X) | (PauliGate::Y, PauliGate::Y) | (PauliGate::Z, PauliGate::Z) => (PauliGate::I, Complex64::new(1.0, 0.0)),
+            (PauliGate::X, PauliGate::Y) => (PauliGate::Z, Complex64::new(0.0, 1.0)),
+            (PauliGate::X, PauliGate::Z) => (PauliGate::Y, Complex64::new(0.0, -1.0)),
+            (PauliGate::Y, PauliGate::X) => (PauliGate::Z, Complex64::new(0.0, -1.0)),
+            (PauliGate::Y, PauliGate::Z) => (PauliGate::X, Complex64::new(0.0, 1.0)),
+            (PauliGate::Z, PauliGate::X) => (PauliGate::Y, Complex64::new(0.0, 1.0)),
+            (PauliGate::Z, PauliGate::Y) => (PauliGate::X, Complex64::new(0.0, -1.0)),
+        }
+    }
+}
+
+/// Argument type when constructing a `PauliTerm` from Python.
 ///
 /// Technically, we only accept `Qubit::Variable` and `Qubit::Fixed` (or `str` and `int`),
 /// but this wraps `Qubit` and raises a type error if the input is `Qubit::Placeholder`.
@@ -1889,7 +1905,7 @@ impl TryFrom<PauliArg> for String {
             Qubit::Variable(v) => Ok(v),
             Qubit::Fixed(v) => Ok(format!("q{v}")),
             Qubit::Placeholder(_) => Err(PyTypeError::new_err(
-                "cannot use Qubit::Placeholder as a PauliTerm target",
+                "cannot use Qubit::Placeholder as a PauliTerm argument",
             )),
         }
     }
@@ -1940,6 +1956,11 @@ pyo3_stub_gen::inventory::submit! {
                 expression: ExpressionDesignator = 1.0,
             ) -> PauliTerm:
                 """Construct a `PauliTerm` from a sequence of arguments."""
+
+            @typing.overload
+            def __mul__(self, other: PauliTerm | ExpressionDesignator) -> PauliTerm: ...
+            @typing.overload
+            def __mul__(self, other: PauliSum) -> PauliSum: ...
         "#
     }
 }
@@ -1952,21 +1973,31 @@ const ONE: Expression = Expression::Number(Complex64::new(1.0, 0.0));
 impl PauliTerm {
     // TODO(migration-guide):
     // - Rust users making use of the `python` feature need to update usage of `__new__`.
-    // - Python users should be aware of the (temporary) combined API.
-    // - The PyQuil v4 methods genereally accepted `Qubit` instances of any sort,
-    //   but typically `Qubit::Placeholder` was not actually allowed, or if it were,
-    //   it was a bug, since it wouldn't be properly resolved into a String.
-    //   Now, it'll explicitly raise an error if used. 
-    //
-    // Developer note:
-    // The stubs for the documented constructors are added manually above.
-    // The reason for two constructors here is backwards compatibility:
-    // PyQuil v4 used the first form, while `quil` had used the second.
+    // - Python users of `quil` should be aware of the (temporary) combined API.
+    // - In constrast to the behavior of earlier versions of `quil-rs`,
+    //   the current version may rearrange and/or simplify arguments here and in `PauliSum`s.
+    //   The result is always logically equivalent, but may lead to different Quil output,
+    //   and consequently, different compilation and hence observable differences.
+    //   Given that a PauliSum is already a pretty high-level abstraction of a gate,
+    //   users should expect that compiler optimizations and physical realizations
+    //   will impact the observable behavior of a program, in any case.
+    // - The PyQuil v4 methods accepted `Qubit::Placeholder` instances
+    //   and just converted them into a `str`, leading to invalid Quil identifiers.
+    //   Since that was a bug, `Placeholder`s now explicitly raise an error if used.
+    // - Relatedly, the PyQuil v4 methods accepted integers and `Qubit::Fixed` instances
+    //   and converted them into `str`s directly (e.g., `Qubit::Fixed(0)` became `"0"`),
+    //   which again are not a valid Quil identifiers.
+    //   This now prefixes them with a `q` to make them valid identifiers,
+    //   but that could cause conflicts if a user gave a mix of strings and integers.
+    //   Since that's a pretty unlikely thing to see in the wild,
+    //   we just document that it's their responsibility to avoid such conflicts.
+    //   And as always, nothing prevents them from giving an invalid identifier
+    //   directly as a string/`Qubit::Variable`.
     /// Construct a new `PauliTerm` from a single operator and qubit index.
     ///
     /// To construct a `PauliTerm`, provide a `PauliGate` operator and an argument string.
     /// As a special case, if `op` is the identity operator, the argument may be `None`.
-    /// Additionally, the argument parameter can be derived automatically 
+    /// Additionally, the argument parameter can be derived automatically
     /// from a non-placeholder `Qubit` instance or from a non-negative integer;
     /// in the latter case, the argument will be formatted as ``"q{index}"``
     /// to generate a valid Quil argument string.
@@ -1991,6 +2022,12 @@ impl PauliTerm {
     ///
     /// Note that to be valid `quil`, the  `coefficient` must be real-valued
     /// and only reference real numeric literals or parameters.
+    // Developer note:
+    // The stubs for the documented constructors are added manually above.
+    // The reason for two constructors here is backwards compatibility:
+    // PyQuil v4 used the first form, while `quil` had used the second.
+    // The second form is deprecated in favor of `PauliTerm.from_list`,
+    // and at some point, we should remove it from `quil` and simplify this constructor.
     #[new]
     #[pyo3(signature = (
             op=None,
@@ -2137,14 +2174,16 @@ impl PauliTerm {
         self.arguments.iter().map(|(_, q)| Qubit::Variable(q.clone())).collect()
     }
 
-    /// Get the [`PauliGate`] for the first matching argument in the [`PauliTerm`].
-    fn __getitem__(&self, argument: String) -> PyResult<PauliGate> {
-        for (gate, qubit) in &self.arguments {
-            if qubit == &argument {
-                return Ok(*gate);
+    /// Get the [`PauliGate`] matching the argument in the [`PauliTerm`],
+    /// or [`PauliGate::I`] if the argument is not present in the term.
+    fn __getitem__(&self, argument: &str) -> PauliGate {
+        self.arguments.iter().find_map(|(gate, qubit)| {
+            if qubit == argument {
+                Some(*gate)
+            } else {
+                None
             }
-        }
-        Err(PyKeyError::new_err(format!("no operator for argument {argument}")))
+        }).unwrap_or(PauliGate::I)
     }
 
     /// Iterate over the arguments in this [`PauliTerm`].
@@ -2154,14 +2193,43 @@ impl PauliTerm {
 
     /// Return the product of this [`PauliTerm`] with another `PauliTerm`,
     /// [`PauliSum`], or number according to the Pauli algebra rules.
-    fn __mul__(&self, other: Bound<'_, PyAny>) -> PyResult<Self> {
+    fn __mul__<'py>(&self, py: Python<'py>, other: Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+        if let Ok(other) = other.cast::<PauliTerm>() {
+            let result = self.clone().multiply_term(other.get());
+            result.into_bound_py_any(py)
+        } else if let Ok(other) = other.cast::<PauliSum>() {
+            todo!()
+        } else if let Ok(other) = other.cast::<Expression>() {
+            let expression = expr_prod_simple(
+                &self.expression, other.get(), Complex64::ONE
+            );
+            PauliTerm {
+                arguments: self.arguments.clone(),
+                expression,
+            }.into_bound_py_any(py)
+        } else if let Ok(other) = other.extract::<Complex64>() {
+            let expression = expr_prod_simple(
+                &self.expression, &Expression::Number(other), Complex64::ONE
+            );
 
-        todo!()
+            PauliTerm {
+                arguments: self.arguments.clone(),
+                expression,
+            }.into_bound_py_any(py)
+        } else {
+            py.NotImplemented().into_bound_py_any(py)
+        }
     }
 
+    // TODO: This produces ambiguous strings if any argument contains X, Y, or Z,
+    // so we should either deprecated this, validate the identifiers and warn/error,
+    // or change the output format to assign arbitrary numeric identifiers to arguments
+    // (which most closely matches the usage of the original PyQuil v4 implementation).
+    // Likely, getting rid of it is the best option,
+    // particularly since naming a function `id` is pretty confusing in Python.
     /// Return an identifier string for the PauliTerm (ignoring the coefficient).
     ///
-    /// For example, ``PauliTerm([("X", 0), ("Y", "q")]).id() == "X0Yq"``.
+    /// For example, ``PauliTerm.from_list([("X", 0), ("Y", "q")]).id() == "Xq0Yq"``.
     ///
     /// Don't use this to compare terms (use ``pt0 == pt1`` or ``hash(pt0)`` for that).
     /// By default, this function sorts the qubits in the term,
@@ -2194,10 +2262,6 @@ impl PauliTerm {
     ///
     /// Use this in place of `id` if the order of operations in the term does not matter.
     #[gen_stub(override_return_type(type_repr = "builtins.frozenset[builtins.tuple[PauliGate, builtins.str]]", imports = ("builtins")))]
-    #[pyo3(warn(
-        message = "`operations_as_set` is deprecated; use `frozenset(term.arguments)` instead.",
-        category = PyDeprecationWarning
-    ))]
     fn operations_as_set<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyFrozenSet>> {
         PyFrozenSet::new(py, self.arguments.clone())
     }
@@ -2206,6 +2270,74 @@ impl PauliTerm {
     /// including the case in which the list of operators is empty.
     fn is_identity(&self) -> bool {
         self.arguments.iter().all(|(gate, _)| *gate == PauliGate::I)
+    }
+}
+
+/// Get the product of two coefficients and a phase, simplifying if possible.
+fn expr_prod_simple(a: &Expression, b: &Expression, phase: Complex64) -> Expression {
+    match (a, b) {
+        (Expression::Number(a), Expression::Number(b)) =>
+            Expression::Number(a * b * phase),
+
+        (Expression::PiConstant(), Expression::Number(b))
+            | (Expression::Number(b), Expression::PiConstant()) =>
+            Expression::Number(PI * b * phase),
+
+        (Expression::PiConstant(), Expression::PiConstant()) =>
+            Expression::Number(PI * PI * phase),
+
+        (Expression::Number(a), b)
+            | (b, Expression::Number(a)) =>
+                Expression::Number(a * phase) * b.clone(),
+
+        (a, b) => {
+            if phase == Complex64::ONE {
+                a.clone() * b.clone()
+            } else {
+                Expression::Number(phase) * a.clone() * b.clone()
+            }
+        }
+    }
+}
+
+impl PauliTerm {
+    /// Return the product of this `PauliTerm` and `other`.
+    ///
+    /// This consumes `self` to reduce the number of clones of the coefficient and arguments.
+    /// The order of the resulting arguments is not guaranteed.
+    fn multiply_term(self, other: &PauliTerm) -> PauliTerm {
+        // For each the terms in the other, if this term has the same argument,
+        // combine their operators and multiply the coefficients.
+        //
+        // This method searches for matching arguments by iterating the terms,
+        // which is asymptotically less efficient than a HashMap-based approach,
+        // but the typical number of arguments in a term is small.
+
+
+        let mut phase = Complex64::new(1.0, 0.0);
+        let mut arguments = self.arguments;
+
+        for (op, qubit) in other.arguments.iter() {
+            match arguments.iter().position(|(_, q)| q == qubit) {
+                Some(idx) => {
+                    let (new_op, new_phase) = arguments[idx].0.product(*op);
+                    if new_op == PauliGate::I {
+                        arguments.swap_remove(idx);
+                    } else {
+                        phase *= new_phase;
+                        arguments[idx] = (new_op, qubit.clone());
+                    }
+                }
+                None => {
+                    arguments.push((*op, qubit.clone()));
+                }
+            }
+        }
+
+        PauliTerm {
+            arguments,
+            expression: expr_prod_simple(&self.expression, &other.expression, phase),
+        }
     }
 }
 
