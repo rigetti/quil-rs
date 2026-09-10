@@ -1814,7 +1814,8 @@ class PauliTerm:
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getitem__(self, argument: builtins.str) -> PauliGate:
         r"""
-        Get the [`PauliGate`] for the first matching argument in the [`PauliTerm`].
+        Get the [`PauliGate`] matching the argument in the [`PauliTerm`],
+        or [`PauliGate::I`] if the argument is not present in the term.
         """
     def __getnewargs__(self) -> builtins.tuple[
             builtins.list[builtins.tuple[PauliGate, builtins.str]],
@@ -1831,7 +1832,12 @@ class PauliTerm:
         
         A term that consists of only a scalar has a length of zero.
         """
-    def __mul__(self, other: typing.Any) -> PauliTerm:
+    @typing.overload
+    def __mul__(self, other: PauliTerm | ExpressionDesignator) -> PauliTerm: ...
+    @typing.overload
+    def __mul__(self, other: PauliSum) -> PauliSum: ...
+    @typing.overload
+    def __mul__(self, other: typing.Any) -> typing.Any:
         r"""
         Return the product of this [`PauliTerm`] with another `PauliTerm`,
         [`PauliSum`], or number according to the Pauli algebra rules.
@@ -1858,7 +1864,7 @@ class PauliTerm:
         
         To construct a `PauliTerm`, provide a `PauliGate` operator and an argument string.
         As a special case, if `op` is the identity operator, the argument may be `None`.
-        Additionally, the argument parameter can be derived automatically 
+        Additionally, the argument parameter can be derived automatically
         from a non-placeholder `Qubit` instance or from a non-negative integer;
         in the latter case, the argument will be formatted as ``"q{index}"``
         to generate a valid Quil argument string.
@@ -1906,7 +1912,7 @@ class PauliTerm:
         r"""
         Return an identifier string for the PauliTerm (ignoring the coefficient).
         
-        For example, ``PauliTerm([("X", 0), ("Y", "q")]).id() == "X0Yq"``.
+        For example, ``PauliTerm.from_list([("X", 0), ("Y", "q")]).id() == "Xq0Yq"``.
         
         Don't use this to compare terms (use ``pt0 == pt1`` or ``hash(pt0)`` for that).
         By default, this function sorts the qubits in the term,

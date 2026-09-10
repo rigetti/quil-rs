@@ -12,6 +12,7 @@ use crate::{
         validate_identifier, validate_user_identifier, IdentifierValidationError,
     },
 };
+use itertools::Itertools;
 use ndarray::{array, linalg::kron, Array2};
 use num_complex::Complex64;
 use once_cell::sync::Lazy;
@@ -859,6 +860,13 @@ pub enum PauliGate {
     Z,
 }
 
+// TODO(migration-guide):
+// In PyQuil v4, `PauliTerm`'s implemention of `__eq__` allowed comparison to `PauliSum`s,
+// violating the Python requirement that objects which compare equal have the same hash.
+// We fix this bug by virtue of not implementing such comparisons,
+// but this may break code which relied on the old behavior.
+// For users tht need to compare a `PauliTerm` to a `PauliSum`,
+// they should wrap the `PauliTerm` in a `PauliSum` with a single term and compare those.
 /// A `PauliTerm` is a coefficient multiplied by the tensor product of Pauli operators
 /// operating on different qubit indices.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -897,6 +905,7 @@ impl PauliTerm {
     }
 }
 
+// TODO(migration-guide): See note about `__eq__` in `PauliTerm` above.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
@@ -941,8 +950,11 @@ impl PauliSum {
             .collect::<HashSet<_>>()
     }
 
+    /// Collect arguments into a sorted list.
     pub(crate) fn into_args(terms: &[PauliTerm]) -> Vec<String> {
-        PauliSum::extract_args(terms).iter().map(|&arg| arg.to_string()).collect()
+        PauliSum::extract_args(terms).iter().map(|&arg| arg.to_string())
+            .sorted()
+            .collect()
     }
 }
 
