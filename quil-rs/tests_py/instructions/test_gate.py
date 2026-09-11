@@ -3,6 +3,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 
 import pytest
+import numpy as np
 from quil.expression import Expression, ExpressionDesignator
 from quil.instructions import (
     MeasureCalibrationDefinition,
@@ -115,6 +116,23 @@ class TestPauliTerm:
 
         assert list(iter(term)) == args_list == list(term)
 
+class TestPauliTermMultiplication:
+    @pytest.fixture
+    def t_2_X0(cls) -> PauliTerm:
+        return PauliTerm(PauliGate.X, 0, 2.0)
+
+    def test_term(self, t_2_X0: PauliTerm):
+        product = t_2_X0 * PauliTerm(PauliGate.Y, 1, 3.0)
+        assert product == PauliTerm.from_list([(PauliGate.X, "q0"), (PauliGate.Y, "q1")], 6.0)
+
+    @pytest.mark.parametrize("three", (3, 3.0, 3.0+0.0j, Expression.Number(3.0),
+                                       np.int8(3), np.int16(3), np.int32(3), np.int64(3),
+                                       np.float32(3.0), np.float64(3.0),
+                                       np.complex64(3.0), np.complex128(3.0)))
+    def test_numbers(self, t_2_X0: PauliTerm, three: int | float | complex | Expression):
+        expected = PauliTerm("X", 0, 6.0)
+        assert t_2_X0 * three == expected
+        assert three * t_2_X0 == expected
 
 class TestPauliSumConstructor:
     """Confirm all variants of the `PauliSum` constructor work as expected."""

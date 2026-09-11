@@ -71,16 +71,14 @@ impl_to_quil!(Expression);
 /// for use as a parameter in methods and functions exposed through Python bindings.
 #[derive(Debug, Clone, FromPyObject)]
 // Generally we don't want to return this as a Python type,
-// but the stub generator needs this when constructing default values in signatures. 
+// but the stub generator needs this when constructing default values in signatures.
 #[cfg_attr(feature = "stubs", derive(IntoPyObject))]
 pub(crate) enum ExpressionLike {
-    Variable(String),
+    Variable(String), // Ensure this is first so we convert to variables rather than memrefs
     MemoryReference(MemoryReference),
+     // Expression must come before Number, since Expression implements __complex__.
     Expression(Expression),
-    // TODO: determine if we need all three of these, or if Complex is enough
-    Int(i64),
-    Float(f64),
-    Complex(Complex64),
+    Number(Complex64),
 }
 
 impl From<ExpressionLike> for Expression {
@@ -89,9 +87,7 @@ impl From<ExpressionLike> for Expression {
             ExpressionLike::Variable(name) => Expression::Variable(name),
             ExpressionLike::MemoryReference(memref) => Expression::Address(memref),
             ExpressionLike::Expression(expr) => expr,
-            ExpressionLike::Int(v) => Expression::Number(Complex64::new(v as f64, 0.0)),
-            ExpressionLike::Float(v) => Expression::Number(v.into()),
-            ExpressionLike::Complex(v) => Expression::Number(v),
+            ExpressionLike::Number(v) => Expression::Number(v),
         }
     }
 }

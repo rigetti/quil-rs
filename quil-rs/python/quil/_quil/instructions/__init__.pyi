@@ -1890,11 +1890,13 @@ class PauliTerm:
         Note that to be valid `quil`, the  `coefficient` must be real-valued
         and only reference real numeric literals or parameters.
         """
+    def __pow__(self, exponent: builtins.int, modulo: typing.Optional[typing.Any] = None) -> PauliTerm: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __rmul__(self, other: typing.Any) -> typing.Any: ...
     def copy(self) -> PauliTerm:
         r"""
         Create a new copy of this [`PauliTerm`].
@@ -2646,6 +2648,7 @@ class PauliGate(enum.Enum):
     Y = ...
     Z = ...
 
+    def __new__(cls, input: builtins.str) -> PauliGate: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust

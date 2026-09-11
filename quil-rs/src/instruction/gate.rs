@@ -133,7 +133,7 @@ impl Gate {
     ///
     /// Returns an error if the given name isn't a valid Quil identifier or if no qubits are given.
     pub fn new(
-        name: &str,
+        name: impl AsRef<str>,
         parameters: Vec<Expression>,
         qubits: Vec<Qubit>,
         modifiers: Vec<GateModifier>,
@@ -142,6 +142,7 @@ impl Gate {
             return Err(GateError::EmptyQubits);
         }
 
+        let name = name.as_ref();
         validate_identifier(name).map_err(GateError::InvalidIdentifier)?;
 
         Ok(Self {
@@ -849,7 +850,7 @@ mod test_gate_into_matrix {
         frozen,
         hash,
         rename_all = "SCREAMING_SNAKE_CASE",
-        from_py_object
+        skip_from_py_object
     )
 )]
 #[strum(serialize_all = "UPPERCASE")]
