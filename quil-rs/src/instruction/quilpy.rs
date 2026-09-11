@@ -4,7 +4,7 @@ use indexmap::IndexMap;
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
 use pyo3::{
-    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit, exceptions::{PyDeprecationWarning, PyIndexError, PyKeyError, PyTypeError, PyValueError}, prelude::*, sync::PyOnceLock, types::{IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyNotImplemented, PyString, PyTuple},
+    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit, exceptions::{PyDeprecationWarning, PyIndexError, PyKeyError, PyNotImplementedError, PyTypeError, PyValueError}, prelude::*, sync::PyOnceLock, types::{IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyNotImplemented, PyString, PyTuple},
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -1864,6 +1864,11 @@ impl Offset {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl PauliGate {
+    #[new]
+    fn __new__(input: &str) -> Result<Self, ParseInstructionError> {
+        Self::parse(input)
+    }
+
     /// Parse a ``PauliGate`` from a string.
     ///
     /// Raises a ``ParseExpressionError`` error if the string isn't a valid Quil expression.
@@ -1886,6 +1891,20 @@ impl PauliGate {
             (PauliGate::Y, PauliGate::Z) => (PauliGate::X, Complex64::new(0.0, 1.0)),
             (PauliGate::Z, PauliGate::X) => (PauliGate::Y, Complex64::new(0.0, 1.0)),
             (PauliGate::Z, PauliGate::Y) => (PauliGate::X, Complex64::new(0.0, -1.0)),
+        }
+    }
+}
+
+impl<'a, 'py> FromPyObject<'a, 'py> for PauliGate {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(gate) = obj.cast::<PauliGate>() {
+            Ok(*gate.get())
+        } else if let Ok(s) = obj.extract::<String>() {
+            Ok(PauliGate::parse(&s)?)
+        } else {
+            Err(CastError::new(obj, PauliGate::classinfo_object(obj.py())))?
         }
     }
 }
@@ -2155,14 +2174,12 @@ impl PauliTerm {
     fn program(&self) -> PyResult<Program> {
         let mut program = Program::new();
         for (op, qubit) in &self.arguments {
-            let name = match op {
-                PauliGate::X => "X",
-                PauliGate::Y => "Y",
-                PauliGate::Z => "Z",
-                PauliGate::I => "I",
-            };
-
-            let g = Gate::new(name, vec![], vec![Qubit::Variable(qubit.clone())], vec![])?;
+            let g = Gate::new(
+                op.to_string(),
+                vec![],
+                vec![Qubit::Variable(qubit.clone())],
+                vec![]
+            )?;
             program.add_instruction(Instruction::Gate(g));
         }
 
@@ -2219,6 +2236,36 @@ impl PauliTerm {
         } else {
             py.NotImplemented().into_bound_py_any(py)
         }
+    }
+
+    fn __rmul__<'py>(&self, py: Python<'py>, other: Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+        self.__mul__(py, other)
+    }
+
+    fn __pow__(&self, exponent: u32, modulo: Option<Bound<'_, PyAny>>) -> PyResult<Self> {
+        if modulo.is_some() {
+            return Err(PyNotImplementedError::new_err(
+                "`modulo` is not supported for `PauliTerm.__pow__`",
+            ));
+        }
+
+        if self.arguments.is_empty() {
+            return Ok(Self::new(Vec::new(), ONE.clone()));
+        }
+
+        let args = if exponent.is_multiple_of(2) {
+            Vec::new()
+        } else {
+            self.arguments.clone()
+        };
+
+        let expr =  if self.expression == ONE || exponent == 0 {
+            ONE.clone()
+        } else {
+            self.expression.clone() ^ Expression::Number((exponent as f64).into())
+        };
+
+        Ok(Self::new(args, expr))
     }
 
     // TODO: This produces ambiguous strings if any argument contains X, Y, or Z,
