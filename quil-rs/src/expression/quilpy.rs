@@ -76,7 +76,7 @@ impl_to_quil!(Expression);
 pub(crate) enum ExpressionLike {
     Variable(String), // Ensure this is first so we convert to variables rather than memrefs
     MemoryReference(MemoryReference),
-     // Expression must come before Number, since Expression implements __complex__.
+    // Expression must come before Number, since Expression implements __complex__.
     Expression(Expression),
     Number(Complex64),
 }

@@ -929,7 +929,12 @@ pub struct PauliSum {
 impl PauliSum {
     pub fn new(arguments: Vec<String>, terms: Vec<PauliTerm>) -> Result<PauliSum, GateError> {
         let diff = PauliSum::extract_args(&terms)
-            .difference(&arguments.iter().map(|arg| arg.as_str()).collect::<HashSet<_>>())
+            .difference(
+                &arguments
+                    .iter()
+                    .map(|arg| arg.as_str())
+                    .collect::<HashSet<_>>(),
+            )
             .copied()
             .collect::<Vec<_>>();
 
@@ -945,7 +950,8 @@ impl PauliSum {
 
     /// Extract arguments from a collection of `PauliTerm`s.
     pub(crate) fn extract_args(terms: &[PauliTerm]) -> HashSet<&str> {
-        terms.iter()
+        terms
+            .iter()
             .flat_map(|term| term.arguments())
             .map(|arg| arg.as_str())
             .collect::<HashSet<_>>()
@@ -953,7 +959,9 @@ impl PauliSum {
 
     /// Collect arguments into a sorted list.
     pub(crate) fn into_args(terms: &[PauliTerm]) -> Vec<String> {
-        PauliSum::extract_args(terms).iter().map(|&arg| arg.to_string())
+        PauliSum::extract_args(terms)
+            .iter()
+            .map(|&arg| arg.to_string())
             .sorted()
             .collect()
     }

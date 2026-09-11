@@ -65,8 +65,7 @@ pub(crate) enum Migrate<New, Old> {
 }
 
 #[cfg(feature = "stubs")]
-impl<New: PyStubType, Old: PyStubType> PyStubType for Migrate<New, Old>
-{
+impl<New: PyStubType, Old: PyStubType> PyStubType for Migrate<New, Old> {
     fn type_output() -> pyo3_stub_gen::TypeInfo {
         New::type_output() | Old::type_output()
     }
@@ -567,7 +566,8 @@ impl<'a, 'py, T> Like<'a, 'py, T> {
 
     /// Get a bound instance of `T`, moving it to the Python heap if necessary.
     pub(crate) fn into_bound(self, py: Python<'py>) -> Result<Bound<'py, T>, T::Error>
-        where T: PyClass + IntoPyObject<'py, Output = Bound<'py, T>>,
+    where
+        T: PyClass + IntoPyObject<'py, Output = Bound<'py, T>>,
     {
         match self {
             Self::Borrowed(bound) => Ok(bound.to_owned()),
@@ -589,9 +589,12 @@ where
 
     fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
         if let Ok(inst) = obj.cast::<T>() {
-            Ok(Self { inner: inst.to_owned() })
+            Ok(Self {
+                inner: inst.to_owned(),
+            })
         } else {
-            let bound = obj.extract::<T>()
+            let bound = obj
+                .extract::<T>()
                 .map_err(|err| err.into())?
                 .into_pyobject(obj.py())
                 .map_err(|err| err.into())?;
@@ -599,7 +602,6 @@ where
         }
     }
 }
-
 
 macro_rules! impl_newargs {
     ($name:ident = $($typ:ty)|+) => {

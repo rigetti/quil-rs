@@ -1,10 +1,24 @@
-use std::{f64::consts::PI, mem, ops::{Mul, MulAssign}, sync::atomic::{AtomicUsize, Ordering}};
+use std::{
+    f64::consts::PI,
+    mem,
+    ops::{Mul, MulAssign},
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
 use indexmap::IndexMap;
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
 use pyo3::{
-    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit, exceptions::{PyDeprecationWarning, PyIndexError, PyKeyError, PyNotImplementedError, PyTypeError, PyValueError}, prelude::*, sync::PyOnceLock, types::{IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyNotImplemented, PyString, PyTuple},
+    exceptions::{
+        PyDeprecationWarning, PyIndexError, PyKeyError, PyNotImplementedError, PyTypeError,
+        PyValueError,
+    },
+    prelude::*,
+    sync::PyOnceLock,
+    types::{
+        IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyNotImplemented, PyString, PyTuple,
+    },
+    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit,
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -158,7 +172,6 @@ pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
         "MemoryReferenceDesignator",
         union!(py, MemoryReference, DeclarationAt, Declaration, PyTuple)?,
     )?;
-
 
     Ok(())
 }
@@ -1884,7 +1897,9 @@ impl PauliGate {
     fn product(self, other: PauliGate) -> (PauliGate, Complex64) {
         match (self, other) {
             (PauliGate::I, g) | (g, PauliGate::I) => (g, Complex64::new(1.0, 0.0)),
-            (PauliGate::X, PauliGate::X) | (PauliGate::Y, PauliGate::Y) | (PauliGate::Z, PauliGate::Z) => (PauliGate::I, Complex64::new(1.0, 0.0)),
+            (PauliGate::X, PauliGate::X)
+            | (PauliGate::Y, PauliGate::Y)
+            | (PauliGate::Z, PauliGate::Z) => (PauliGate::I, Complex64::new(1.0, 0.0)),
             (PauliGate::X, PauliGate::Y) => (PauliGate::Z, Complex64::new(0.0, 1.0)),
             (PauliGate::X, PauliGate::Z) => (PauliGate::Y, Complex64::new(0.0, -1.0)),
             (PauliGate::Y, PauliGate::X) => (PauliGate::Z, Complex64::new(0.0, -1.0)),
@@ -2139,7 +2154,10 @@ impl PauliTerm {
     /// Construct a new `PauliTerm` from a list of operators and an optional coefficient.
     #[pyo3(signature = (terms_list, coefficient=ExpressionLike::Expression(ONE)))]
     #[staticmethod]
-    fn from_list(terms_list: Vec<(PauliGate, PauliArg)>, coefficient: ExpressionLike) -> PyResult<Self> {
+    fn from_list(
+        terms_list: Vec<(PauliGate, PauliArg)>,
+        coefficient: ExpressionLike,
+    ) -> PyResult<Self> {
         let arguments = terms_list
             .into_iter()
             .filter_map(|(gate, qubit)| {
@@ -2178,7 +2196,7 @@ impl PauliTerm {
                 op.to_string(),
                 vec![],
                 vec![Qubit::Variable(qubit.clone())],
-                vec![]
+                vec![],
             )?;
             program.add_instruction(Instruction::Gate(g));
         }
@@ -2188,19 +2206,27 @@ impl PauliTerm {
 
     /// Get the arguments of the [`PauliTerm`] as [`Qubit`]s.
     fn get_qubits(&self) -> Vec<Qubit> {
-        self.arguments.iter().map(|(_, q)| Qubit::Variable(q.clone())).collect()
+        self.arguments
+            .iter()
+            .map(|(_, q)| Qubit::Variable(q.clone()))
+            .collect()
     }
 
     /// Get the [`PauliGate`] matching the argument in the [`PauliTerm`],
     /// or [`PauliGate::I`] if the argument is not present in the term.
     fn __getitem__(&self, argument: &str) -> PauliGate {
-        self.arguments.iter().find_map(|(gate, qubit)| {
-            if qubit == argument {
-                Some(*gate)
-            } else {
-                None
-            }
-        }).unwrap_or(PauliGate::I)
+        self.arguments
+            .iter()
+            .find_map(
+                |(gate, qubit)| {
+                    if qubit == argument {
+                        Some(*gate)
+                    } else {
+                        None
+                    }
+                },
+            )
+            .unwrap_or(PauliGate::I)
     }
 
     /// Iterate over the arguments in this [`PauliTerm`].
@@ -2210,35 +2236,42 @@ impl PauliTerm {
 
     /// Return the product of this [`PauliTerm`] with another `PauliTerm`,
     /// [`PauliSum`], or number according to the Pauli algebra rules.
-    fn __mul__<'py>(&self, py: Python<'py>, other: Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+    fn __mul__<'py>(
+        &self,
+        py: Python<'py>,
+        other: Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         if let Ok(other) = other.cast::<PauliTerm>() {
             let result = self.clone().multiply_term(other.get());
             result.into_bound_py_any(py)
         } else if let Ok(other) = other.cast::<PauliSum>() {
             todo!()
         } else if let Ok(other) = other.cast::<Expression>() {
-            let expression = expr_prod_simple(
-                &self.expression, other.get(), Complex64::ONE
-            );
+            let expression = expr_prod_simple(&self.expression, other.get(), Complex64::ONE);
             PauliTerm {
                 arguments: self.arguments.clone(),
                 expression,
-            }.into_bound_py_any(py)
+            }
+            .into_bound_py_any(py)
         } else if let Ok(other) = other.extract::<Complex64>() {
-            let expression = expr_prod_simple(
-                &self.expression, &Expression::Number(other), Complex64::ONE
-            );
+            let expression =
+                expr_prod_simple(&self.expression, &Expression::Number(other), Complex64::ONE);
 
             PauliTerm {
                 arguments: self.arguments.clone(),
                 expression,
-            }.into_bound_py_any(py)
+            }
+            .into_bound_py_any(py)
         } else {
             py.NotImplemented().into_bound_py_any(py)
         }
     }
 
-    fn __rmul__<'py>(&self, py: Python<'py>, other: Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+    fn __rmul__<'py>(
+        &self,
+        py: Python<'py>,
+        other: Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         self.__mul__(py, other)
     }
 
@@ -2259,7 +2292,7 @@ impl PauliTerm {
             self.arguments.clone()
         };
 
-        let expr =  if self.expression == ONE || exponent == 0 {
+        let expr = if self.expression == ONE || exponent == 0 {
             ONE.clone()
         } else {
             self.expression.clone() ^ Expression::Number((exponent as f64).into())
@@ -2323,19 +2356,16 @@ impl PauliTerm {
 /// Get the product of two coefficients and a phase, simplifying if possible.
 fn expr_prod_simple(a: &Expression, b: &Expression, phase: Complex64) -> Expression {
     match (a, b) {
-        (Expression::Number(a), Expression::Number(b)) =>
-            Expression::Number(a * b * phase),
+        (Expression::Number(a), Expression::Number(b)) => Expression::Number(a * b * phase),
 
         (Expression::PiConstant(), Expression::Number(b))
-            | (Expression::Number(b), Expression::PiConstant()) =>
-            Expression::Number(PI * b * phase),
+        | (Expression::Number(b), Expression::PiConstant()) => Expression::Number(PI * b * phase),
 
-        (Expression::PiConstant(), Expression::PiConstant()) =>
-            Expression::Number(PI * PI * phase),
+        (Expression::PiConstant(), Expression::PiConstant()) => Expression::Number(PI * PI * phase),
 
-        (Expression::Number(a), b)
-            | (b, Expression::Number(a)) =>
-                Expression::Number(a * phase) * b.clone(),
+        (Expression::Number(a), b) | (b, Expression::Number(a)) => {
+            Expression::Number(a * phase) * b.clone()
+        }
 
         (a, b) => {
             if phase == Complex64::ONE {
@@ -2359,7 +2389,6 @@ impl PauliTerm {
         // This method searches for matching arguments by iterating the terms,
         // which is asymptotically less efficient than a HashMap-based approach,
         // but the typical number of arguments in a term is small.
-
 
         let mut phase = Complex64::new(1.0, 0.0);
         let mut arguments = self.arguments;
@@ -2417,7 +2446,11 @@ impl PauliTermIter {
     }
 
     fn __next__(slf: PyRef<'_, Self>) -> Option<(PauliGate, String)> {
-        slf.term.get().arguments.get(slf.index.fetch_add(1, Ordering::Relaxed)).cloned()
+        slf.term
+            .get()
+            .arguments
+            .get(slf.index.fetch_add(1, Ordering::Relaxed))
+            .cloned()
     }
 
     #[gen_stub(skip)]
@@ -2502,8 +2535,7 @@ impl PauliSum {
     ) -> PyResult<PauliSum> {
         match (terms_or_args, terms, arguments) {
             // Single-parameter `terms` as positional or keyword parameters.
-            (Some(Migrate::New(terms)), None, None)
-                | (None, Some(Migrate::New(terms)), None) => {
+            (Some(Migrate::New(terms)), None, None) | (None, Some(Migrate::New(terms)), None) => {
                 let arguments = PauliSum::into_args(&terms);
                 Ok(PauliSum { arguments, terms })
             }
@@ -2511,8 +2543,8 @@ impl PauliSum {
             // New-style two-parameter new-style constructor `(terms, arguments)`,
             // as positional, mixed, and keyword-only versions.
             (Some(Migrate::New(terms)), Some(Migrate::Old(arguments)), None)
-                | (Some(Migrate::New(terms)), None, Some(arguments))
-                | (None, Some(Migrate::New(terms)), Some(arguments)) => {
+            | (Some(Migrate::New(terms)), None, Some(arguments))
+            | (None, Some(Migrate::New(terms)), Some(arguments)) => {
                 let arguments = convert_pauli_targets(arguments)?;
                 // Let the existing constructor check for valid parameters.
                 Ok(PauliSum::new(arguments, terms)?)
@@ -2537,14 +2569,14 @@ impl PauliSum {
             }
 
             // Given `terms=<list of strings>` or two lists of strings positionally.
-            (Some(Migrate::Old(_)), None, Some(_)) | (_, Some(Migrate::Old(_)), _) => {
-                Err(PyTypeError::new_err("`terms` must be a list of `PauliTerm`s"))
-            }
+            (Some(Migrate::Old(_)), None, Some(_)) | (_, Some(Migrate::Old(_)), _) => Err(
+                PyTypeError::new_err("`terms` must be a list of `PauliTerm`s"),
+            ),
 
             // Given two lists of `PauliTerm`s, but one should be `arguments`.
             (Some(Migrate::New(_)), Some(Migrate::New(_)), None) => {
                 Err(PyTypeError::new_err("`arguments` must be a list of `str`s"))
-            },
+            }
 
             (Some(_), Some(_), Some(_)) => Err(PyValueError::new_err(
                 "too many arguments; use `PauliSum(terms, arguments)`",
