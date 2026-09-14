@@ -1029,6 +1029,41 @@ X 0
         pretty_assertions::assert_eq!(expansion, Some(expected));
     }
 
+    /// Regression test for https://github.com/rigetti/quil-rs/issues/499
+    ///
+    /// A `CAPTURE` inside a `DEFCAL MEASURE` body may target a local/intermediate memory
+    /// region (e.g. a raw IQ buffer later routed to the calibration's declared target via
+    /// `PRAGMA LOAD-MEMORY`), as opposed to the calibration's declared target directly.
+    /// Expanding the calibration for a specific `MEASURE` must not overwrite that unrelated
+    /// `CAPTURE` memory reference with the `MEASURE`'s target.
+    #[test]
+    fn measure_calibration_does_not_overwrite_unrelated_capture_memory_reference() {
+        let input = "\
+DECLARE raw_iq REAL[2]
+DECLARE ro BIT[1]
+DEFCAL MEASURE 0 addr:
+    NONBLOCKING CAPTURE 0 \"ro_rx\" boxcar_kernel(duration: 1e-6) raw_iq[0]
+    PRAGMA LOAD-MEMORY raw_iq \"addr\"
+
+MEASURE 0 ro[0]
+";
+        let program = Program::from_str(input).unwrap();
+        let expanded = program.expand_calibrations().unwrap();
+
+        let capture = expanded
+            .instructions
+            .iter()
+            .find_map(|instruction| match instruction {
+                crate::instruction::Instruction::Capture(capture) => Some(capture),
+                _ => None,
+            })
+            .expect("expanded program should contain a CAPTURE instruction");
+
+        // The CAPTURE should still write to the local `raw_iq` buffer, not to `ro`.
+        assert_eq!(capture.memory_reference.name, "raw_iq");
+        assert_eq!(capture.memory_reference.index, 0);
+    }
+
     #[test]
     fn test_eq() {
         let input = "DEFCAL X 0:
