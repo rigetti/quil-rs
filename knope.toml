@@ -12,12 +12,14 @@
 versioned_files = [
     "quil-rs/Cargo.toml",
     "quil-rs/pyproject.toml",
+    # `quil-plotting` shares this version number rather than carrying one of its own.
+    "quil-plotting/pyproject.toml",
     "Cargo.lock",
     # Update the intra-workspace dependency
     { path = "Cargo.toml", dependency = "quil-rs" },
 ]
 changelog = "quil-rs/CHANGELOG.md"
-scopes = ["quil-rs", "rs", "rust", "quil-py", "py", "python"]
+scopes = ["quil-rs", "rs", "rust", "quil-py", "py", "python", "plotting"]
 
 [packages.quil-cli]
 versioned_files = ["quil-cli/Cargo.toml", "Cargo.lock"]
@@ -29,6 +31,17 @@ name = "release"
 
 [[workflows.steps]]
 type = "PrepareRelease"
+
+# knope bumps the `version` fields above but cannot rewrite quil-plotting's `quil==` pin:
+# `{ path, dependency }` is unsupported for pyproject.toml.
+[[workflows.steps]]
+type = "Command"
+command = "python3 .github/scripts/plotting_version.py --sync"
+
+# PrepareRelease stages its own edits; the pin rewritten above needs staging too.
+[[workflows.steps]]
+type = "Command"
+command = "git add quil-plotting/pyproject.toml"
 
 [[workflows.steps]]
 type = "Command"

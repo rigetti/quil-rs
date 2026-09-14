@@ -1,4 +1,4 @@
-name: Publish quil-py documentation
+name: Publish quil documentation
 
 on:
   push:
@@ -20,6 +20,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@cargo-make
+      - uses: astral-sh/setup-uv@v5
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -31,6 +32,14 @@ jobs:
 
       - name: Build quil-py documentation
         run: cargo make --cwd quil-rs document-quil
+
+      - name: Build quil-plotting documentation
+        run: |
+          uv tool install maturin
+          maturin build --features python --out "$RUNNER_TEMP/wheels" --manifest-path quil-rs/Cargo.toml
+          pip install "$RUNNER_TEMP"/wheels/*.whl
+          pip install './quil-plotting[docs]'
+          sphinx-build quil-plotting/docs quil-rs/build/docs/plotting
 
       - name: Deploy preview
         if: ${{ github.event_name == 'pull_request' }}

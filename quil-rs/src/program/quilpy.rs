@@ -45,6 +45,7 @@ create_init_submodule! {
         Calibrations, // Python: CalibrationSet
         ControlFlowGraphOwned, // Python: ControlFlowGraph
         FlatExpansionResult,
+        FlatExpansionResultIter, // Python: InstructionTargetIterator
         FrameSet,
         InstructionSourceMap,
         InstructionSourceMapEntry,
@@ -1070,6 +1071,37 @@ impl FlatExpansionResult {
             Self::Calibration(value) => (value.clone(),).into_pyobject(py),
             Self::DefGateSequence(value) => (value.clone(),).into_pyobject(py),
         }
+    }
+
+    fn __iter__(&self, py: Python<'_>) -> PyResult<Py<FlatExpansionResultIter>> {
+        let index_range = match self {
+            Self::Unmodified(index) => index.0..index.0 + 1,
+            Self::Calibration(expansion) => expansion.range.start.0..expansion.range.end.0,
+            Self::DefGateSequence(expansion) => expansion.range.start.0..expansion.range.end.0,
+        };
+        Py::new(py, FlatExpansionResultIter { inner: index_range })
+    }
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyo3::pyclass(name = "InstructionTargetIterator", module = "quil._quil.program")]
+pub struct FlatExpansionResultIter {
+    inner: std::ops::Range<usize>,
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pyo3::pymethods]
+impl FlatExpansionResultIter {
+    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    fn __next__(&mut self) -> Option<usize> {
+        self.inner.next()
+    }
+
+    fn __length_hint__(&self) -> usize {
+        self.inner.len()
     }
 }
 

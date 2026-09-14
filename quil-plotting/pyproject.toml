@@ -1,90 +1,88 @@
 [project]
 name = "quil-plotting"
-version = "0.1.0"
-requires-python = ">=3.10"
+version = "0.37.2"
+requires-python = ">=3.11"
 description = "A Python package for visualizing Quil programs."
-documentation = "https://rigetti.github.io/quil-rs/quil.html"
 readme = "README.md"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
+# One LICENSE in the repository, at its root. This directory carries a symlink
+# to it, and the sdist replaces that link with the file's contents, so no copy
+# is ever tracked here to drift from the original.
+license-files = ["LICENSE"]
 authors = [{ name = "Rigetti Computing", email = "softapps@rigetti.com" }]
 classifiers = [
   "Development Status :: 3 - Alpha",
-  "License :: OSI Approved :: Apache Software License",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Operating System :: OS Independent",
 ]
 dependencies = [
-    # The waveform API this uses landed in 0.37.0-rc.3, which is currently only available by
-    # building it from the quil-rs checkout alongside this package.
-    "quil>=0.37.0rc3",
+    # Shares a version number with `quil`; kept in sync by
+    # `.github/scripts/plotting_version.py`, which CI verifies.
+    "quil==0.37.2",
     "numpy>=1.26",
-    "plotly>=5.11",
-    "kaleido==0.2.1",
-    "pandas>=2.0",
-    # The Altair backend. `vl-convert-python` renders charts to png/svg in process, so unlike
-    # plotly's `kaleido` it does not need an installed copy of Chrome.
     "altair>=5.5",
-    "vl-convert-python>=1.7"
+    # `vl-convert-python` renders charts to png/svg in process, so it does
+    # not need an installed copy of Chrome.
+    "vl-convert-python>=1.7",
+    "anywidget>=0.9",
+    "ipywidgets>=8"
 ]
+
+[project.urls]
+documentation = "https://rigetti.github.io/quil-rs/plotting/"
 
 [project.optional-dependencies]
 dev = [
     "ruff>=0.3.7",
-    "maturin>=1.2.3",
     "mypy>=1.1.1",
-    "pytest>=7.2.2",
-    "pdoc>=14.1.0",
-    "syrupy>=3.0.6"
+    "pytest>=7.2.2"
 ]
-
-# [build-system]
-# requires = ["setuptools>=61.0"]
-# build-backend = "setuptools.build_meta"
+docs = [
+    "sphinx>=8",
+    "myst-parser>=4",
+    "sphinx-autodoc2>=0.5",
+    "sphinx-autobuild>=2024",
+    "sphinx_rtd_theme>=3.1.0",
+]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.9,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+# Ships only `quil/plotting/`. `namespace = true` keeps a `quil/__init__.py` out of the
+# wheel, where it would collide with the one the `quil` distribution installs.
+module-name = "quil.plotting"
+module-root = ""
+namespace = true
+source-exclude = ["tests", "examples", "docs"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.pydocfmt]
+line-length = 80
+indent-style = "space"
+indent-width = 4
+line-ending = "lf"
+docstring-convention = "google"
+docstring-missing-documentation = "non-summary-docstrings"
+docstring-missing-documentation-public-only = false
+docstring-require-init-attribute-documentation = true
+docstring-include-assertion-errors = true
 
 [tool.ruff]
-exclude = [
-    ".bzr",
-    ".direnv",
-    ".eggs",
-    ".git",
-    ".git-rewrite",
-    ".hg",
-    ".ipynb_checkpoints",
-    ".mypy_cache",
-    ".nox",
-    ".pants.d",
-    ".pyenv",
-    ".pytest_cache",
-    ".pytype",
-    ".ruff_cache",
-    ".svn",
-    ".tox",
-    ".venv",
-    ".vscode",
-    "__pypackages__",
-    "_build",
-    "buck-out",
-    "build",
-    "dist",
-    "node_modules",
-    "site-packages",
-    "venv",
-]
-line-length = 120
+line-length = 100
 indent-width = 4
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["D", "E4", "E7", "E9", "F", "I", "B", "S", "W"]
 ignore = [
-    "E741" # "Ambiguous" variable names like "I" aren't ambiguous in this contex.
+    "E741" # Mathematical variable names like "I" are allowed here.
 ]
 fixable = ["ALL"]
 unfixable = []
@@ -92,23 +90,20 @@ unfixable = []
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.lint.per-file-ignores]
-"quil/**/*.py" = [
-    "F403", # * imports allowed in extension module glue.
-    "D100", # docstrings belong in type stubs
-    "D104",
-]
 "tests/**/*.py" = [
     "D",    # docstrings are not enforced in tests
     "S101", # asserts are allowed in tests
     "S301", # we need to test pickling
 ]
-"make_docs.py" = [ "D" ]
+
+[tool.pydocfmt.per-file-ignores]
+"tests/**/*.py" = ["ALL"]
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
-line-ending = "auto"
+line-ending = "lf"
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -118,11 +113,10 @@ convention = "google"
 # necessarily the case for a pure Rust pyo3 module, so disabling it.
 reportMissingModuleSource = false
 
-[tool.mypy]
-plugins = "numpy.typing.mypy_plugin"
-
 [[tool.mypy.overrides]]
+# quil is a pyo3 module and ipywidgets ships no marker, so neither is analyzable.
 module = [
-    "quil.quil",
+    "quil.*",
+    "ipywidgets",
 ]
 ignore_missing_imports = true

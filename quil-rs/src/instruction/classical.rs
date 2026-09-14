@@ -37,6 +37,18 @@ pickleable_new! {
     }
 }
 
+impl Arithmetic {
+    /// The Quil mnemonic for this instruction's operator.
+    pub fn name(&self) -> &'static str {
+        match self.operator {
+            ArithmeticOperator::Add => "ADD",
+            ArithmeticOperator::Subtract => "SUB",
+            ArithmeticOperator::Divide => "DIV",
+            ArithmeticOperator::Multiply => "MUL",
+        }
+    }
+}
+
 impl Quil for Arithmetic {
     fn write(
         &self,
@@ -295,6 +307,20 @@ pickleable_new! {
     }
 }
 
+impl BinaryLogic {
+    /// The Quil mnemonic for this instruction's operator.
+    pub fn name(&self) -> &'static str {
+        match self.operator {
+            BinaryOperator::And => "AND",
+            BinaryOperator::Ior => "IOR",
+            BinaryOperator::Xor => "XOR",
+            BinaryOperator::Shl => "SHL",
+            BinaryOperator::Shr => "SHR",
+            BinaryOperator::Ashr => "ASHR",
+        }
+    }
+}
+
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
@@ -441,6 +467,19 @@ pickleable_new! {
             lhs: MemoryReference,
             rhs: ComparisonOperand,
         );
+    }
+}
+
+impl Comparison {
+    /// The Quil mnemonic for this instruction's operator.
+    pub fn name(&self) -> &'static str {
+        match self.operator {
+            ComparisonOperator::Equal => "EQ",
+            ComparisonOperator::GreaterThanOrEqual => "GE",
+            ComparisonOperator::GreaterThan => "GT",
+            ComparisonOperator::LessThanOrEqual => "LE",
+            ComparisonOperator::LessThan => "LT",
+        }
     }
 }
 
@@ -605,6 +644,16 @@ pub struct UnaryLogic {
 pickleable_new! {
     impl UnaryLogic {
         pub fn new(operator: UnaryOperator, operand: MemoryReference);
+    }
+}
+
+impl UnaryLogic {
+    /// The Quil mnemonic for this instruction's operator.
+    pub fn name(&self) -> &'static str {
+        match self.operator {
+            UnaryOperator::Neg => "NEG",
+            UnaryOperator::Not => "NOT",
+        }
     }
 }
 
