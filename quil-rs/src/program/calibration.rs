@@ -437,7 +437,10 @@ impl Calibrations {
                                         pragma.data = Some(target.to_quil_or_debug())
                                     }
                                 }
-                                Instruction::Capture(capture) => {
+                                Instruction::Capture(capture)
+                                    if calibration.identifier.target.as_deref()
+                                        == Some(capture.memory_reference.name.as_str()) =>
+                                {
                                     if let Some(target) = &measurement.target {
                                         capture.memory_reference = target.clone()
                                     }
@@ -838,6 +841,16 @@ mod tests {
             "    FENCE q0\n",
             "    FENCE q1\n",
             "FENCES 0 1\n",
+        )
+    )]
+    #[case(
+        "Measure-Calibration-Capture-Memory-Reference",
+        concat!(
+            "DEFCAL MEASURE 0 addr:\n",
+            "    DECLARE raw_iq REAL[2]\n",
+            "    NONBLOCKING CAPTURE 0 \"ro_rx\" boxcar_kernel(duration: 1e-6) raw_iq[0]\n",
+            "    NONBLOCKING CAPTURE 0 \"ro_rx\" boxcar_kernel(duration: 1e-6) addr[0]\n",
+            "MEASURE 0 ro[0]\n",
         )
     )]
     fn test_expansion(#[case] description: &str, #[case] input: &str) {
