@@ -16,9 +16,9 @@ import json
 
 import pytest
 from conftest import load
+from quil.program import Program
 
 from quil.plotting import PlottableProgramCircuit, PlottableProgramPulseSchedule
-from quil.program import Program
 
 
 @pytest.fixture

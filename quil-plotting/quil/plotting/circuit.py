@@ -17,11 +17,12 @@
 import json
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any, Self
+from typing import Any, Self, cast
 
 import altair as alt
 from quil.instructions import Instruction, MemoryReference, Qubit
 from quil.program import BasicBlock, Program
+from typing_extensions import override
 
 from .program import PlottableBlock, PlottableProgram
 from .render import GRAY, gate_name_color, natural_sort_key, order_labels
@@ -110,7 +111,9 @@ class PlottableCircuitEvent:
         """Whether this operates on qubits, not timing or classical memory."""
         # Only these are colored by gate name: the shared heuristic matches on
         # a prefix, so asking it about `SUB` would get back a one-qubit gate's
-        # color (it starts with `S`).
+        # color (it starts with `S`). Pulse instructions are absent because a
+        # circuit never holds one - `_build` rejects a Quil-T program outright,
+        # and points at the pulse-schedule view instead.
         return isinstance(
             self.instruction,
             (Instruction.Gate, Instruction.Measurement, Instruction.Reset),
@@ -326,6 +329,25 @@ class PlottableBlockCircuit(PlottableBlock[PlottableCircuitEvent]):
         self._fences: list[tuple[int, tuple[Track, ...]]] = []
 
         for instruction in instructions:
+            if isinstance(
+                instruction,
+                (
+                    Instruction.Pulse,
+                    Instruction.Capture,
+                    Instruction.RawCapture,
+                    Instruction.SetFrequency,
+                    Instruction.ShiftFrequency,
+                    Instruction.SetPhase,
+                    Instruction.ShiftPhase,
+                    Instruction.SetScale,
+                    Instruction.SwapPhases,
+                ),
+            ):
+                raise ValueError(
+                    "Cannot draw a circuit for a program with a Quil-T instruction. It may be "
+                    "better to use `PlottableProgramPulseSchedule`."
+                )
+
             if isinstance(instruction, Instruction.Gate):
                 gate = instruction._0
                 tracks = tuple(filter(None, (qubit_track(q) for q in gate.qubits)))
@@ -490,11 +512,13 @@ class PlottableBlockCircuit(PlottableBlock[PlottableCircuitEvent]):
         return [track for track in self.tracks if track.is_register]
 
     @property
+    @override
     def drawable(self) -> bool:
         """Whether this block has anything to draw."""
         return bool(self.visible_events)
 
     @property
+    @override
     def caption(self) -> str:
         """This block in one line, as its control-flow graph node shows it."""
         if not self.drawable:
@@ -507,6 +531,7 @@ class PlottableBlockCircuit(PlottableBlock[PlottableCircuitEvent]):
     # -- Colors ---------------------------------------------------------------
 
     @property
+    @override
     def colorable_events(self) -> list[PlottableCircuitEvent]:
         """The visible events that earn a legend entry.
 
@@ -515,6 +540,7 @@ class PlottableBlockCircuit(PlottableBlock[PlottableCircuitEvent]):
         """
         return self.visible_events
 
+    @override
     def _default_group_key(self, event: PlottableCircuitEvent) -> str:
         """The group `event` falls into with no `color_key`: its gate name.
 
@@ -526,6 +552,7 @@ class PlottableBlockCircuit(PlottableBlock[PlottableCircuitEvent]):
         """
         return event.gate
 
+    @override
     def _default_color(self, key: str, events: list[PlottableCircuitEvent]) -> str:
         """Classify `key` by gate name, graying out anything unrecognized.
 
@@ -547,7 +574,8 @@ class PlottableBlockCircuit(PlottableBlock[PlottableCircuitEvent]):
 
     # -- Drawing ---------------------------------------------------------------
 
-    def draw(self, rows: list[Track] | None = None):
+    @override
+    def draw(self, rows: list[Track] | None = None) -> alt.LayerChart:
         """Draw this block's circuit, using its own settings.
 
         Args:
@@ -613,7 +641,11 @@ class PlottableBlockCircuit(PlottableBlock[PlottableCircuitEvent]):
             )
             .configure_view(strokeWidth=0)
         )
-        return chart
+
+        # altair leaves `configure_view` untyped, so the chain degrades to
+        # `Any`.
+        # `layer()` returns the LayerChart this is declared to give back.
+        return cast(alt.LayerChart, chart)
 
     def _wire_layers(self, rows, columns, row_axis, column_axis, row_scale, column_scale):
         """The horizontal wires.
@@ -835,6 +867,7 @@ class PlottableProgramCircuit(PlottableProgram[PlottableBlockCircuit]):
         {py:obj}`PlottableCircuitEvent`: what a {py:obj}`hide`/{py:obj}`show` predicate is handed.
     """
 
+    @override
     def _build_blocks(self, program: Program) -> list[PlottableBlockCircuit]:
         """Lay `program` out as a circuit, block by block.
 
@@ -852,6 +885,7 @@ class PlottableProgramCircuit(PlottableProgram[PlottableBlockCircuit]):
             PlottableBlockCircuit(block) for block in program.control_flow_graph().basic_blocks()
         ]
 
+    @override
     def _resolve_rows(self) -> list[Track]:
         drawable = self._drawable_blocks()
         if not drawable:

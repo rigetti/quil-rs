@@ -20,7 +20,6 @@ from typing import Any, Callable, Literal
 
 import altair as alt
 import numpy as np
-
 from quil.instructions import Instruction
 
 from .render import BLUE, EMBED_OPTIONS, GRAY, MAGENTA

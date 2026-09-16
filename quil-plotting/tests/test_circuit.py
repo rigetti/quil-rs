@@ -15,10 +15,10 @@
 import altair as alt
 import pytest
 from conftest import load
+from quil.program import Program
 
 from quil.plotting import PlottableProgramCircuit
 from quil.plotting.circuit import _delay_label, _gate_label
-from quil.program import Program
 
 
 def one_block(name: str):

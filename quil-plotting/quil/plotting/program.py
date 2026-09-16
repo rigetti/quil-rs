@@ -20,7 +20,6 @@ from pathlib import Path
 from typing import Any, Callable, Generic, Self, TypeVar
 
 import altair as alt
-
 from quil.instructions import Instruction
 from quil.program import BasicBlock, Program
 
@@ -230,6 +229,15 @@ class PlottableProgram(abc.ABC, Generic[BlockT]):
 
     def _drawable_blocks(self) -> list[BlockT]:
         return [block for block in self._blocks if block.drawable]
+
+    def __repr__(self) -> str:
+        """One line: the view, how many blocks it holds, and how many rows it draws."""
+        count = len(self._blocks)
+        blocks = f"{count} block{'' if count == 1 else 's'}"
+        drawable = len(self._drawable_blocks())
+        if drawable != count:
+            blocks += f" ({drawable} drawable)"
+        return f"<{type(self).__name__}: {blocks}, {len(self._resolve_rows())} rows>"
 
     # -- Builder methods -------------------------------------------------------
     # The program pushes all rendering state down to the blocks, to minimize

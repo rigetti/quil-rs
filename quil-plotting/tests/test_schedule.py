@@ -15,10 +15,10 @@
 import altair as alt
 import pytest
 from conftest import load, sig_digits
+from quil.program import Program
 
 from quil.plotting import PlottableProgramPulseSchedule
 from quil.plotting.waveform import PlottableWaveformCache, WaveformKey
-from quil.program import Program
 
 
 def test_every_program_builds_and_draws_a_valid_spec(program):

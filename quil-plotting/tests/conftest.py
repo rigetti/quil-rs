@@ -24,7 +24,6 @@ from functools import lru_cache
 from pathlib import Path
 
 import pytest
-
 from quil.program import Program
 
 PROGRAMS = Path(__file__).resolve().parent / "programs"

@@ -18,7 +18,6 @@ from collections.abc import Iterable, Mapping
 
 import numpy as np
 import numpy.typing as npt
-
 from quil.expression import EvaluationError, Expression
 
 

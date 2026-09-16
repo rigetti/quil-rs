@@ -26,10 +26,21 @@ CORE = ROOT / "quil-rs" / "pyproject.toml"
 PLOTTING = ROOT / "quil-plotting" / "pyproject.toml"
 
 # knope writes versions like `0.37.0` or `0.37.0-rc.3`; PEP 440 spells the latter
-# `0.37.0rc3`, and that normalized form is what has to appear in the dependency pin.
+# `0.37.0rc3`, and that form is what has to appear in the dependency pin.
+#
+# The shape follows PEP 440's own appendix regex: a separator that may be `-`, `_`, `.`
+# or nothing on either side of the label, and a label drawn from PEP 440's complete
+# set of pre-release spellings plus `dev`. Both are public segments, so a matched
+# version can only produce a pin PEP 440 accepts and pip resolves without `--pre`.
+# The branches are ordered longest-first, as PEP 440 orders them, so `alpha` is never
+# mis-read as `a` followed by junk.
+#
 # Anything else is a shape this script has not been taught, so fail rather than emit a
-# pin that silently does not match.
-KNOPE_VERSION = re.compile(r"^(\d+\.\d+\.\d+)(?:-([a-z]+)\.(\d+))?$")
+# pin that silently does not match. A commit-based local segment (`+g1a2b3c4`) is one
+# such shape: knope does not emit one, and it resolves from no index anyway.
+KNOPE_VERSION = re.compile(
+    r"^(\d+\.\d+\.\d+)(?:[-_.]?(alpha|a|beta|b|preview|pre|c|rc|dev)[-_.]?(\d+))?$"
+)
 PIN = re.compile(r'^(?P<indent>\s*)"quil==(?P<version>[^"]+)"', re.MULTILINE)
 
 

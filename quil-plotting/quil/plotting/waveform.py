@@ -22,10 +22,10 @@ from typing import Any, Self
 
 import numpy as np
 import numpy.typing as npt
-
-import quil
 from quil.instructions import Waveform, WaveformInvocation
 from quil.waveform import BuiltinWaveform, CommonBuiltinParameters
+
+import quil
 
 from .utils import (
     _evaluate_complex,

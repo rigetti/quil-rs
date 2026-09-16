@@ -5,9 +5,6 @@ requires-python = ">=3.11"
 description = "A Python package for visualizing Quil programs."
 readme = "README.md"
 license = "Apache-2.0"
-# One LICENSE in the repository, at its root. This directory carries a symlink
-# to it, and the sdist replaces that link with the file's contents, so no copy
-# is ever tracked here to drift from the original.
 license-files = ["LICENSE"]
 authors = [{ name = "Rigetti Computing", email = "softapps@rigetti.com" }]
 classifiers = [
@@ -28,7 +25,12 @@ dependencies = [
     # not need an installed copy of Chrome.
     "vl-convert-python>=1.7",
     "anywidget>=0.9",
-    "ipywidgets>=8"
+    "ipywidgets>=8",
+    # `typing.override` landed in 3.12, one minor above this package's floor.
+    # typing_extensions re-exports the stdlib one there, so the import is
+    # correct on every supported version and this line goes away when the
+    # floor reaches 3.12.
+    "typing-extensions>=4.4"
 ]
 
 [project.urls]
@@ -36,13 +38,14 @@ documentation = "https://rigetti.github.io/quil-rs/plotting/"
 
 [project.optional-dependencies]
 dev = [
-    "ruff>=0.3.7",
+    "ruff>=0.16",
     "mypy>=1.1.1",
     "pytest>=7.2.2"
 ]
 docs = [
     "sphinx>=8",
-    "myst-parser>=4",
+    "myst-nb>=1.2",
+    "ipykernel>=6",
     "sphinx-autodoc2>=0.5",
     "sphinx-autobuild>=2024",
     "sphinx_rtd_theme>=3.1.0",

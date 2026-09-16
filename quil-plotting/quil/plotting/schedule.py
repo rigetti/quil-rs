@@ -16,7 +16,7 @@
 
 import json
 import math
-from typing import Callable, Iterable, Self
+from typing import Callable, Iterable, Self, cast
 
 import altair as alt
 import numpy as np
@@ -27,6 +27,7 @@ from quil.instructions import (
     Qubit,
 )
 from quil.program import BasicBlock, Program
+from typing_extensions import override
 
 from .program import PlottableBlock, PlottableProgram
 from .pulse import (
@@ -272,6 +273,7 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
         return [event for event in self.events if isinstance(event, PlottableRawCapture)]
 
     @property
+    @override
     def colorable_events(self) -> list[PlottablePulseEvent]:
         """The visible events that are colored, and so get a legend entry.
 
@@ -284,11 +286,13 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
         return [event for event in (*self.pulses, *self.raw_captures) if not event.hidden]
 
     @property
+    @override
     def drawable(self) -> bool:
         """Whether this block has anything to draw."""
         return bool(self.events)
 
     @property
+    @override
     def caption(self) -> str:
         """This block in one line, as its control-flow graph node shows it.
 
@@ -336,6 +340,7 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
         lanes = {label: lane for lane, label in enumerate(labels)}
         return labels, lambda event: lanes.get(field(event))
 
+    @override
     def _default_group_key(self, event: PlottablePulseEvent) -> str:
         """The group `event` falls into with no `color_key`.
 
@@ -349,6 +354,7 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
         """
         return event.logical_instruction_name
 
+    @override
     def _default_color(self, key: str, events: list[PlottablePulseEvent]) -> str:
         """Classify `key` by what the operation is, falling back on its frame.
 
@@ -419,6 +425,7 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
             max_time_ns = 1000.0
         return int(np.clip(max_time_ns / self.ns_per_pixel, self.min_width, self.max_width))
 
+    @override
     def draw(self, rows: list[str] | None = None) -> alt.LayerChart:
         """Draw this block's pulse schedule, using its own settings.
 
@@ -689,7 +696,7 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
 
         # `interactive()` is declared on altair's base chart, so it widens the
         # LayerChart that `layer()` returns.
-        return chart  # type: ignore[return-value]
+        return cast(alt.LayerChart, chart)
 
 
 class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule]):
@@ -755,6 +762,7 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
             predicate is handed.
     """
 
+    @override
     def _build_blocks(self, program: Program) -> list[PlottableBlockPulseSchedule]:
         """Expand `program`'s calibrations, schedule it, and lay out its blocks.
 
@@ -895,6 +903,7 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
         filtered_program.add_instructions([instruction for _, instruction in kept])
         return filtered_program, instruction_name_map
 
+    @override
     def _resolve_rows(self) -> list[str]:
         # Every block's `y_axis` was set identically by `with_y_axis`, so any
         # one of them names the field. Built from every event, not just pulses,

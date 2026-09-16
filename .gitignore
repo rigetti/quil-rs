@@ -35,3 +35,9 @@ quil-plotting/examples/plots/
 
 # quil-plotting documentation
 quil-plotting/docs/_build/
+
+# myst-nb writes the executed copy of each notebook here on every build.
+quil-plotting/docs/jupyter_execute/
+
+# Generated at docs build time by vl-convert; see quil-plotting/docs/conf.py
+quil-plotting/docs/_static/vega-bundle.js

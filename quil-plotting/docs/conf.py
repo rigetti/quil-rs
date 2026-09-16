@@ -17,6 +17,8 @@
 import sys
 from pathlib import Path
 
+import vl_convert
+
 # `napoleon_myst` is resolved by docutils as a plain module name, so `_ext` has
 # to be importable rather than merely present.
 sys.path.insert(0, str(Path(__file__).parent / "_ext"))
@@ -26,9 +28,12 @@ author = "Rigetti Computing"
 copyright = "2026, Rigetti Computing"
 
 extensions = [
-    "myst_parser",
+    "myst_nb",
     "autodoc2",
 ]
+
+nb_execution_mode = "auto"
+nb_execution_raise_on_error = True
 
 # `auto_mode` off: the reference is curated in `api/`, one directive per class.
 autodoc2_packages = [{"path": "../quil", "auto_mode": False}]
@@ -63,4 +68,21 @@ html_theme = "sphinx_rtd_theme"
 html_title = "quil-plotting"
 
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "_ext"]
+
+# One copy of the Vega runtime for the whole site, bundled by `vl-convert`
+# rather than fetched from a CDN, so a built page renders offline. The
+# notebook's charts carry only their own spec and call into this.
+_static = Path(__file__).parent / "_static"
+_static.mkdir(exist_ok=True)
+# Wrapped in an IIFE: the bundle declares a top-level `const _`, and a classic
+# script's top-level `const` is global, so unwrapped it collides with the `_`
+# the RTD theme already defines and aborts before exporting `vegaEmbed`.
+(_static / "vega-bundle.js").write_text(
+    f"(function () {{\n{vl_convert.javascript_bundle()}\n}})();"
+)
+
+html_static_path = ["_static"]
+html_js_files = ["vega-bundle.js"]
+# `jupyter_execute` is myst-nb's own output - the executed copy of every
+# notebook. Left in, sphinx picks it back up as source and executes it again.
+exclude_patterns = ["_build", "_ext", "jupyter_execute"]
