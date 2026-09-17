@@ -145,8 +145,8 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
         self.lane_fraction: float = 0.45
         """The fraction of a lane a full-scale pulse spans."""
 
-        self.normalize_by: str = "Frame"
-        """The field pulse amplitudes are normalized within."""
+        self.normalize_by: str | None = "Frame"
+        """The field pulse amplitudes are normalized within, or `None` for absolute."""
 
         self.max_points_per_pulse: int | None = 500
         """Caps a pulse's rendered sample count, or `None` for no cap."""
@@ -387,11 +387,16 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
         Returns:
             A callable giving the divisor for a pulse's amplitude - the
             largest scaled IQ magnitude in its group, so that pulse fills
-            its lane and quieter ones stay in proportion to it.
+            its lane and quieter ones stay in proportion to it. With
+            `normalize_by` unset the divisor is always 1.0, drawing each pulse
+            at its own absolute amplitude.
 
         See Also:
             `PlottableProgramPulseSchedule.with_normalize_by`
         """
+        if self.normalize_by is None:
+            return lambda _: 1.0
+
         field = self.field_accessor(self.normalize_by)
 
         peaks: dict[str, float] = {}
@@ -720,7 +725,7 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
     Four field names run through this class. {py:obj}`with_y_axis`,
     {py:obj}`with_normalize_by`, {py:obj}`with_color_key` and the string form of
     {py:obj}`hide`/{py:obj}`show` all accept the same
-    four:
+    four ({py:obj}`with_normalize_by` also takes `None`, for no grouping):
 
     | Field              | Groups by                                     |
     | ------------------ | --------------------------------------------- |
@@ -1103,12 +1108,12 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
             block.lane_fraction = fraction
         return self
 
-    def with_normalize_by(self, field: str) -> Self:
+    def with_normalize_by(self, field: str | None) -> Self:
         """Group pulses by `field`, and scale each group to its own loudest.
 
-        Drawn pulse heights are relative, never absolute: within each group, the
-        largest-amplitude pulse fills its lane and the rest stay in proportion
-        to it. The field chooses what "the rest" means.
+        Drawn pulse heights are relative by default, not absolute: within each
+        group, the largest-amplitude pulse fills its lane and the rest stay in
+        proportion to it. The field chooses what "the rest" means.
 
         `"Frame"`, the default, compares a pulse only against other pulses on
         the same frame, which keeps a small drive pulse readable next to a
@@ -1116,9 +1121,18 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
         `"Qubit"` or `"Channel Type"` makes amplitudes comparable across frames
         instead, at the cost of flattening the quiet ones.
 
+        `None` turns normalization off altogether and draws every pulse at its
+        own amplitude, so a `scale` of 1.0 spans a full
+        {py:obj}`with_lane_fraction` and a scale of 0.1 a tenth of it. Heights
+        are then comparable across the whole chart, at the cost of quiet pulses
+        being drawn as quiet as they really are. Nothing clamps them either: a
+        waveform whose scaled samples exceed 1.0 overruns its lane into its
+        neighbor, the same way a lane fraction above 0.5 does.
+
         Args:
             field: One of `"Qubit"`, `"Frame"`, `"Channel Type"` or
-                `"Instruction"`. See the class's grouping-fields table.
+                `"Instruction"` - see the class's grouping-fields table - or
+                `None` to draw absolute amplitudes.
 
         Returns:
             `self`, so calls chain.
@@ -1130,12 +1144,19 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
             schedule.with_normalize_by("Qubit").draw()
             ```
 
+            Draw amplitudes as they are, with no grouping at all:
+
+            ```python
+            schedule.with_normalize_by(None).draw()
+            ```
+
         See Also:
             {py:obj}`quil.plotting.pulse.PlottablePulse.scale`: the amplitude being
                 normalized.
         """
-        # rejects an unknown field
-        PlottableBlockPulseSchedule.field_accessor(field)
+        if field is not None:
+            # rejects an unknown field
+            PlottableBlockPulseSchedule.field_accessor(field)
         for block in self._blocks:
             block.normalize_by = field
         return self

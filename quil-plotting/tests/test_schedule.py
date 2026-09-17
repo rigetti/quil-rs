@@ -232,3 +232,21 @@ def test_a_program_with_no_pulses_refuses_to_draw():
 def test_non_program_input_is_rejected():
     with pytest.raises(TypeError, match="Expected quil.Program"):
         PlottableProgramPulseSchedule("RX(pi) 0")
+
+
+def test_disabling_normalization_draws_absolute_amplitudes():
+    schedule = PlottableProgramPulseSchedule(load("multiple_offset_gates_with_measures"))
+    block = schedule._blocks[0]
+    assert schedule.with_normalize_by(None) is schedule
+    assert block.normalize_by is None
+
+    normalization_of = block.resolve_normalization()
+    peaks = set()
+    for pulse in block.pulses:
+        record = pulse.build_record(0, 0, "label", normalization_of(pulse), block.lane_fraction)
+        assert record["kr"] == pytest.approx(block.lane_fraction * pulse.scale, rel=1e-4)
+        peaks.add(round(abs(record["kr"]), 9))
+
+    # Normalized, every group tops out at exactly `lane_fraction`; absolute, the
+    # quiet pulses stay quiet.
+    assert len(peaks) > 1
