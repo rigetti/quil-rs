@@ -17,10 +17,31 @@
 import json
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any, Self, cast
+from typing import Any, NoReturn, Self, cast
 
 import altair as alt
-from quil.instructions import Instruction, MemoryReference, Qubit
+from quil.expression import Expression
+from quil.instructions import (
+    Capture,
+    Delay,
+    Fence,
+    FrameIdentifier,
+    Gate,
+    Instruction,
+    Measurement,
+    MemoryReference,
+    Pulse,
+    Qubit,
+    RawCapture,
+    Reset,
+    SetFrequency,
+    SetPhase,
+    SetScale,
+    ShiftFrequency,
+    ShiftPhase,
+    SwapPhases,
+    WaveformInvocation,
+)
 from quil.program import BasicBlock, Program
 from typing_extensions import override
 
@@ -866,6 +887,204 @@ class PlottableProgramCircuit(PlottableProgram[PlottableBlockCircuit]):
             of the same program.
         {py:obj}`PlottableCircuitEvent`: what a {py:obj}`hide`/{py:obj}`show` predicate is handed.
     """
+
+    def __init__(self, program: Program, inline_defcircuits: bool = False) -> None:
+        """Parse `program` into a circuit diagram.
+
+        Args:
+            program: Any parseable Quil program.
+            inline_defcircuits: Whether to replace every `DEFCIRCUIT` call with
+                the instructions it stands for, recursively, so the diagram
+                shows `RX(pi/2) 23` rather than the macro that contains it.
+                Experimental!
+
+        Raises:
+            TypeError: If `program` is not a `quil.program.Program`.
+            ValueError: If `inline_defcircuits` is set and a call cannot be
+                inlined faithfully.
+        """
+        if inline_defcircuits and isinstance(program, Program):
+            program = self._inline_defcircuits(program)
+        super().__init__(program)
+
+    @staticmethod
+    def _inline_defcircuits(program: Program) -> Program:
+        """Replace every `DEFCIRCUIT` call in `program` with its body.
+
+        Walk the body; where an instruction names a `DEFCIRCUIT`, substitute the
+        call's qubits and parameters into that definition's instructions and
+        splice them in, repeating on what comes out so nested macros unfold too.
+
+        Experimental. Quil gives a `DEFCIRCUIT` call no syntactic marking,
+        meaning it parses as an ordinary gate. As a result, there are some
+        situations where we cannot inline faithfully. Rather than guess at a
+        call it cannot reproduce faithfully, it raises an error.
+
+        Args:
+            program: The program to inline. One with no `DEFCIRCUIT` is returned
+                unchanged.
+
+        Returns:
+            A copy of `program` with its calls inlined. Frames, waveforms,
+            calibrations and the definitions themselves are carried over, so the
+            result stays a complete program.
+
+        Raises:
+            ValueError: If a call carries a gate modifier, passes the wrong
+                number of qubits or parameters, nests beyond the depth limit, or
+                leaves behind a qubit variable this cannot substitute.
+        """
+        circuits = program.circuits
+        if not circuits:
+            return program
+
+        depth_limit = 50
+
+        def fail(problem: str, instruction: Instruction) -> NoReturn:
+            raise ValueError(
+                f"cannot inline DEFCIRCUITs: {problem}, at {instruction.to_quil_or_debug()!r}. "
+                "DEFCIRCUIT inlining is experimental and fragile - a call is an ordinary gate "
+                "as far as Quil is concerned, so this expands only what it can reproduce "
+                "faithfully and refuses the rest. Draw the program without "
+                "`inline_defcircuits` to see it as written."
+            )
+
+        def variables(inner: Any) -> list[Qubit]:
+            """Every qubit variable `inner` holds."""
+            frames = [
+                frame
+                for name in ("frame", "frame_1", "frame_2")
+                if (frame := getattr(inner, name, None)) is not None
+            ]
+            qubits = [*getattr(inner, "qubits", []), *(q for f in frames for q in f.qubits)]
+            if (qubit := getattr(inner, "qubit", None)) is not None:
+                qubits.append(qubit)
+            return [qubit for qubit in qubits if isinstance(qubit, Qubit.Variable)]
+
+        def substituted(
+            instruction: Instruction,
+            qubits: dict[str, Qubit],
+            parameters: dict[str, Expression],
+        ) -> Instruction:
+            """Instantiation an instruction placeholder with a call's arguments.
+
+            The cases are the instruction shapes quil-rs can hold a qubit or an
+            expression in; anything else holds neither and passes through.
+            """
+
+            def q(operands: list[Qubit]) -> list[Qubit]:
+                return [
+                    qubits.get(operand._0, operand)
+                    if isinstance(operand, Qubit.Variable)
+                    else operand
+                    for operand in operands
+                ]
+
+            def f(frame: FrameIdentifier) -> FrameIdentifier:
+                return FrameIdentifier(frame.name, q(frame.qubits))
+
+            def e(expression: Expression) -> Expression:
+                return expression.substitute_variables(parameters)
+
+            def w(waveform: WaveformInvocation) -> WaveformInvocation:
+                return WaveformInvocation(
+                    waveform.name, {name: e(value) for name, value in waveform.parameters.items()}
+                )
+
+            # the payload is a union of every variant
+            i = cast(Any, instruction)._0
+            match instruction:
+                case Instruction.Gate():
+                    return Instruction.Gate(
+                        Gate(i.name, [e(x) for x in i.parameters], q(i.qubits), i.modifiers)
+                    )
+                case Instruction.Measurement():
+                    return Instruction.Measurement(
+                        Measurement(q([i.qubit])[0], i.target, name=i.name)
+                    )
+                case Instruction.Reset():
+                    return Instruction.Reset(Reset(q([i.qubit])[0] if i.qubit else None))
+                case Instruction.Delay():
+                    return Instruction.Delay(Delay(e(i.duration), i.frame_names, q(i.qubits)))
+                case Instruction.Fence():
+                    return Instruction.Fence(Fence(q(i.qubits)))
+                case Instruction.Pulse():
+                    return Instruction.Pulse(Pulse(i.blocking, f(i.frame), w(i.waveform)))
+                case Instruction.Capture():
+                    return Instruction.Capture(
+                        Capture(i.blocking, f(i.frame), i.memory_reference, w(i.waveform))
+                    )
+                case Instruction.RawCapture():
+                    return Instruction.RawCapture(
+                        RawCapture(i.blocking, f(i.frame), e(i.duration), i.memory_reference)
+                    )
+                case Instruction.SetFrequency():
+                    return Instruction.SetFrequency(SetFrequency(f(i.frame), e(i.frequency)))
+                case Instruction.SetPhase():
+                    return Instruction.SetPhase(SetPhase(f(i.frame), e(i.phase)))
+                case Instruction.SetScale():
+                    return Instruction.SetScale(SetScale(f(i.frame), e(i.scale)))
+                case Instruction.ShiftFrequency():
+                    return Instruction.ShiftFrequency(ShiftFrequency(f(i.frame), e(i.frequency)))
+                case Instruction.ShiftPhase():
+                    return Instruction.ShiftPhase(ShiftPhase(f(i.frame), e(i.phase)))
+                case Instruction.SwapPhases():
+                    return Instruction.SwapPhases(SwapPhases(f(i.frame_1), f(i.frame_2)))
+                case _:
+                    # Holds neither a qubit nor an expression - unless quil-rs
+                    # has
+                    # grown a shape this does not know, which the check catches.
+                    if leftover := variables(i):
+                        fail(
+                            f"cannot substitute qubit variable {leftover[0].to_quil()!r}",
+                            instruction,
+                        )
+                    return instruction
+
+        def expand(instructions: list[Instruction], depth: int) -> list[Instruction]:
+            if depth > depth_limit:
+                raise ValueError(
+                    f"cannot inline DEFCIRCUITs: nesting exceeded {depth_limit} levels, so a "
+                    "macro is very likely defined in terms of itself. DEFCIRCUIT inlining is "
+                    "experimental and fragile - draw the program without `inline_defcircuits` "
+                    "to see it as written."
+                )
+            expanded: list[Instruction] = []
+            for instruction in instructions:
+                if not isinstance(instruction, Instruction.Gate):
+                    expanded.append(instruction)
+                    continue
+
+                gate = instruction._0
+                definition = circuits.get(gate.name)
+                if definition is None:
+                    expanded.append(instruction)
+                    continue
+
+                if gate.modifiers:
+                    fail("a DEFCIRCUIT call cannot carry a gate modifier", instruction)
+                if len(gate.qubits) != len(definition.qubit_variables):
+                    fail(
+                        f"{definition.name} takes {len(definition.qubit_variables)} qubits but the "
+                        f"call passes {len(gate.qubits)}",
+                        instruction,
+                    )
+                if len(gate.parameters) != len(definition.parameters):
+                    fail(
+                        f"{definition.name} takes {len(definition.parameters)} parameters but the "
+                        f"call passes {len(gate.parameters)}",
+                        instruction,
+                    )
+
+                qubits = dict(zip(definition.qubit_variables, gate.qubits, strict=True))
+                parameters = dict(zip(definition.parameters, gate.parameters, strict=True))
+                body = [substituted(x, qubits, parameters) for x in definition.instructions]
+                expanded.extend(expand(body, depth + 1))
+            return expanded
+
+        inlined = program.clone_without_body_instructions()
+        inlined.add_instructions(expand(program.body_instructions, 0))
+        return inlined
 
     @override
     def _build_blocks(self, program: Program) -> list[PlottableBlockCircuit]:
