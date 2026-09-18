@@ -26,7 +26,7 @@ from quil.instructions import (
     Instruction,
     Qubit,
 )
-from quil.program import BasicBlock, Program
+from quil.program import BasicBlock, FrameSet, Program
 from typing_extensions import override
 
 from .program import PlottableBlock, PlottableProgram
@@ -120,7 +120,7 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
             program: The expanded program, consulted for its frame and waveform
                 definitions.
             instruction_name_map: One logical instruction name per instruction
-                of `block`, from `PlottableProgramPulseSchedule.expand_program`.
+                of `block`.
         """
         super().__init__(block)
 
@@ -146,7 +146,9 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
         """The fraction of a lane a full-scale pulse spans."""
 
         self.normalize_by: str | None = "Frame"
-        """The field pulse amplitudes are normalized within, or `None` for absolute."""
+        """The field pulse amplitudes are normalized within, or `None` for
+        absolute.
+        """
 
         self.max_points_per_pulse: int | None = 500
         """Caps a pulse's rendered sample count, or `None` for no cap."""
@@ -166,6 +168,9 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
         qubit_str_map = _build_qubit_str_map(program)
 
         waveform_defs = program.waveforms
+        # `program.frames` clones the whole frame set on every access, so it is
+        # read once here rather than per pulse.
+        frames = program.frames
         for event in scheduled.items:
             instruction = block_instructions[event.instruction_index]
 
@@ -179,7 +184,7 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
                 if isinstance(instruction, Instruction.Capture):
                     memory_reference = instruction._0.memory_reference.to_quil_or_debug()
 
-                sample_rate = _frame_sample_rate(program, pulse.frame)
+                sample_rate = _frame_sample_rate(frames, pulse.frame)
                 waveform_id, scale = self.waveforms.cache(
                     pulse.waveform,
                     waveform_defs,
@@ -724,8 +729,8 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
 
     Four field names run through this class. {py:obj}`with_y_axis`,
     {py:obj}`with_normalize_by`, {py:obj}`with_color_key` and the string form of
-    {py:obj}`hide`/{py:obj}`show` all accept the same
-    four ({py:obj}`with_normalize_by` also takes `None`, for no grouping):
+    {py:obj}`hide`/{py:obj}`show` all accept the same four
+    ({py:obj}`with_normalize_by` also takes `None`, for no grouping):
 
     | Field              | Groups by                                     |
     | ------------------ | --------------------------------------------- |
@@ -838,9 +843,12 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
         # 1. Decompose the program and retain the source map
         expanded_program, source_map = program.expand_calibrations_with_source_map()
 
-        # 2. Convert the source map to an instruction_name_map
-        instruction_name_map = [""] * len(expanded_program.body_instructions)
+        # 2. Convert the source map to an instruction_name_map.
+        source_instructions = program.body_instructions
+        expanded_instructions = expanded_program.body_instructions
+        instruction_name_map = [""] * len(expanded_instructions)
         for entry in source_map.entries():
+            logical_name = source_instructions[entry.source_location()].name
             for target_index in entry.target_location():
                 # Typed `int | None` because pyo3 spells exhaustion as `None`,
                 # which the
@@ -848,14 +856,13 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
                 # is an index.
                 if target_index is None:
                     continue
-                logical_name = program.body_instructions[entry.source_location()].name
                 instruction_name_map[target_index] = logical_name
 
         # 3. A gate or measurement still present after expansion has no
         #    calibration to give it a pulse. Report these as errors now.
         uncalibrated = [
             instruction
-            for instruction in expanded_program.body_instructions
+            for instruction in expanded_instructions
             if isinstance(instruction, (Instruction.Gate, Instruction.Measurement))
         ]
         if uncalibrated:
@@ -876,9 +883,7 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
         #    is dropped rather than crashing.
         kept = [
             (name, instruction)
-            for name, instruction in zip(
-                instruction_name_map, expanded_program.body_instructions, strict=True
-            )
+            for name, instruction in zip(instruction_name_map, expanded_instructions, strict=True)
             if isinstance(
                 instruction,
                 (
@@ -1225,13 +1230,15 @@ def _build_channel_type_map(program: Program) -> dict[FrameIdentifier, str]:
     return channel_types
 
 
-def _frame_sample_rate(program: Program, frame: FrameIdentifier) -> float:
+def _frame_sample_rate(frames: FrameSet, frame: FrameIdentifier) -> float:
     """A frame's `SAMPLE-RATE` in Hz, which is what waveforms are sampled at.
 
     Internal.
 
     Args:
-        program: The program whose `DEFFRAME`s are consulted.
+        frames: The program's `DEFFRAME`s. Taken as a `FrameSet` rather than the
+            program, because reading `program.frames` clones the whole set and
+            this is called once per pulse.
         frame: The frame to look up.
 
     Returns:
@@ -1241,7 +1248,7 @@ def _frame_sample_rate(program: Program, frame: FrameIdentifier) -> float:
         RuntimeError: If the frame has no `DEFFRAME`, or its `DEFFRAME` has no
             numeric `SAMPLE-RATE`.
     """
-    attributes = program.frames.get(frame)
+    attributes = frames.get(frame)
     if attributes is None:
         raise RuntimeError(f"no DEFFRAME for {frame!r}")
     rate = attributes.get("SAMPLE-RATE")
