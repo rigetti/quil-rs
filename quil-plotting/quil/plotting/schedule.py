@@ -156,6 +156,12 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
         self.frame_update_color: str = "#0d0d36"
         """The one color every frame update is drawn in."""
 
+        self.pan_y: bool = True
+        """Whether dragging pans the lane axis as well as the time axis."""
+
+        self.zoom_y: bool = True
+        """Whether scrolling zooms the lane axis as well as the time axis."""
+
         block_instructions = block.instructions
         scheduled = block.as_schedule_seconds(program)
         self.duration: float = scheduled.duration
@@ -694,18 +700,35 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
                 )
             )
 
+        # The time axis is always fully interactive. `y` needs its own
+        # scales-bound param because pan and zoom are per-param knobs, not
+        # per-axis ones: one `interactive()` binds both axes to both gestures,
+        # so pan-y-without-zoom-y cannot be expressed that way. `translate` is
+        # the drag stream and `zoom` the wheel stream; `False` turns that
+        # gesture off for this param's axis alone, and `Undefined` leaves
+        # Vega-Lite's own default stream in place rather than hardcoding one.
+        scale_params = [alt.selection_interval(bind="scales", encodings=["x"])]
+        if self.pan_y or self.zoom_y:
+            scale_params.append(
+                alt.selection_interval(
+                    bind="scales",
+                    encodings=["y"],
+                    translate=alt.Undefined if self.pan_y else False,
+                    zoom=alt.Undefined if self.zoom_y else False,
+                )
+            )
+
         chart = (
             alt.layer(*layers)
-            .add_params(legend_selection)
+            .add_params(legend_selection, *scale_params)
             .properties(
                 width=width,
                 height=min(height_per_runner * max(len(y_axis_labels), 1), self.max_height),
             )
-            .interactive()
         )
 
-        # `interactive()` is declared on altair's base chart, so it widens the
-        # LayerChart that `layer()` returns.
+        # `properties()` is declared on altair's base chart, so it widens the
+        # LayerChart that `layer()` returns to `LayerChart | FacetChart`.
         return cast(alt.LayerChart, chart)
 
 
@@ -1203,6 +1226,40 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
         """Sets the frame update marker color for the diagram."""
         for block in self._blocks:
             block.frame_update_color = frame_update_color
+        return self
+
+    def with_pan_y(self, on: bool = True) -> Self:
+        """Pan the lane axis along with the time axis, or pan time only.
+
+        On by default. The time axis always pans.
+
+        Args:
+            on: Whether dragging moves the lane axis.
+
+        Returns:
+            `self`, so calls chain.
+        """
+        for block in self._blocks:
+            block.pan_y = on
+        return self
+
+    def with_zoom_y(self, on: bool = True) -> Self:
+        """Zoom the lane axis along with the time axis, or zoom time only.
+
+        On by default. The time axis always zooms. Turning this off while
+        leaving {py:obj}`with_pan_y` on keeps lanes at a fixed height while
+        scrolling still stretches the time axis - which is usually what you
+        want on a long schedule, where the lanes are a fixed set of rows and
+        only the time direction has detail to magnify.
+
+        Args:
+            on: Whether scrolling scales the lane axis.
+
+        Returns:
+            `self`, so calls chain.
+        """
+        for block in self._blocks:
+            block.zoom_y = on
         return self
 
 

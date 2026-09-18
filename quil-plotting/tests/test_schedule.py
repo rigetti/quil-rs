@@ -250,3 +250,34 @@ def test_disabling_normalization_draws_absolute_amplitudes():
     # Normalized, every group tops out at exactly `lane_fraction`; absolute, the
     # quiet pulses stay quiet.
     assert len(peaks) > 1
+
+
+@pytest.mark.parametrize(
+    ("pan_y", "zoom_y", "expected_y"),
+    [
+        (True, True, ("default", "default")),
+        (True, False, ("default", False)),
+        (False, True, (False, "default")),
+        (False, False, None),  # no y param at all
+    ],
+)
+def test_pan_and_zoom_bind_to_each_axis_independently(pan_y, zoom_y, expected_y):
+    # Vega-Lite takes pan (`translate`) and zoom per *param*, not per axis, so the time and lane
+    # axes need one scales-bound param each. Asserting on the spec rather than the toggles is what
+    # catches the two collapsing back into a single param, which silently re-couples the axes.
+    schedule = (
+        PlottableProgramPulseSchedule(load("test_blocks")).with_pan_y(pan_y).with_zoom_y(zoom_y)
+    )
+    spec = schedule._blocks[0].draw().to_dict()
+
+    gestures = {
+        encoding: (select.get("translate", "default"), select.get("zoom", "default"))
+        for param in spec["params"]
+        if param.get("bind") == "scales"
+        for select in [param["select"]]
+        for encoding in select["encodings"]
+    }
+
+    # The time axis always pans and zooms; only the lane axis is configurable.
+    assert gestures.pop("x") == ("default", "default")
+    assert gestures.get("y") == expected_y
