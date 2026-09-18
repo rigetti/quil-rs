@@ -146,8 +146,9 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
         """The fraction of a lane a full-scale pulse spans."""
 
         self.normalize_by: str | None = "Frame"
-        """The field pulse amplitudes are normalized within, or `None` for
-        absolute.
+        """The field pulse amplitudes are normalized within.
+
+        `None` normalizes nothing, so amplitudes are drawn absolute.
         """
 
         self.max_points_per_pulse: int | None = 500
@@ -1248,9 +1249,9 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
 
         On by default. The time axis always zooms. Turning this off while
         leaving {py:obj}`with_pan_y` on keeps lanes at a fixed height while
-        scrolling still stretches the time axis - which is usually what you
-        want on a long schedule, where the lanes are a fixed set of rows and
-        only the time direction has detail to magnify.
+        scrolling still stretches the time axis - which is usually what you want
+        on a long schedule, where the lanes are a fixed set of rows and only the
+        time direction has detail to magnify.
 
         Args:
             on: Whether scrolling scales the lane axis.
@@ -1274,6 +1275,10 @@ def _build_channel_type_map(program: Program) -> dict[FrameIdentifier, str]:
 
     Returns:
         Each frame's channel type, keyed by its identifier.
+
+    Raises:
+        TypeError: If a frame's `HARDWARE-OBJECT` is not a string, so it holds
+            no JSON to read a channel type out of.
     """
     channel_types = {}
     for frame_id, attributes in program.frames.get_all_frames().items():

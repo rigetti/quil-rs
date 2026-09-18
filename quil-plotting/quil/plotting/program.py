@@ -231,7 +231,7 @@ class PlottableProgram(abc.ABC, Generic[BlockT]):
         return [block for block in self._blocks if block.drawable]
 
     def __repr__(self) -> str:
-        """One line: the view, how many blocks it holds, and how many rows it draws."""
+        """One line: the view, its block count, and its drawn row count."""
         count = len(self._blocks)
         blocks = f"{count} block{'' if count == 1 else 's'}"
         drawable = len(self._drawable_blocks())

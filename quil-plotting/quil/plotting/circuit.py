@@ -966,10 +966,19 @@ class PlottableProgramCircuit(PlottableProgram[PlottableBlockCircuit]):
             qubits: dict[str, Qubit],
             parameters: dict[str, Expression],
         ) -> Instruction:
-            """Instantiation an instruction placeholder with a call's arguments.
+            """Instantiate an instruction placeholder with a call's arguments.
 
             The cases are the instruction shapes quil-rs can hold a qubit or an
             expression in; anything else holds neither and passes through.
+
+            Args:
+                instruction: The body instruction to substitute into.
+                qubits: The caller's qubit per formal qubit name.
+                parameters: The caller's expression per formal parameter name.
+
+            Returns:
+                `instruction` with its formals replaced, or `instruction`
+                itself where it holds no qubit and no expression.
             """
 
             def q(operands: list[Qubit]) -> list[Qubit]:
