@@ -73,6 +73,7 @@ __all__ = [
     "Offset",
     "ParseInstructionError",
     "ParseMemoryReferenceError",
+    "PauliArgIter",
     "PauliGate",
     "PauliSum",
     "PauliTargetDesignator",
@@ -1760,14 +1761,33 @@ class ParseMemoryReferenceError(_quil.QuilError):
     """
     ...
 
+@typing.final
+class PauliArgIter:
+    r"""
+    An iterator over the qubit indices and Pauli operators in a [`PauliTerm`].
+    """
+    def __iter__(self) -> PauliArgIter: ...
+    def __next__(self) -> typing.Optional[tuple[PauliGate, builtins.str]]: ...
+
 class PauliSum:
     @property
     def arguments(self) -> builtins.list[builtins.str]: ...
     @property
     def terms(self) -> builtins.list[PauliTerm]: ...
+    def __add__(self, other: typing.Any) -> typing.Any: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __getitem__(self, index: builtins.int) -> typing.Any: ...
     def __getnewargs__(self) -> tuple[builtins.list[PauliTerm], builtins.list[builtins.str]]: ...
     def __hash__(self) -> builtins.int: ...
+    def __iter__(self) -> PauliTermIter:
+        r"""
+        Iterate over the [`PauliTerm`]s in this [`PauliSum`].
+        """
+    def __len__(self) -> builtins.int:
+        r"""
+        Return the number of terms in this [`PauliSum`].
+        """
+    def __mul__(self, other: typing.Any) -> typing.Any: ...
     @typing.overload
     def __new__(cls, terms: collections.abc.Sequence[PauliTerm], arguments: collections.abc.Sequence[PauliTargetDesignator] | None = None) -> PauliSum:
         r"""
@@ -1791,10 +1811,23 @@ class PauliSum:
         and the other order will issue a deprecation warning.
         If not given, `arguments` are inferred from the `PauliTerm`s.
         """
+    def __pow__(self, exponent: builtins.int, modulo: typing.Optional[typing.Any] = None) -> PauliSum: ...
+    def __radd__(self, other: typing.Any) -> typing.Any: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __rmul__(self, other: typing.Any) -> typing.Any: ...
+    def __rsub__(self, other: typing.Any) -> typing.Any: ...
+    def __str__(self) -> builtins.str:
+        r"""
+        Return a string representation of the PauliSum.
+        """
+    def __sub__(self, other: typing.Any) -> typing.Any: ...
+    def get_qubits(self) -> builtins.list[builtins.str]:
+        r"""
+        Get a list of all the qubits in the sum of the terms.
         """
 
 class PauliTerm:
@@ -1811,6 +1844,12 @@ class PauliTerm:
         r"""
         Create [`Program`] from the [`PauliTerm`].
         """
+    @typing.overload
+    def __add__(self, other: ExpressionDesignator) -> PauliTerm: ...
+    @typing.overload
+    def __add__(self, other: PauliTerm | PauliSum) -> PauliSum: ...
+    @typing.overload
+    def __add__(self, other: typing.Any) -> typing.Any: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getitem__(self, argument: builtins.str) -> PauliGate:
         r"""
@@ -1822,7 +1861,7 @@ class PauliTerm:
             _quil.expression.Expression
         ]: ...
     def __hash__(self) -> builtins.int: ...
-    def __iter__(self) -> PauliTermIter:
+    def __iter__(self) -> PauliArgIter:
         r"""
         Iterate over the arguments in this [`PauliTerm`].
         """
@@ -1890,17 +1929,63 @@ class PauliTerm:
         Note that to be valid `quil`, the  `coefficient` must be real-valued
         and only reference real numeric literals or parameters.
         """
-    def __pow__(self, exponent: builtins.int, modulo: typing.Optional[typing.Any] = None) -> PauliTerm: ...
+    @typing.overload
+    def __pow__(self, exponent: int, modulo: None = None) -> PauliTerm: ...
+    @typing.overload
+    def __pow__(self, exponent: complex | Expression, modulo: None = None) -> PauliSum: ...
+    @typing.overload
+    def __pow__(self, exponent: int  |  expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, modulo: typing.Optional[typing.Any] = None) -> typing.Any:
+        r"""
+        Compute the power of this [`PauliTerm`].
+        
+        In general, the result of raising a `PauliTerm` to a power is a two-term [`PauliSum`],
+        but in the common case of raising to an integer power, this returns a `PauliTerm`.
+        
+        To be specific, for a scaled Pauli operator `T = cP` and complex `k`, `T^k = c^k * P^k`.
+        Note that for Pauli operators, `P^2 = I` with eigenvalues `+1` and `-1`, so we can write
+        `P^k = (1/2)(I+P)(1^k) + (1/2)(I-P)((-1)^k) = (1/2)(1+(-1)^k)*I + (1/2)(1-(-1)^k)*P`.
+        Define `a = (1/2)(1+(-1)^k)` and `b = (1/2)(1-(-1)^k)`, so that `P^k = aI + bP`,
+        and we can write `T^k = c^k * P^k = c^k * (aI + bP) = (c^k * a)I + (c^k * b)P`.
+        Thus, the result is a two-term `PauliSum` with coefficients `c^k * a` and `c^k * b`.
+        
+        In the integer case, `(-1)^k = 1` for even `k` and `(-1)^k = -1` for odd `k`,
+        and so we have `a = 1` and `b = 0` for even `k`, and `a = 0` and `b = 1` for odd `k`:
+        thus, in that case we return a single `PauliTerm`.
+        
+        For non-integer exponents, we evaluate via the principal branch `(-1)^k = exp(i * pi * k)`.
+        In general, real and rational exponents result in complex coefficients,
+        and hence a two-term `PauliSum` result.
+        Symbolic expressions are supported using the same substituions:
+        `a = (1 + exp(i * pi * k)) / 2` and `b = (1 - exp(i * pi * k)) / 2`.
+        """
+    @typing.overload
+    def __radd__(self, other: ExpressionDesignator) -> PauliTerm: ...
+    @typing.overload
+    def __radd__(self, other: PauliTerm | PauliSum) -> PauliSum: ...
+    @typing.overload
+    def __radd__(self, other: typing.Any) -> typing.Any: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
     def __rmul__(self, other: typing.Any) -> typing.Any: ...
+    def __rsub__(self, other: typing.Any) -> typing.Any: ...
+    def __str__(self) -> builtins.str:
+        r"""
+        Return a string representation of the PauliTerm.
+        """
+    def __sub__(self, other: typing.Any) -> typing.Any: ...
+    def compact_str(self) -> builtins.str:
+        r"""
+        Return a compact string representation of the PauliTerm.
+        """
     def copy(self) -> PauliTerm:
         r"""
         Create a new copy of this [`PauliTerm`].
         """
+    @staticmethod
+    def from_compact_str(str_pauli_term: builtins.str) -> PauliTerm: ...
     @staticmethod
     def from_list(terms_list: typing.Sequence[tuple[PauliGate, builtins.str  |  builtins.int  |  Qubit]], coefficient: expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex = ...) -> PauliTerm:
         r"""
@@ -1910,21 +1995,20 @@ class PauliTerm:
         r"""
         Get the arguments of the [`PauliTerm`] as [`Qubit`]s.
         """
-    def id(self, sort_ops: builtins.bool) -> builtins.str:
+    def id(self, sort_ops: builtins.bool = False, /, delimiter: builtins.str = '') -> builtins.str:
         r"""
         Return an identifier string for the PauliTerm (ignoring the coefficient).
         
         For example, ``PauliTerm.from_list([("X", 0), ("Y", "q")]).id() == "Xq0Yq"``.
         
-        Don't use this to compare terms (use ``pt0 == pt1`` or ``hash(pt0)`` for that).
-        By default, this function sorts the qubits in the term,
-        but you can pass ``sort_ops=False`` to disable sorting by qubit.
-        This is currently ``True`` by default, but will change in a future version.
+        If an argument contains a character that would otherwise be interpreted as a Pauli operator
+        (i.e., `X`, `Y`, or `Z`), its wrapped in parentheses to avoid ambiguity. For example,
+        ``PauliTerm.from_list([("X", "X0")]).id() == "X(X0)"``.
         
-        Note that if the term has no operators,
-        this function will return ``"I"`` if ``sort_ops=False`` and ``""`` otherwise
-        to maintain backwards compatibility with versions prior to adding ``sort_ops``;
-        this is expected to change in a future version and should not be relied upon.
+        Don't use this to compare terms (use ``pt0 == pt1`` or ``hash(pt0)`` for that).
+        You can pass ``sort_ops=True`` to sort arguments by qubit.
+        
+        Note that if the term has no operators, this function will return ``"I"``.
         If you need to check for identity, use ``term.is_identity()`` instead.
         """
     def is_identity(self) -> builtins.bool:
@@ -1938,14 +2022,32 @@ class PauliTerm:
         
         Use this in place of `id` if the order of operations in the term does not matter.
         """
+    def pauli_string(self, qubits: typing.Optional[typing.Sequence[builtins.int]] = None) -> builtins.str:
+        r"""
+        Return a string representation of the PauliTerm without its coefficient
+        and with implicit qubit indices.
+        
+        If an iterable of qubits is provided, each character in the resulting string
+        represents the Pauli operator acting on the corresponding qubit.
+        
+        ```python
+        >>> p = PauliTerm("X", 0) * PauliTerm("Y", 1, 1.0j)
+        >>> p.pauli_string()
+        'XY'
+        >>> p.pauli_string(qubits=[0])
+        'X'
+        >>> p.pauli_string(qubits=[0, 2])
+        'XI'
+        ```
+        """
 
 @typing.final
 class PauliTermIter:
     r"""
-    An iterator over the qubit indices and Pauli operators in a [`PauliTerm`].
+    An iterator over the [`PauliTerm`]s of a [`PauliSum`].
     """
     def __iter__(self) -> PauliTermIter: ...
-    def __next__(self) -> typing.Optional[tuple[PauliGate, builtins.str]]: ...
+    def __next__(self) -> typing.Optional[PauliTerm]: ...
 
 class Pragma(Instruction):
     @property

@@ -13,12 +13,7 @@
 // limitations under the License.
 
 use crate::{
-    floating_point_eq, imag,
-    instruction::MemoryReference,
-    parser::{lex, parse_expression, ParseError},
-    program::{disallow_leftover, ParseProgramError},
-    quil::Quil,
-    real,
+    expression::consts::PI_NUMERIC, floating_point_eq, imag, instruction::MemoryReference, parser::{ParseError, lex, parse_expression}, program::{ParseProgramError, disallow_leftover}, quil::Quil, real,
 };
 use internment::ArcIntern;
 use lexical::{format, to_string_with_options, WriteFloatOptions};
@@ -103,6 +98,22 @@ pub enum Expression {
     PiConstant(),
     Prefix(PrefixExpression),
     Variable(String),
+}
+
+/// Useful constant [`Expression`]s.
+pub mod consts {
+    use std::f64::consts::PI;
+    use num_complex::Complex64;
+
+    use super::Expression;
+
+    pub const ONE: Expression = Expression::Number(Complex64::ONE);
+    pub const ZERO: Expression = Expression::Number(Complex64::ZERO);
+    pub const IMAGINARY_UNIT: Expression = Expression::Number(Complex64::I);
+
+    /// An `Expression::Number` with a close approximation of the mathematical constant π.
+    /// Note that `Expression` also has a `PiConstant` variant, used when parsing Quil.
+    pub const PI_NUMERIC: Expression = Expression::Number(Complex64::new(PI, 0.0));
 }
 
 #[cfg(test)]
@@ -440,7 +451,7 @@ impl Expression {
         match self {
             Expression::Address(_) | Expression::Number(_) | Expression::Variable(_) => {}
             Expression::PiConstant() => {
-                *self = Expression::Number(Complex64::from(PI));
+                *self = PI_NUMERIC.clone();
             }
             _ => *self = simplification::run(self),
         }

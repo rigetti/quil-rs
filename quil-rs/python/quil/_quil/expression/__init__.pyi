@@ -21,6 +21,11 @@ __all__ = [
     "ParseExpressionError",
     "PrefixExpression",
     "PrefixOperator",
+    "quil_cis",
+    "quil_cos",
+    "quil_exp",
+    "quil_sin",
+    "quil_sqrt",
 ]
 
 ExpressionDesignator: TypeAlias = Expression  |  builtins.int  |  builtins.float  |  builtins.complex
@@ -179,7 +184,7 @@ class Expression:
         """
     def into_simplified(self) -> Expression:
         r"""
-        Return an expression derived from this one, simplified as much as possible.
+        Return a new expression derived from this one, simplified as much as possible.
         """
     @staticmethod
     def parse(input: builtins.str) -> Expression:
@@ -413,4 +418,14 @@ class PrefixOperator(enum.Enum):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+
+def quil_cis(expression: Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> FunctionCallExpression: ...
+
+def quil_cos(expression: Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> FunctionCallExpression: ...
+
+def quil_exp(expression: Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> FunctionCallExpression: ...
+
+def quil_sin(expression: Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> FunctionCallExpression: ...
+
+def quil_sqrt(expression: Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> FunctionCallExpression: ...
 
