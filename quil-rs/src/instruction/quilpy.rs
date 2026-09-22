@@ -1,5 +1,7 @@
 use std::{
-    collections::HashMap, mem, sync::atomic::{AtomicUsize, Ordering},
+    collections::HashMap,
+    mem,
+    sync::atomic::{AtomicUsize, Ordering},
 };
 
 use indexmap::IndexMap;
@@ -29,10 +31,18 @@ use pyo3_stub_gen::{
 use super::*;
 use crate::{
     expression::{
-        consts::{IMAGINARY_UNIT, ONE, PI_NUMERIC, ZERO}, quilpy::{ExpressionArgs, ExpressionLike, quil_exp},
-    }, instruction::gate::GateSignature, pickleable_new, quilpy::{
-        IntoNewArgs, Like, Migrate, NewArgs, NonZeroU64, deprecated_or_new, deprecated_param, errors::{self, PickleError}, from_sequence, impl_newargs, impl_to_quil, py_deprecated, py_friendly_enum, singleton,
-    }, validation::identifier::IdentifierValidationError,
+        consts::{IMAGINARY_UNIT, ONE, PI_NUMERIC, ZERO},
+        quilpy::{quil_exp, ExpressionArgs, ExpressionLike},
+    },
+    instruction::gate::GateSignature,
+    pickleable_new,
+    quilpy::{
+        deprecated_or_new, deprecated_param,
+        errors::{self, PickleError},
+        from_sequence, impl_newargs, impl_to_quil, py_deprecated, py_friendly_enum, singleton,
+        IntoNewArgs, Like, Migrate, NewArgs, NonZeroU64,
+    },
+    validation::identifier::IdentifierValidationError,
 };
 
 use singleton::{py_singleton, PyModuleSingletonExt};
@@ -2071,7 +2081,6 @@ macro_rules! simple {
     ($head:tt $($rest:tt)+) => { simple!(@search [$($rest)+] [$head]) };
 }
 
-
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
@@ -2321,11 +2330,19 @@ impl PauliTerm {
         }
     }
 
-    fn __rmul__<'py>(&self, py: Python<'py>, other: Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+    fn __rmul__<'py>(
+        &self,
+        py: Python<'py>,
+        other: Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         self.__mul__(py, other)
     }
 
-    fn __add__<'py>(&self, py: Python<'py>, other: Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+    fn __add__<'py>(
+        &self,
+        py: Python<'py>,
+        other: Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         if let Ok(other) = other.cast::<PauliTerm>() {
             (self.clone() + other.get().clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.cast::<PauliSum>() {
@@ -2339,11 +2356,19 @@ impl PauliTerm {
         }
     }
 
-    fn __radd__<'py>(&self, py: Python<'py>, other: Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+    fn __radd__<'py>(
+        &self,
+        py: Python<'py>,
+        other: Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         self.__add__(py, other)
     }
 
-    fn __sub__<'py>(&self, py: Python<'py>, other: Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+    fn __sub__<'py>(
+        &self,
+        py: Python<'py>,
+        other: Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         if let Ok(other) = other.cast::<PauliTerm>() {
             (self.clone() - other.get().clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.cast::<PauliSum>() {
@@ -2357,7 +2382,11 @@ impl PauliTerm {
         }
     }
 
-    fn __rsub__<'py>(&self, py: Python<'py>, other: Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+    fn __rsub__<'py>(
+        &self,
+        py: Python<'py>,
+        other: Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         if let Ok(other) = other.cast::<PauliTerm>() {
             (other.get().clone() - self.clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.cast::<PauliSum>() {
@@ -2396,7 +2425,7 @@ impl PauliTerm {
         &self,
         py: Python<'py>,
         exponent: PauliExponent,
-        modulo: Option<Bound<'py, PyAny>>
+        modulo: Option<Bound<'py, PyAny>>,
     ) -> PyResult<Bound<'py, PyAny>> {
         if modulo.is_some() {
             return Err(PyNotImplementedError::new_err(
@@ -2427,14 +2456,15 @@ impl PauliTerm {
                 };
 
                 Self::new(args, scalar).into_bound_py_any(py)
-            },
+            }
 
-            PauliExponent::Expression(expr) =>  {
+            PauliExponent::Expression(expr) => {
                 let expr = Expression::from(expr);
 
                 // (-1)^k = exp(i * pi * k)
-                let exp_i_pi_k = Expression::FunctionCall(
-                    quil_exp((IMAGINARY_UNIT * Expression::PiConstant() * expr.clone()).into()));
+                let exp_i_pi_k = Expression::FunctionCall(quil_exp(
+                    (IMAGINARY_UNIT * Expression::PiConstant() * expr.clone()).into(),
+                ));
 
                 let a = (ONE + exp_i_pi_k.clone()) / Expression::Number(Complex64::from(2.0));
                 let b = (ONE - exp_i_pi_k) / Expression::Number(Complex64::from(2.0));
@@ -2515,22 +2545,35 @@ impl PauliTerm {
         }
 
         if sort_ops {
-            self.arguments.iter().sorted_by(|(_, a), (_, b)| a.cmp(b))
-                .map(|(op, q)| format_arg(op, q, delimiter)).join(delimiter)
+            self.arguments
+                .iter()
+                .sorted_by(|(_, a), (_, b)| a.cmp(b))
+                .map(|(op, q)| format_arg(op, q, delimiter))
+                .join(delimiter)
         } else {
-            self.arguments.iter()
-                .map(|(op, q)| format_arg(op, q, delimiter)).join(delimiter)
+            self.arguments
+                .iter()
+                .map(|(op, q)| format_arg(op, q, delimiter))
+                .join(delimiter)
         }
     }
 
     /// Return a compact string representation of the PauliTerm.
     fn compact_str(&self) -> PyResult<String> {
-        Ok(format!("({})*{}", self.expression.to_quil()?, self.id(false, "")))
+        Ok(format!(
+            "({})*{}",
+            self.expression.to_quil()?,
+            self.id(false, "")
+        ))
     }
 
     /// Return a string representation of the PauliTerm.
     fn __str__(&self) -> PyResult<String> {
-        Ok(format!("{}*{}", self.expression.to_quil()?, self.id(false, "*")))
+        Ok(format!(
+            "{}*{}",
+            self.expression.to_quil()?,
+            self.id(false, "*")
+        ))
     }
 
     #[staticmethod]
@@ -2547,18 +2590,24 @@ impl PauliTerm {
 
         // The first part is the expression, which should have the form `(<coefficient>)*`.
         let (mut last_idx, expr_str) = parts.next().ok_or_else(|| err("no operators found"))?;
-        let expression = expr_str.strip_circumfix("(", ")*")
+        let expression = expr_str
+            .strip_circumfix("(", ")*")
             .ok_or_else(|| err("expected (<coefficient>)*<terms>"))?
             .trim()
             .parse::<Expression>()?;
 
         while let Some((idx, qubit)) = parts.next() {
             let op_str = &str_pauli_term[last_idx..idx];
-            let op = PauliGate::parse(op_str)
-                .map_err(|_| PyValueError::new_err(format!("unknown operator at {idx}: {op_str}")))?;
+            let op = PauliGate::parse(op_str).map_err(|_| {
+                PyValueError::new_err(format!("unknown operator at {idx}: {op_str}"))
+            })?;
             last_idx = idx + op_str.len() + qubit.len();
 
-            let qubit = qubit.trim().strip_circumfix("(", ")").unwrap_or(qubit).trim();
+            let qubit = qubit
+                .trim()
+                .strip_circumfix("(", ")")
+                .unwrap_or(qubit)
+                .trim();
             if qubit.is_empty() {
                 return Err(err("missing qubit identifier after final operator"));
             }
@@ -2599,13 +2648,12 @@ impl PauliTerm {
     #[pyo3(signature = (qubits=None))]
     fn pauli_string(&self, qubits: Option<Vec<u64>>) -> String {
         match qubits {
-            None => {
-                self.arguments
-                    .iter()
-                    .map(|(gate, _)| gate.to_string())
-                    .collect::<Vec<_>>()
-                    .join("")
-            }
+            None => self
+                .arguments
+                .iter()
+                .map(|(gate, _)| gate.to_string())
+                .collect::<Vec<_>>()
+                .join(""),
 
             Some(qubits) => {
                 // TODO: We should really likely have a Python-specific version of PauliTerm
@@ -2618,8 +2666,13 @@ impl PauliTerm {
                 }
                 qubits
                     .iter()
-                    .map(|q|
-                        qubit_map.get(q).copied().unwrap_or(PauliGate::I).to_string())
+                    .map(|q| {
+                        qubit_map
+                            .get(q)
+                            .copied()
+                            .unwrap_or(PauliGate::I)
+                            .to_string()
+                    })
                     .collect::<Vec<_>>()
                     .join("")
             }
@@ -2731,7 +2784,6 @@ impl std::ops::Mul<PauliTerm> for Expression {
     }
 }
 
-
 impl std::ops::Mul<PauliTerm> for PauliTerm {
     type Output = PauliTerm;
 
@@ -2756,7 +2808,10 @@ impl std::ops::Add<Expression> for PauliSum {
     type Output = PauliSum;
 
     fn add(self, rhs: Expression) -> Self::Output {
-        let PauliSum { arguments, mut terms } = self;
+        let PauliSum {
+            arguments,
+            mut terms,
+        } = self;
         terms.push(PauliTerm {
             arguments: Vec::new(),
             expression: rhs,
@@ -2769,7 +2824,10 @@ impl std::ops::Add<PauliTerm> for PauliSum {
     type Output = PauliSum;
 
     fn add(self, rhs: PauliTerm) -> Self::Output {
-        let PauliSum { mut arguments, mut terms } = self;
+        let PauliSum {
+            mut arguments,
+            mut terms,
+        } = self;
         for (_, qubit) in rhs.arguments.iter() {
             if !arguments.contains(qubit) {
                 arguments.push(qubit.clone());
@@ -2804,7 +2862,10 @@ impl std::ops::Sub<Expression> for PauliSum {
     type Output = PauliSum;
 
     fn sub(self, rhs: Expression) -> Self::Output {
-        let PauliSum { arguments, mut terms } = self;
+        let PauliSum {
+            arguments,
+            mut terms,
+        } = self;
         terms.push(PauliTerm {
             arguments: Vec::new(),
             expression: simple!(Expression::Number(-Complex64::ONE) * rhs),
@@ -2850,9 +2911,7 @@ impl std::ops::Mul<Expression> for PauliSum {
             }
         } else {
             let PauliSum { arguments, terms } = self;
-            let terms = terms.into_iter()
-                .map(|term| term * rhs.clone())
-                .collect();
+            let terms = terms.into_iter().map(|term| term * rhs.clone()).collect();
             PauliSum { arguments, terms }
         }
     }
@@ -2943,7 +3002,6 @@ impl std::ops::MulAssign<(PauliGate, String)> for PauliTerm {
     }
 }
 
-
 /// An iterator over the qubit indices and Pauli operators in a [`PauliTerm`].
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[pyclass(module = "quil._quil.instructions", frozen)]
@@ -3025,7 +3083,6 @@ impl PauliTermIter {
         visit.call(&self.inner)
     }
 }
-
 
 // PauliSum constructor stub overloads:
 // - the first is the new (PyQuil) preferred order `(terms, arguments=None)`
@@ -3190,7 +3247,11 @@ impl PauliSum {
         PauliTermIter::new(slf.unbind())
     }
 
-    fn __add__<'py>(&self, py: Python<'py>, other: Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+    fn __add__<'py>(
+        &self,
+        py: Python<'py>,
+        other: Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         if let Ok(other) = other.cast::<PauliTerm>() {
             (self.clone() + other.get().clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.cast::<PauliSum>() {
@@ -3204,11 +3265,19 @@ impl PauliSum {
         }
     }
 
-    fn __radd__<'py>(&self, py: Python<'py>, other: Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+    fn __radd__<'py>(
+        &self,
+        py: Python<'py>,
+        other: Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         self.__add__(py, other)
     }
 
-    fn __mul__<'py>(&self, py: Python<'py>, other: Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+    fn __mul__<'py>(
+        &self,
+        py: Python<'py>,
+        other: Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         if let Ok(other) = other.cast::<PauliTerm>() {
             (self.clone() * other.get().clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.cast::<PauliSum>() {
@@ -3222,7 +3291,11 @@ impl PauliSum {
         }
     }
 
-    fn __rmul__<'py>(&self, py: Python<'py>, other: Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+    fn __rmul__<'py>(
+        &self,
+        py: Python<'py>,
+        other: Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         self.__mul__(py, other)
     }
 
@@ -3234,7 +3307,10 @@ impl PauliSum {
         }
 
         if exponent == 0 {
-            return Ok(PauliSum { arguments: Vec::new(), terms: Vec::new() });
+            return Ok(PauliSum {
+                arguments: Vec::new(),
+                terms: Vec::new(),
+            });
         }
 
         let mut result = self.clone();
@@ -3244,7 +3320,11 @@ impl PauliSum {
         Ok(result)
     }
 
-    fn __sub__<'py>(&self, py: Python<'py>, other: Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+    fn __sub__<'py>(
+        &self,
+        py: Python<'py>,
+        other: Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         if let Ok(other) = other.cast::<PauliTerm>() {
             (self.clone() - other.get().clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.cast::<PauliSum>() {
@@ -3258,7 +3338,11 @@ impl PauliSum {
         }
     }
 
-    fn __rsub__<'py>(&self, py: Python<'py>, other: Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+    fn __rsub__<'py>(
+        &self,
+        py: Python<'py>,
+        other: Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
         if let Ok(other) = other.cast::<PauliTerm>() {
             (other.get().clone() - self.clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.cast::<PauliSum>() {

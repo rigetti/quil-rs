@@ -13,7 +13,13 @@
 // limitations under the License.
 
 use crate::{
-    expression::consts::PI_NUMERIC, floating_point_eq, imag, instruction::MemoryReference, parser::{ParseError, lex, parse_expression}, program::{ParseProgramError, disallow_leftover}, quil::Quil, real,
+    expression::consts::PI_NUMERIC,
+    floating_point_eq, imag,
+    instruction::MemoryReference,
+    parser::{lex, parse_expression, ParseError},
+    program::{disallow_leftover, ParseProgramError},
+    quil::Quil,
+    real,
 };
 use internment::ArcIntern;
 use lexical::{format, to_string_with_options, WriteFloatOptions};
@@ -102,8 +108,8 @@ pub enum Expression {
 
 /// Useful constant [`Expression`]s.
 pub mod consts {
-    use std::f64::consts::PI;
     use num_complex::Complex64;
+    use std::f64::consts::PI;
 
     use super::Expression;
 
