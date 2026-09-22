@@ -7,7 +7,7 @@ use pyo3::{
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::gen_stub_pymethods;
+use pyo3_stub_gen::derive::{gen_stub_pyfunction, gen_stub_pymethods};
 
 use super::*;
 use crate::quilpy::{
@@ -26,6 +26,13 @@ create_init_submodule! {
     ],
     complex_enums: [ Expression ],
     errors: [ errors::EvaluationError, errors::ParseExpressionError ],
+    funcs: [
+        quil_sin,
+        quil_cos,
+        quil_cis,
+        quil_exp,
+        quil_sqrt
+    ],
 }
 
 pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -89,6 +96,17 @@ impl From<ExpressionLike> for Expression {
             ExpressionLike::Expression(expr) => expr,
             ExpressionLike::Number(v) => Expression::Number(v),
         }
+    }
+}
+
+/// Wrap an [`Expression`] in an [`ExpressionLike`].
+///
+/// Occassionally, it's useful to call a Python-exposed function that takes an `ExpressionLike`
+/// using an existing `Expression`. Ideally, we'd be able to take an `impl Into<Expression>`,
+/// but since such functions cannot be used with PyO3, we need to convert instead. 
+impl From<Expression> for ExpressionLike {
+    fn from(value: Expression) -> Self {
+        ExpressionLike::Expression(value)
     }
 }
 
@@ -207,7 +225,7 @@ impl Expression {
         }
     }
 
-    /// Return an expression derived from this one, simplified as much as possible.
+    /// Return a new expression derived from this one, simplified as much as possible.
     #[pyo3(name = "into_simplified")]
     fn py_into_simplified(&self) -> Self {
         self.clone().into_simplified()
@@ -635,3 +653,34 @@ impl InfixOperator {
         (*self as isize,)
     }
 }
+
+#[cfg_attr(feature = "stubs", gen_stub_pyfunction(module = "quil._quil.expression"))]
+#[pyfunction]
+pub(crate) fn quil_sin(expression: ExpressionLike) -> FunctionCallExpression {
+    FunctionCallExpression::new(ExpressionFunction::Sine, ArcIntern::new(expression.into()))
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pyfunction(module = "quil._quil.expression"))]
+#[pyfunction]
+pub(crate) fn quil_cos(expression: ExpressionLike) -> FunctionCallExpression {
+    FunctionCallExpression::new(ExpressionFunction::Cosine, ArcIntern::new(expression.into()))
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pyfunction(module = "quil._quil.expression"))]
+#[pyfunction]
+pub(crate) fn quil_cis(expression: ExpressionLike) -> FunctionCallExpression {
+    FunctionCallExpression::new(ExpressionFunction::Cis, ArcIntern::new(expression.into()))
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pyfunction(module = "quil._quil.expression"))]
+#[pyfunction]
+pub(crate) fn quil_exp(expression: ExpressionLike) -> FunctionCallExpression {
+    FunctionCallExpression::new(ExpressionFunction::Exponent, ArcIntern::new(expression.into()))
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pyfunction(module = "quil._quil.expression"))]
+#[pyfunction]
+pub(crate) fn quil_sqrt(expression: ExpressionLike) -> FunctionCallExpression {
+    FunctionCallExpression::new(ExpressionFunction::SquareRoot, ArcIntern::new(expression.into()))
+}
+

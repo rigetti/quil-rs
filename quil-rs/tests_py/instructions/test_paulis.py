@@ -14,7 +14,7 @@ from quil.instructions import (
 )
 
 @dataclass
-class PauliTermArg:
+class ConstrArg:
     """Constructor arguments/expected values for a `PauliTerm`."""
 
     op: PauliGate
@@ -29,31 +29,31 @@ class PauliTermArg:
 
 
 @pytest.fixture
-def pauli_term_args() -> list[PauliTermArg]:
+def constr_args() -> list[ConstrArg]:
     """Get a list of non-identity `PauliTerm` constructor arguments."""
     return [
-        PauliTermArg(PauliGate.X, 0, "q0", Expression.Pi(), Expression.Pi()),
-        PauliTermArg(PauliGate.Y, "b", "b", -1.0, Expression.Number(-1.0)),
+        ConstrArg(PauliGate.X, 0, "q0", Expression.Pi(), Expression.Pi()),
+        ConstrArg(PauliGate.Y, "b", "b", -1.0, Expression.Number(-1.0)),
     ]
 
 @pytest.fixture
-def terms(pauli_term_args: list[PauliTermArg]) -> list[PauliTerm]:
-    return [PauliTerm(term.op, term.index, term.coeff) for term in pauli_term_args]
+def terms(constr_args: list[ConstrArg]) -> list[PauliTerm]:
+    return [PauliTerm(term.op, term.index, term.coeff) for term in constr_args]
 
 @pytest.fixture
-def arguments(pauli_term_args: list[PauliTermArg]) -> list[PauliTargetDesignator]:
-    return [term.index for term in pauli_term_args]
+def arguments(constr_args: list[ConstrArg]) -> list[PauliTargetDesignator]:
+    return [term.index for term in constr_args]
 
 
-class TestPauliConstructor:
-    def test_single(self, pauli_term_args: list[PauliTermArg]):
-        for op, index, qubit_str, coeff, expr in pauli_term_args:
+class TestTermConstructor:
+    def test_single(self, constr_args: list[ConstrArg]):
+        for op, index, qubit_str, coeff, expr in constr_args:
             pt = PauliTerm(op, index, coeff)
             assert pt.arguments == [(op, qubit_str)]
             assert pt.expression == expr
 
-    def test_single_default_coeff(self, pauli_term_args: list[PauliTermArg]):
-        for op, index, qubit_str, _, _ in pauli_term_args:
+    def test_single_default_coeff(self, constr_args: list[ConstrArg]):
+        for op, index, qubit_str, _, _ in constr_args:
             pt = PauliTerm(op, index)
             assert pt.arguments == [(op, qubit_str)]
             assert pt.expression == Expression.Number(1.0)
@@ -68,23 +68,23 @@ class TestPauliConstructor:
         assert pt.arguments == []
         assert pt.expression == Expression.Number(1.0)
 
-    def test_list_constructor(self, pauli_term_args: list[PauliTermArg]):
-        for op, index, qubit_str, coeff, expr in pauli_term_args:
+    def test_list_constructor(self, constr_args: list[ConstrArg]):
+        for op, index, qubit_str, coeff, expr in constr_args:
             with pytest.warns(DeprecationWarning):
                 pt = PauliTerm([(op, index)], coeff)
             assert pt.arguments == [(op, qubit_str)]
             assert pt.expression == expr
 
-    def test_list_default_coeff(self, pauli_term_args: list[PauliTermArg]):
-        for op, index, qubit_str, _, _ in pauli_term_args:
+    def test_list_default_coeff(self, constr_args: list[ConstrArg]):
+        for op, index, qubit_str, _, _ in constr_args:
             with pytest.warns(DeprecationWarning):
                 pt = PauliTerm([(op, index)])
             assert pt.arguments == [(op, qubit_str)]
             assert pt.expression == Expression.Number(1.0)
 
-    def test_from_list(self, pauli_term_args: list[PauliTermArg]):
+    def test_from_list(self, constr_args: list[ConstrArg]):
         """Confirm the ``from_list`` method is equivalent to using the constructor."""
-        terms_list = [(term.op, term.index) for term in pauli_term_args]
+        terms_list = [(term.op, term.index) for term in constr_args]
         with pytest.warns(DeprecationWarning):
             from_constructor = PauliTerm(terms_list)
         assert from_constructor == PauliTerm.from_list(terms_list)
@@ -98,20 +98,22 @@ class TestPauliConstructor:
 
 
 class TestPauliTerm:
-    def test_iteration(self, pauli_term_args: list[PauliTermArg]):
+    def test_iteration(self, constr_args: list[ConstrArg]):
         """Confirm we can iterate over the arguments of a PauliTerm."""
 
-        terms_list = [(term.op, term.index) for term in pauli_term_args]
-        args_list = [(term.op, term.qubit_str) for term in pauli_term_args]
+        terms_list = [(term.op, term.index) for term in constr_args]
+        args_list = [(term.op, term.qubit_str) for term in constr_args]
         term = PauliTerm.from_list(terms_list)
 
         assert list(iter(term)) == args_list == list(term)
 
-class TestPauliTermMultiplication:
-    @pytest.fixture
-    def t_2_X0(cls) -> PauliTerm:
-        return PauliTerm(PauliGate.X, 0, 2.0)
 
+@pytest.fixture
+def t_2_X0() -> PauliTerm:
+    return PauliTerm(PauliGate.X, 0, 2.0)
+
+
+class TestTermMultiplication:
     def test_term(self, t_2_X0: PauliTerm):
         product = t_2_X0 * PauliTerm(PauliGate.Y, 1, 3.0)
         assert product == PauliTerm.from_list([(PauliGate.X, "q0"), (PauliGate.Y, "q1")], 6.0)
@@ -125,7 +127,25 @@ class TestPauliTermMultiplication:
         assert t_2_X0 * three == expected
         assert three * t_2_X0 == expected
 
-class TestPauliSumConstructor:
+
+class TestTermPower:
+    def test_even(self, t_2_X0: PauliTerm):
+        assert t_2_X0 ** 2 == PauliTerm("I", None, t_2_X0.expression ** 2)
+
+    def test_odd(self, t_2_X0: PauliTerm):
+        assert t_2_X0 ** 3 == PauliTerm.from_list(t_2_X0.arguments, coefficient=t_2_X0.expression ** 3)
+
+    def test_one(self, t_2_X0: PauliTerm):
+        assert t_2_X0 ** 1 == PauliTerm.from_list(t_2_X0.arguments, coefficient=t_2_X0.expression)
+
+    def test_zero(self, t_2_X0: PauliTerm):
+        assert t_2_X0 ** 0 == PauliTerm()
+
+    def test_big(self, t_2_X0: PauliTerm):
+        x = 2**33 + 1
+        assert t_2_X0 ** x == PauliTerm.from_list(t_2_X0.arguments, coefficient=t_2_X0.expression ** x)
+
+class TestSumConstructor:
     """Confirm all variants of the `PauliSum` constructor work as expected."""
 
     def test_terms_only(self, terms: list[PauliTerm]):
