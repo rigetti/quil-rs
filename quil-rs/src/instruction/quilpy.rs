@@ -9,14 +9,12 @@ use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
 use pyo3::{
     exceptions::{
-        PyDeprecationWarning, PyIndexError, PyKeyError, PyNotImplementedError, PyTypeError,
+        PyDeprecationWarning, PyIndexError, PyNotImplementedError, PyTypeError, PyUserWarning,
         PyValueError,
     },
     prelude::*,
     sync::PyOnceLock,
-    types::{
-        IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyNotImplemented, PyString, PyTuple,
-    },
+    types::{IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyString, PyTuple},
     CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit,
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
@@ -29,9 +27,11 @@ use pyo3_stub_gen::{
 };
 
 use super::*;
+#[cfg(feature = "stubs")]
+use crate::expression::quilpy::stubs::QualifiedExpression;
 use crate::{
     expression::{
-        consts::{IMAGINARY_UNIT, ONE, PI_NUMERIC, ZERO},
+        consts::{IMAGINARY_UNIT, ONE, ZERO},
         quilpy::{quil_exp, ExpressionArgs, ExpressionLike},
     },
     instruction::gate::GateSignature,
@@ -1956,11 +1956,11 @@ fn convert_pauli_targets(values: Vec<PauliArg>) -> PyResult<Vec<String>> {
     Ok(result)
 }
 
-// Overloads for `PauliTerm.__new__`.
 #[cfg(feature = "stubs")]
 pyo3_stub_gen::inventory::submit! {
     gen_methods_from_python! {
         r#"
+        import builtins
         import typing
         import typing_extensions
 
@@ -1972,7 +1972,7 @@ pyo3_stub_gen::inventory::submit! {
                 cls,
                 op: typing.Literal[PauliGate.I] | typing.Literal["I"],
                 index: PauliTargetDesignator | None,
-                coefficient: ExpressionDesignator = 1.0,
+                coefficient: _quil.expression.ExpressionDesignator = 1.0,
             ) -> PauliTerm:
                 """Construct a `PauliTerm` for a single Identity operator."""
 
@@ -1981,7 +1981,7 @@ pyo3_stub_gen::inventory::submit! {
                 cls,
                 op: PauliGate | str,
                 index: PauliTargetDesignator | None,
-                coefficient: ExpressionDesignator = 1.0,
+                coefficient: _quil.expression.ExpressionDesignator = 1.0,
             ) -> PauliTerm:
                 """Construct a `PauliTerm` for a single operator and argument."""
 
@@ -1990,29 +1990,35 @@ pyo3_stub_gen::inventory::submit! {
             def __new__(
                 cls,
                 arguments: collections.abc.Sequence[tuple[PauliGate | str, PauliTargetDesignator]],
-                expression: ExpressionDesignator = 1.0,
+                expression: _quil.expression.ExpressionDesignator = 1.0,
             ) -> PauliTerm:
                 """Construct a `PauliTerm` from a sequence of arguments."""
 
             @typing.overload
-            def __mul__(self, other: PauliTerm | ExpressionDesignator) -> PauliTerm: ...
+            def __mul__(self, other: PauliTerm | _quil.expression.ExpressionDesignator) -> PauliTerm: ...
             @typing.overload
             def __mul__(self, other: PauliSum) -> PauliSum: ...
 
             @typing.overload
-            def __add__(self, other: ExpressionDesignator) -> PauliTerm: ...
+            def __add__(self, other: _quil.expression.ExpressionDesignator) -> PauliTerm: ...
             @typing.overload
             def __add__(self, other: PauliTerm | PauliSum) -> PauliSum: ...
 
             @typing.overload
-            def __radd__(self, other: ExpressionDesignator) -> PauliTerm: ...
+            def __radd__(self, other: _quil.expression.ExpressionDesignator) -> PauliTerm: ...
             @typing.overload
             def __radd__(self, other: PauliTerm | PauliSum) -> PauliSum: ...
 
+            # Note: Do **NOT** specify `float` or `complex` in these annotations,
+            # because Pyright special-cases them as if `int | float` and `int | float | complex`,
+            # both of which are unsound, causing overlapping overloads/errors.
+            # See: https://discuss.python.org/t/clarifying-the-float-int-complex-special-case/54018/71
             @typing.overload
-            def __pow__(self, exponent: int, modulo: None=None) -> PauliTerm: ...
+            def __pow__(self, exponent: builtins.int, modulo: None=None) -> PauliTerm: ...
             @typing.overload
-            def __pow__(self, exponent: complex | Expression, modulo: None=None) -> PauliSum: ...
+            def __pow__(self, exponent: _quil.expression.Expression | builtins.str, modulo: None=None) -> PauliSum: ...
+            @typing.overload
+            def __pow__(self, exponent: typing.Any, modulo: typing.Any) -> typing.NoReturn: ...
         "#
     }
 }
@@ -2021,14 +2027,20 @@ pyo3_stub_gen::inventory::submit! {
 ///
 /// Integer arguments are more likely, and they have a more efficient implementation,
 /// so we handle them separately from other things we can convert into an `Expression`.
+/// See the documentation on [`PauliTerm::__pow__`] for more information.
 #[derive(FromPyObject)]
 enum PauliExponent {
+    // Expression must come before numbers, since Expression implements __complex__.
+    Expression(Expression),
     Int(i64),
-    Expression(ExpressionLike),
+    Complex(Complex64),
+    Variable(String),
 }
 
+// Do not specify `float` or `complex` in this annotation.
+// See notes in `PauliTerm::__pow__` for an explanation.
 #[cfg(feature = "stubs")]
-pyo3_stub_gen::impl_stub_type!(PauliExponent = PyInt | ExpressionLike);
+pyo3_stub_gen::impl_stub_type!(PauliExponent = PyInt | PyString | QualifiedExpression);
 
 /// Apply a binary operation to two [`Expression`]s,
 /// with special handling to leave the result as a `Number` when possible.
@@ -2057,6 +2069,24 @@ macro_rules! simple {
         }
     };
 
+    (($a:expr) ^ ($b:expr)) => {
+        match ($a, $b) {
+            (_, Expression::Number(Complex64::ZERO)) => Expression::Number(Complex64::ONE),
+            (Expression::Number(Complex64::ONE), _) => Expression::Number(Complex64::ONE),
+            (a, Expression::Number(Complex64::ONE)) => a,
+            (Expression::Number(a), Expression::Number(b)) => {
+                // Keep it as an expression if the result is not finite.
+                let n = a.powc(b);
+                if n.is_finite() {
+                    Expression::Number(n)
+                } else {
+                    Expression::Number(a) ^ Expression::Number(b)
+                }
+            }
+            (a, b) => a ^ b,
+        }
+    };
+
     // Handle addition, subtraction, and multiplication by comparing against the group identity.
     (($a:expr) $op:tt ($b:expr), $unit:pat) => {
         match ($a, $b) {
@@ -2072,6 +2102,7 @@ macro_rules! simple {
     (@search [+ $b:expr] [$a:expr]) => { simple!(($a) + ($b), Expression::Number(Complex64::ZERO)) };
     (@search [- $b:expr] [$a:expr]) => { simple!(($a) - ($b), Expression::Number(Complex64::ZERO)) };
     (@search [/ $b:expr] [$a:expr]) => { simple!(($a) / ($b)) };
+    (@search [^ $b:expr] [$a:expr]) => { simple!(($a) ^ ($b)) };
 
     // Put all the tokens in a left list, then shuffle them to the right until we find an operator.
     (@search [$head:tt $($rest:tt)*] [$($a:tt)+]) => { simple!(@search [$($rest)*] [$($a)+ $head]) };
@@ -2232,6 +2263,13 @@ impl PauliTerm {
     }
 
     /// Construct a new `PauliTerm` from a list of operators and an optional coefficient.
+    ///
+    /// If the given arguments are disjoint (as required by a well-formed Quil `PauliTerm`),
+    /// the resulting `PauliTerm` will preserve that order and use the given coefficient as-is.
+    ///
+    /// Otherwise, operations on the same argument are combined via Pauli algebra rules,
+    /// and the coefficient is multiplied by any resulting complex phase,
+    /// and the resulting `PauliTerm` may have a different order of arguments than the input list.
     #[pyo3(signature = (terms_list, coefficient=ExpressionLike::Expression(ONE)))]
     #[staticmethod]
     fn from_list(
@@ -2402,8 +2440,19 @@ impl PauliTerm {
 
     /// Compute the power of this [`PauliTerm`].
     ///
-    /// In general, the result of raising a `PauliTerm` to a power is a two-term [`PauliSum`],
-    /// but in the common case of raising to an integer power, this returns a `PauliTerm`.
+    /// This returns a new [`PauliTerm`] or [`PauliSum`]
+    /// representing the result of raising this term to the given exponent.
+    ///
+    /// As with other operations on this type,
+    /// the arguments and coefficient may be rearranged and/or simplified,
+    /// so logically equivalent results may not be identical one another.
+    /// The simplifications and rearrangements are not guaranteed to be stable across versions,
+    /// and may change the observable behavior of a program when executed on a QPU.
+    ///
+    /// In the common case that the exponent is a small integer, this returns a [`PauliTerm`].
+    /// To handle more general exponents, this returns a two-term [`PauliSum`].
+    ///
+    /// # General Mathematical Explanation
     ///
     /// To be specific, for a scaled Pauli operator `T = cP` and complex `k`, `T^k = c^k * P^k`.
     /// Note that for Pauli operators, `P^2 = I` with eigenvalues `+1` and `-1`, so we can write
@@ -2412,15 +2461,62 @@ impl PauliTerm {
     /// and we can write `T^k = c^k * P^k = c^k * (aI + bP) = (c^k * a)I + (c^k * b)P`.
     /// Thus, the result is a two-term `PauliSum` with coefficients `c^k * a` and `c^k * b`.
     ///
-    /// In the integer case, `(-1)^k = 1` for even `k` and `(-1)^k = -1` for odd `k`,
-    /// and so we have `a = 1` and `b = 0` for even `k`, and `a = 0` and `b = 1` for odd `k`:
-    /// thus, in that case we return a single `PauliTerm`.
+    /// # Special Cases for Integer Exponents
     ///
-    /// For non-integer exponents, we evaluate via the principal branch `(-1)^k = exp(i * pi * k)`.
-    /// In general, real and rational exponents result in complex coefficients,
-    /// and hence a two-term `PauliSum` result.
-    /// Symbolic expressions are supported using the same substituions:
-    /// `a = (1 + exp(i * pi * k)) / 2` and `b = (1 - exp(i * pi * k)) / 2`.
+    /// When `k` is an even integer, `(-1)^k = 1`, so `a = 1`, `b = 0`, and `T^k = c^k * I`.
+    /// When `k` is an odd integer,  `(-1)^k = 0`, so `a = 0`, `b = 1`, and `T^k = c^k * P`.
+    /// Thus, we can simplify the result to a single `PauliTerm` when given an integer exponent.
+    /// If the existing term's coefficient is numeric, we simplify the result to its numeric form.
+    ///
+    /// Note that this only applies to exponents given as integers that fit in an `i32`;
+    /// integers with larger magnitudes are converted to [`Expression::Number`]s,
+    /// and [`Expression`]-based exponents are treated as described below.
+    ///
+    /// # Large Integer, Complex Numbers, and General Expressions
+    ///
+    /// Large integers, floats, and complex numbers are converted to [`Expression::Number`]s,
+    /// and `str`s are converted to [`Expression::Variable`]s.
+    /// and general [`Expression`]s are used directly.
+    ///
+    /// General [`Expression`]s are supported via the above substitutions, processed symbolically.
+    /// The exact [`Expression`]s are not formally part of the API and may change between versions.
+    /// At present, we evaluate `(-1)^k` with the principal branch `exp(i * pi * k)`,
+    /// resulting in `a = (1 + exp(i * pi * k)) / 2` and `b = (1 - exp(i * pi * k)) / 2`;
+    /// as with the numeric case, the exact [`Expression`]s produced may be simplified
+    /// when the existing term's coefficient is numeric.
+    ///
+    /// For non-integer exponents, we
+    ///
+    /// evaluated via the principal branch
+    /// which in general results in complex coefficients,
+    /// and hence the two-term `PauliSum` result.
+    ///
+    /// Note that a valid Quil ``DEFGATE ... AS PAULI-SUM`` requires coefficient expressions
+    /// to be real-valued and reference only real numeric literals or gate-defined parameters.
+    ///
+    /// If called with Python's 3-argument `pow` function, the `modulo` argument is not supported,
+    /// and will raise a `NotImplementedError` if provided.
+    ///
+    /// Note: As explained above, this method returns `PauliTerm` for (most) integer exponents,
+    /// and a `PauliSum` for (most) non-integer exponents, and accepts `float` and `complex`.
+    /// Despite this, due to the way Python and type-checkers special-case them,
+    /// it is not possible to express this accurately as a type annotation overload.
+    /// Consequently, this is typed with an expectation that integers are the most common numbers,
+    /// and also are likely to be in the range of a 32-bit signed integer,
+    /// in which case the result is a `PauliTerm`.
+    /// Although it cannot be annotated as such, it is valid to pass a `float` or `complex`,
+    /// and the result will be a `PauliSum` (as will be true for `Expression`s and large ints).
+    /// If you find yourself running into type-checking errors when passing a `float` or `complex`,
+    /// you can work around it by wrapping the argument in an `Expression`.
+    ///
+    /// This arises because Python specifies that `int` is assignable to `float` and `complex`
+    /// and that `float` is assignable to `complex`, and from the definition of `assignable`
+    /// (see: https://typing.python.org/en/latest/spec/glossary.html#term-assignable),
+    /// the consequence is that `int` is treated as a subtype of `float` and `complex`,
+    /// leading to all kinds of unsoundness in type-checking vs actual runtime behavior.
+    /// For more information, see this discussion:
+    /// https://discuss.python.org/t/clarifying-the-float-int-complex-special-case/54018/71
+    #[gen_stub(override_return_type(type_repr = "PauliTerm | PauliSum"))]
     fn __pow__<'py>(
         &self,
         py: Python<'py>,
@@ -2433,60 +2529,65 @@ impl PauliTerm {
             ));
         }
 
-        // TODO: write tests
-        match exponent {
-            PauliExponent::Int(exponent) => {
-                // Since all Pauli operators square to the identity,
-                // if the exponent is even, we have `P^(2x) == (P^2)^x == I^x == I`,
-                // and if it's odd, we have `P^(2x+1) == P^(2x) * P == I * P == P`.
-                let args = if exponent % 2 == 0 {
-                    Vec::new()
-                } else {
-                    self.arguments.clone()
-                };
+        fn powi(term: &PauliTerm, exponent: i64) -> PauliTerm {
+            // If `k=2x`, so `P^(2x) == (P^2)^x == I^x == I`;
+            // else, `k=2x+1`, so `P^(2x+1) == P^(2x) * P == I * P == P`.
+            let args = if exponent % 2 == 0 {
+                Vec::new()
+            } else {
+                term.arguments.clone()
+            };
 
-                // Keep the coefficient as a number if possible.
-                let scalar = if self.expression == ONE || exponent == 0 {
-                    ONE.clone()
-                } else if matches!(&self.expression, Expression::Number(_)) {
-                    (self.expression.clone() ^ Expression::Number((exponent as f64).into()))
-                        .into_simplified()
-                } else {
-                    self.expression.clone() ^ Expression::Number((exponent as f64).into())
-                };
-
-                Self::new(args, scalar).into_bound_py_any(py)
-            }
-
-            PauliExponent::Expression(expr) => {
-                let expr = Expression::from(expr);
-
-                // (-1)^k = exp(i * pi * k)
-                let exp_i_pi_k = Expression::FunctionCall(quil_exp(
-                    (IMAGINARY_UNIT * Expression::PiConstant() * expr.clone()).into(),
-                ));
-
-                let a = (ONE + exp_i_pi_k.clone()) / Expression::Number(Complex64::from(2.0));
-                let b = (ONE - exp_i_pi_k) / Expression::Number(Complex64::from(2.0));
-                let c_pow_k = self.expression.clone() ^ expr;
-
-                let term_ident = PauliTerm {
-                    arguments: Vec::new(),
-                    expression: c_pow_k.clone() * a,
-                };
-
-                let term_pauli = PauliTerm {
-                    arguments: self.arguments.clone(),
-                    expression: c_pow_k * b,
-                };
-
-                PauliSum {
-                    arguments: self.arguments().cloned().collect(),
-                    terms: vec![term_ident, term_pauli],
-                }
-                .into_bound_py_any(py)
-            }
+            let scalar =
+                simple!(term.expression.clone() ^ Expression::Number((exponent as f64).into()));
+            PauliTerm::new(args, scalar)
         }
+
+        let expr = match exponent {
+            PauliExponent::Int(exponent) => {
+                return powi(self, exponent).into_bound_py_any(py);
+            }
+
+            // If the complex number is small integer, use the shortcut.
+            PauliExponent::Complex(n)
+                if n.im == 0.0
+                    && n.re.fract() == 0.0
+                    && (i64::MIN as f64) <= n.re
+                    && n.re <= (i64::MAX as f64) =>
+            {
+                return powi(self, n.re as i64).into_bound_py_any(py);
+            }
+
+            PauliExponent::Complex(n) => Expression::Number(n),
+            PauliExponent::Variable(v) => Expression::Variable(v),
+            PauliExponent::Expression(expr) => expr,
+        };
+
+        // (-1)^k = exp(i * pi * k)
+        let exp_i_pi_k = Expression::FunctionCall(quil_exp(
+            (IMAGINARY_UNIT * Expression::PiConstant() * expr.clone()).into(),
+        ));
+
+        let a = (ONE + exp_i_pi_k.clone()) / Expression::Number(Complex64::from(2.0));
+        let b = (ONE - exp_i_pi_k) / Expression::Number(Complex64::from(2.0));
+
+        let c_pow_k = self.expression.clone() ^ expr;
+
+        let term_ident = PauliTerm {
+            arguments: Vec::new(),
+            expression: c_pow_k.clone() * a,
+        };
+
+        let term_pauli = PauliTerm {
+            arguments: self.arguments.clone(),
+            expression: c_pow_k * b,
+        };
+
+        PauliSum {
+            arguments: self.arguments().cloned().collect(),
+            terms: vec![term_ident, term_pauli],
+        }
+        .into_bound_py_any(py)
     }
 
     // TODO(migration-guide):
@@ -2537,7 +2638,7 @@ impl PauliTerm {
         }
 
         fn format_arg(op: &PauliGate, q: &str, delimiter: &str) -> String {
-            if delimiter.is_empty() && q.contains(&['X', 'Y', 'Z', 'I']) {
+            if delimiter.is_empty() && q.contains(['X', 'Y', 'Z', 'I']) {
                 format!("{op}({q})")
             } else {
                 format!("{op}{q}")
@@ -2591,12 +2692,13 @@ impl PauliTerm {
         // The first part is the expression, which should have the form `(<coefficient>)*`.
         let (mut last_idx, expr_str) = parts.next().ok_or_else(|| err("no operators found"))?;
         let expression = expr_str
-            .strip_circumfix("(", ")*")
+            .strip_prefix("(")
+            .and_then(|s| s.strip_suffix(")*"))
             .ok_or_else(|| err("expected (<coefficient>)*<terms>"))?
             .trim()
             .parse::<Expression>()?;
 
-        while let Some((idx, qubit)) = parts.next() {
+        for (idx, qubit) in parts {
             let op_str = &str_pauli_term[last_idx..idx];
             let op = PauliGate::parse(op_str).map_err(|_| {
                 PyValueError::new_err(format!("unknown operator at {idx}: {op_str}"))
@@ -2605,7 +2707,8 @@ impl PauliTerm {
 
             let qubit = qubit
                 .trim()
-                .strip_circumfix("(", ")")
+                .strip_prefix("(")
+                .and_then(|s| s.strip_suffix(")"))
                 .unwrap_or(qubit)
                 .trim();
             if qubit.is_empty() {
@@ -2620,7 +2723,7 @@ impl PauliTerm {
                 format!("q{qubit}")
             };
 
-            arguments.push((PauliGate::from(op), qubit));
+            arguments.push((op, qubit));
         }
 
         if !str_pauli_term[last_idx..].trim().is_empty() {
@@ -2691,6 +2794,23 @@ impl PauliTerm {
     /// including the case in which the list of operators is empty.
     fn is_identity(&self) -> bool {
         self.arguments.iter().all(|(gate, _)| *gate == PauliGate::I)
+    }
+
+    // This is the name that PyQuil v4 used for this property;
+    // it's probably a better name anyway, so there's no immediate plan to deprecate it.
+    /// Return a copy of the coefficient [`Expression`] of the [`PauliTerm`],
+    /// aka its `expression` property.
+    #[getter]
+    fn coefficient(&self) -> Expression {
+        self.expression.clone()
+    }
+
+    /// Supported for backwards compatibility, though only for use within PyQuil itself.
+    /// This is not part of the public API and may be removed or changed at any time.
+    #[pyo3(warn(message = "`_ops` is not part of the public API", category = PyUserWarning))]
+    #[getter]
+    fn _ops<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        self.arguments.iter().cloned().into_py_dict(py)
     }
 }
 
@@ -3031,6 +3151,7 @@ impl PauliArgIter {
         slf
     }
 
+    #[gen_stub(override_return_type(type_repr = "builtins.tuple[PauliGate, builtins.str]", imports = ("builtins")))]
     fn __next__(slf: PyRef<'_, Self>) -> Option<(PauliGate, String)> {
         slf.inner
             .get()
@@ -3070,6 +3191,7 @@ impl PauliTermIter {
         slf
     }
 
+    #[gen_stub(override_return_type(type_repr = "PauliTerm"))]
     fn __next__(slf: PyRef<'_, Self>) -> Option<PauliTerm> {
         slf.inner
             .get()
@@ -3095,6 +3217,7 @@ pyo3_stub_gen::inventory::submit! {
         import collections.abc
         import typing
         import typing_extensions
+        from quil import _quil
 
         class PauliSum:
             @typing.overload
@@ -3242,6 +3365,7 @@ impl PauliSum {
         }
     }
 
+    // TODO: is this just going to clone the PauliSum anyway?
     /// Iterate over the [`PauliTerm`]s in this [`PauliSum`].
     fn __iter__(slf: Bound<'_, Self>) -> PauliTermIter {
         PauliTermIter::new(slf.unbind())
@@ -3302,7 +3426,7 @@ impl PauliSum {
     fn __pow__(&self, exponent: u64, modulo: Option<Bound<'_, PyAny>>) -> PyResult<Self> {
         if modulo.is_some() {
             return Err(PyNotImplementedError::new_err(
-                "`modulo` is not supported for `PauliTerm.__pow__`",
+                "`modulo` is not supported for `PauliSum.__pow__`",
             ));
         }
 

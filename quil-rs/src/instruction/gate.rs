@@ -866,10 +866,20 @@ pub enum PauliGate {
 // violating the Python requirement that objects which compare equal have the same hash.
 // We fix this bug by virtue of not implementing such comparisons,
 // but this may break code which relied on the old behavior.
-// For users tht need to compare a `PauliTerm` to a `PauliSum`,
+// For users that need to compare a `PauliTerm` to a `PauliSum`,
 // they should wrap the `PauliTerm` in a `PauliSum` with a single term and compare those.
 /// A `PauliTerm` is a coefficient multiplied by the tensor product of Pauli operators
 /// operating on different qubit indices.
+///
+/// # Python Users
+///
+/// For Python users, `PauliTerm`s and [`PauliSum`]s support several mathematical operations
+/// that allow you to manipulate instances in a natural way;
+/// except where otherwise noted, these methods may rearrange and/or simplify terms,
+/// which may change the observable behavior of a program when executed on a QPU.
+/// The simplifications and rearrangements are not guaranteed to be stable across versions,
+/// so if you wish to specify an exact order of operations,
+/// you must use the `PauliTerm` and `PauliSum` constructors directly.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
