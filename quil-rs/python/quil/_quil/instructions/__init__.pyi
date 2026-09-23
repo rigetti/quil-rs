@@ -6,6 +6,7 @@ import collections.abc
 import enum
 import numpy
 import numpy.typing
+import quil
 from quil import _quil
 from quil._quil import expression
 from quil._quil import program
@@ -1021,9 +1022,9 @@ class Gate(Instruction):
     def __getnewargs__(self) -> tuple: ...
     def __hash__(self) -> builtins.int: ...
     @typing.overload
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> Gate: ...
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> Gate: ...
     @typing.overload
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None, *, params: typing.Optional[typing.Sequence[expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]]) -> typing_extensions.NoReturn: ...
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None, *, params: typing.Optional[typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]]) -> typing_extensions.NoReturn: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1767,7 +1768,7 @@ class PauliArgIter:
     An iterator over the qubit indices and Pauli operators in a [`PauliTerm`].
     """
     def __iter__(self) -> PauliArgIter: ...
-    def __next__(self) -> typing.Optional[tuple[PauliGate, builtins.str]]: ...
+    def __next__(self) -> builtins.tuple[PauliGate, builtins.str]: ...
 
 class PauliSum:
     @property
@@ -1834,9 +1835,31 @@ class PauliTerm:
     r"""
     A `PauliTerm` is a coefficient multiplied by the tensor product of Pauli operators
     operating on different qubit indices.
+    
+    # Python Users
+    
+    For Python users, `PauliTerm`s and [`PauliSum`]s support several mathematical operations
+    that allow you to manipulate instances in a natural way;
+    except where otherwise noted, these methods may rearrange and/or simplify terms,
+    which may change the observable behavior of a program when executed on a QPU.
+    The simplifications and rearrangements are not guaranteed to be stable across versions,
+    so if you wish to specify an exact order of operations,
+    you must use the `PauliTerm` and `PauliSum` constructors directly.
     """
     @property
+    def _ops(self) -> dict:
+        r"""
+        Supported for backwards compatibility, though only for use within PyQuil itself.
+        This is not part of the public API and may be removed or changed at any time.
+        """
+    @property
     def arguments(self) -> builtins.list[tuple[PauliGate, builtins.str]]: ...
+    @property
+    def coefficient(self) -> expression.Expression:
+        r"""
+        Return a copy of the coefficient [`Expression`] of the [`PauliTerm`],
+        aka its `expression` property.
+        """
     @property
     def expression(self) -> expression.Expression: ...
     @property
@@ -1845,7 +1868,7 @@ class PauliTerm:
         Create [`Program`] from the [`PauliTerm`].
         """
     @typing.overload
-    def __add__(self, other: ExpressionDesignator) -> PauliTerm: ...
+    def __add__(self, other: _quil.expression.ExpressionDesignator) -> PauliTerm: ...
     @typing.overload
     def __add__(self, other: PauliTerm | PauliSum) -> PauliSum: ...
     @typing.overload
@@ -1872,7 +1895,7 @@ class PauliTerm:
         A term that consists of only a scalar has a length of zero.
         """
     @typing.overload
-    def __mul__(self, other: PauliTerm | ExpressionDesignator) -> PauliTerm: ...
+    def __mul__(self, other: PauliTerm | _quil.expression.ExpressionDesignator) -> PauliTerm: ...
     @typing.overload
     def __mul__(self, other: PauliSum) -> PauliSum: ...
     @typing.overload
@@ -1882,22 +1905,22 @@ class PauliTerm:
         [`PauliSum`], or number according to the Pauli algebra rules.
         """
     @typing.overload
-    def __new__(cls, op: typing.Literal[PauliGate.I] | typing.Literal["I"], index: PauliTargetDesignator | None, coefficient: ExpressionDesignator = 1) -> PauliTerm:
+    def __new__(cls, op: typing.Literal[PauliGate.I] | typing.Literal["I"], index: PauliTargetDesignator | None, coefficient: _quil.expression.ExpressionDesignator = 1) -> PauliTerm:
         r"""
         Construct a `PauliTerm` for a single Identity operator.
         """
     @typing.overload
-    def __new__(cls, op: PauliGate | str, index: PauliTargetDesignator | None, coefficient: ExpressionDesignator = 1) -> PauliTerm:
+    def __new__(cls, op: PauliGate | str, index: PauliTargetDesignator | None, coefficient: _quil.expression.ExpressionDesignator = 1) -> PauliTerm:
         r"""
         Construct a `PauliTerm` for a single operator and argument.
         """
     @typing.overload
-    def __new__(cls, arguments: collections.abc.Sequence[tuple[PauliGate | str, PauliTargetDesignator]], expression: ExpressionDesignator = 1) -> PauliTerm:
+    def __new__(cls, arguments: collections.abc.Sequence[tuple[PauliGate | str, PauliTargetDesignator]], expression: _quil.expression.ExpressionDesignator = 1) -> PauliTerm:
         r"""
         Construct a `PauliTerm` from a sequence of arguments.
         """
     @typing.overload
-    def __new__(cls, op: typing.Optional[PauliGate  |  builtins.list[tuple[PauliGate, builtins.str  |  builtins.int  |  Qubit]]] = None, index: typing.Optional[builtins.str  |  builtins.int  |  Qubit  |  expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None, coefficient: typing.Optional[expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None, arguments: typing.Optional[typing.Sequence[tuple[PauliGate, builtins.str  |  builtins.int  |  Qubit]]] = None, expression: typing.Optional[expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None) -> PauliTerm:
+    def __new__(cls, op: typing.Optional[PauliGate  |  builtins.list[tuple[PauliGate, builtins.str  |  builtins.int  |  Qubit]]] = None, index: typing.Optional[builtins.str  |  builtins.int  |  Qubit  |  _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None, coefficient: typing.Optional[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None, arguments: typing.Optional[typing.Sequence[tuple[PauliGate, builtins.str  |  builtins.int  |  Qubit]]] = None, expression: typing.Optional[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None) -> PauliTerm:
         r"""
         Construct a new `PauliTerm` from a single operator and qubit index.
         
@@ -1930,16 +1953,29 @@ class PauliTerm:
         and only reference real numeric literals or parameters.
         """
     @typing.overload
-    def __pow__(self, exponent: int, modulo: None = None) -> PauliTerm: ...
+    def __pow__(self, exponent: builtins.int, modulo: None = None) -> PauliTerm: ...
     @typing.overload
-    def __pow__(self, exponent: complex | Expression, modulo: None = None) -> PauliSum: ...
+    def __pow__(self, exponent: _quil.expression.Expression | builtins.str, modulo: None = None) -> PauliSum: ...
     @typing.overload
-    def __pow__(self, exponent: int  |  expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, modulo: typing.Optional[typing.Any] = None) -> typing.Any:
+    def __pow__(self, exponent: typing.Any, modulo: typing.Any) -> typing.NoReturn: ...
+    @typing.overload
+    def __pow__(self, exponent: int | str | _quil.expression.Expression, modulo: typing.Optional[typing.Any] = None) -> PauliTerm | PauliSum:
         r"""
         Compute the power of this [`PauliTerm`].
         
-        In general, the result of raising a `PauliTerm` to a power is a two-term [`PauliSum`],
-        but in the common case of raising to an integer power, this returns a `PauliTerm`.
+        This returns a new [`PauliTerm`] or [`PauliSum`]
+        representing the result of raising this term to the given exponent.
+        
+        As with other operations on this type,
+        the arguments and coefficient may be rearranged and/or simplified,
+        so logically equivalent results may not be identical one another.
+        The simplifications and rearrangements are not guaranteed to be stable across versions,
+        and may change the observable behavior of a program when executed on a QPU.
+        
+        In the common case that the exponent is a small integer, this returns a [`PauliTerm`].
+        To handle more general exponents, this returns a two-term [`PauliSum`].
+        
+        # General Mathematical Explanation
         
         To be specific, for a scaled Pauli operator `T = cP` and complex `k`, `T^k = c^k * P^k`.
         Note that for Pauli operators, `P^2 = I` with eigenvalues `+1` and `-1`, so we can write
@@ -1948,18 +1984,64 @@ class PauliTerm:
         and we can write `T^k = c^k * P^k = c^k * (aI + bP) = (c^k * a)I + (c^k * b)P`.
         Thus, the result is a two-term `PauliSum` with coefficients `c^k * a` and `c^k * b`.
         
-        In the integer case, `(-1)^k = 1` for even `k` and `(-1)^k = -1` for odd `k`,
-        and so we have `a = 1` and `b = 0` for even `k`, and `a = 0` and `b = 1` for odd `k`:
-        thus, in that case we return a single `PauliTerm`.
+        # Special Cases for Integer Exponents
         
-        For non-integer exponents, we evaluate via the principal branch `(-1)^k = exp(i * pi * k)`.
-        In general, real and rational exponents result in complex coefficients,
-        and hence a two-term `PauliSum` result.
-        Symbolic expressions are supported using the same substituions:
-        `a = (1 + exp(i * pi * k)) / 2` and `b = (1 - exp(i * pi * k)) / 2`.
+        When `k` is an even integer, `(-1)^k = 1`, so `a = 1`, `b = 0`, and `T^k = c^k * I`.
+        When `k` is an odd integer,  `(-1)^k = 0`, so `a = 0`, `b = 1`, and `T^k = c^k * P`.
+        Thus, we can simplify the result to a single `PauliTerm` when given an integer exponent.
+        If the existing term's coefficient is numeric, we simplify the result to its numeric form.
+        
+        Note that this only applies to exponents given as integers that fit in an `i32`;
+        integers with larger magnitudes are converted to [`Expression::Number`]s,
+        and [`Expression`]-based exponents are treated as described below.
+        
+        # Large Integer, Complex Numbers, and General Expressions
+        
+        Large integers, floats, and complex numbers are converted to [`Expression::Number`]s,
+        and `str`s are converted to [`Expression::Variable`]s.
+        and general [`Expression`]s are used directly.
+        
+        General [`Expression`]s are supported via the above substitutions, processed symbolically.
+        The exact [`Expression`]s are not formally part of the API and may change between versions.
+        At present, we evaluate `(-1)^k` with the principal branch `exp(i * pi * k)`,
+        resulting in `a = (1 + exp(i * pi * k)) / 2` and `b = (1 - exp(i * pi * k)) / 2`;
+        as with the numeric case, the exact [`Expression`]s produced may be simplified
+        when the existing term's coefficient is numeric.
+        
+        For non-integer exponents, we
+        
+        evaluated via the principal branch
+        which in general results in complex coefficients,
+        and hence the two-term `PauliSum` result.
+        
+        Note that a valid Quil ``DEFGATE ... AS PAULI-SUM`` requires coefficient expressions
+        to be real-valued and reference only real numeric literals or gate-defined parameters.
+        
+        If called with Python's 3-argument `pow` function, the `modulo` argument is not supported,
+        and will raise a `NotImplementedError` if provided.
+        
+        Note: As explained above, this method returns `PauliTerm` for (most) integer exponents,
+        and a `PauliSum` for (most) non-integer exponents, and accepts `float` and `complex`.
+        Despite this, due to the way Python and type-checkers special-case them,
+        it is not possible to express this accurately as a type annotation overload.
+        Consequently, this is typed with an expectation that integers are the most common numbers,
+        and also are likely to be in the range of a 32-bit signed integer,
+        in which case the result is a `PauliTerm`.
+        Although it cannot be annotated as such, it is valid to pass a `float` or `complex`,
+        and the result will be a `PauliSum` (as will be true for `Expression`s and large ints).
+        If you find yourself running into type-checking errors when passing a `float` or `complex`,
+        you can work around it by wrapping the argument in an `Expression`.
+        
+        This arises because Python specifies that `int` is assignable to `float` and `complex`
+        and that `float` is assignable to `complex`, and from the definition of `assignable`
+        (see: https://typing.python.org/en/latest/spec/glossary.html#term-assignable),
+        the consequence is that `int` is treated as a subtype of `float` and `complex`,
+        leading to all kinds of unsoundness in type-checking vs actual runtime behavior.
+        For more information, see this discussion:
+        https://discuss.python.org/t/clarifying-the-float-int-complex-special-case/54018/71
         """
     @typing.overload
-    def __radd__(self, other: ExpressionDesignator) -> PauliTerm: ...
+    def __radd__(self, other: _quil.expression.ExpressionDesignator) -> PauliTerm: ...
     @typing.overload
     def __radd__(self, other: PauliTerm | PauliSum) -> PauliSum: ...
     @typing.overload
@@ -1987,9 +2069,16 @@ class PauliTerm:
     @staticmethod
     def from_compact_str(str_pauli_term: builtins.str) -> PauliTerm: ...
     @staticmethod
-    def from_list(terms_list: typing.Sequence[tuple[PauliGate, builtins.str  |  builtins.int  |  Qubit]], coefficient: expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex = ...) -> PauliTerm:
+    def from_list(terms_list: typing.Sequence[tuple[PauliGate, builtins.str  |  builtins.int  |  Qubit]], coefficient: _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex = ...) -> PauliTerm:
         r"""
         Construct a new `PauliTerm` from a list of operators and an optional coefficient.
+        
+        If the given arguments are disjoint (as required by a well-formed Quil `PauliTerm`),
+        the resulting `PauliTerm` will preserve that order and use the given coefficient as-is.
+        
+        Otherwise, operations on the same argument are combined via Pauli algebra rules,
+        and the coefficient is multiplied by any resulting complex phase,
+        and the resulting `PauliTerm` may have a different order of arguments than the input list.
         """
     def get_qubits(self) -> builtins.list[Qubit]:
         r"""
@@ -2047,7 +2136,7 @@ class PauliTermIter:
     An iterator over the [`PauliTerm`]s of a [`PauliSum`].
     """
     def __iter__(self) -> PauliTermIter: ...
-    def __next__(self) -> typing.Optional[PauliTerm]: ...
+    def __next__(self) -> PauliTerm: ...
 
 class Pragma(Instruction):
     @property
@@ -2593,7 +2682,7 @@ class WaveformInvocation:
     def parameters(self) -> builtins.dict[builtins.str, expression.Expression]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[builtins.str, builtins.dict[builtins.str, expression.Expression]]: ...
-    def __new__(cls, name: builtins.str, parameters: typing.Optional[typing.Mapping[builtins.str, expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]] = None) -> WaveformInvocation: ...
+    def __new__(cls, name: builtins.str, parameters: typing.Optional[typing.Mapping[builtins.str, _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]] = None) -> WaveformInvocation: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust

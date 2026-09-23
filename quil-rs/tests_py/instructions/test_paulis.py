@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import pytest
 import numpy as np
-from quil.expression import Expression, ExpressionDesignator
+from quil.expression import Expression, ExpressionDesignator, quil_exp
 from quil.instructions import (
     PauliGate,
     PauliSum,
@@ -12,6 +12,7 @@ from quil.instructions import (
     PauliTargetDesignator,
     QubitPlaceholder,
 )
+
 
 @dataclass
 class ConstrArg:
@@ -21,7 +22,7 @@ class ConstrArg:
     index: PauliTargetDesignator
     qubit_str: str  # what we expect the actual argument to be
     coeff: ExpressionDesignator
-    expr: Expression # what we expect Expression(coeff) to be
+    expr: Expression  # what we expect Expression(coeff) to be
 
     def __iter__(self) -> Iterator:
         """Facilitate automatic destructuring."""
@@ -36,9 +37,11 @@ def constr_args() -> list[ConstrArg]:
         ConstrArg(PauliGate.Y, "b", "b", -1.0, Expression.Number(-1.0)),
     ]
 
+
 @pytest.fixture
 def terms(constr_args: list[ConstrArg]) -> list[PauliTerm]:
     return [PauliTerm(term.op, term.index, term.coeff) for term in constr_args]
+
 
 @pytest.fixture
 def arguments(constr_args: list[ConstrArg]) -> list[PauliTargetDesignator]:
@@ -118,10 +121,23 @@ class TestTermMultiplication:
         product = t_2_X0 * PauliTerm(PauliGate.Y, 1, 3.0)
         assert product == PauliTerm.from_list([(PauliGate.X, "q0"), (PauliGate.Y, "q1")], 6.0)
 
-    @pytest.mark.parametrize("three", (3, 3.0, 3.0+0.0j, Expression.Number(3.0),
-                                       np.int8(3), np.int16(3), np.int32(3), np.int64(3),
-                                       np.float32(3.0), np.float64(3.0),
-                                       np.complex64(3.0), np.complex128(3.0)))
+    @pytest.mark.parametrize(
+        "three",
+        (
+            3,
+            3.0,
+            3.0 + 0.0j,
+            Expression.Number(3.0),
+            np.int8(3),
+            np.int16(3),
+            np.int32(3),
+            np.int64(3),
+            np.float32(3.0),
+            np.float64(3.0),
+            np.complex64(3.0),
+            np.complex128(3.0),
+        ),
+    )
     def test_numbers(self, t_2_X0: PauliTerm, three: int | float | complex | Expression):
         expected = PauliTerm("X", 0, 6.0)
         assert t_2_X0 * three == expected
@@ -129,21 +145,59 @@ class TestTermMultiplication:
 
 
 class TestTermPower:
-    def test_even(self, t_2_X0: PauliTerm):
-        assert t_2_X0 ** 2 == PauliTerm("I", None, t_2_X0.expression ** 2)
-
-    def test_odd(self, t_2_X0: PauliTerm):
-        assert t_2_X0 ** 3 == PauliTerm.from_list(t_2_X0.arguments, coefficient=t_2_X0.expression ** 3)
-
-    def test_one(self, t_2_X0: PauliTerm):
-        assert t_2_X0 ** 1 == PauliTerm.from_list(t_2_X0.arguments, coefficient=t_2_X0.expression)
+    """Test exponentiation of PauliTerms."""
 
     def test_zero(self, t_2_X0: PauliTerm):
-        assert t_2_X0 ** 0 == PauliTerm()
+        assert t_2_X0**0 == PauliTerm("I", None)
 
-    def test_big(self, t_2_X0: PauliTerm):
-        x = 2**33 + 1
-        assert t_2_X0 ** x == PauliTerm.from_list(t_2_X0.arguments, coefficient=t_2_X0.expression ** x)
+    def test_one(self, t_2_X0: PauliTerm):
+        assert t_2_X0**1 == PauliTerm.from_list(t_2_X0.arguments, coefficient=t_2_X0.expression)
+
+    def test_even(self, t_2_X0: PauliTerm):
+        coefficient = (t_2_X0.expression**2).into_simplified()
+        assert t_2_X0**2 == PauliTerm("I", None, coefficient)
+
+    def test_odd(self, t_2_X0: PauliTerm):
+        coefficient = (t_2_X0.expression**3).into_simplified()
+        assert t_2_X0**3 == PauliTerm.from_list(t_2_X0.arguments, coefficient=coefficient)
+
+    @pytest.mark.parametrize("k", [0, 1, 2, 3, 4, 5, 2**10, 2**32, 2**33, 2**33+1, 2**63-1])
+    def test_ints(self, t_2_X0: PauliTerm, k: int):
+        actual = t_2_X0**k
+        assert isinstance(actual, PauliTerm), f"integer exponents ({k=}) should reduce to a PauliTerm"
+
+        if k % 2 == 0:
+            assert all(op == PauliGate.I for op, _ in actual), f"even exponents ({k=})) should reduce to identity"
+        else:
+            assert set(actual.arguments) == set(t_2_X0.arguments), f"odd exponents ({k=}) should preserve the original arguments"
+
+        assert (
+            actual.expression.into_simplified() == (t_2_X0.expression**k).into_simplified()
+        ), f"{actual.expression.to_quil()} != {t_2_X0.expression.to_quil()}"
+
+
+    def test_expr(self, t_2_X0: PauliTerm):
+        k = Expression.parse("2*pi + 1")
+        # TODO: this may justify making Expression work like Instruction, as a class hierarchy.
+        exp_i_pi_k = Expression.FunctionCall(quil_exp(1.0j * Expression.Pi() * k))
+        a = (1 + exp_i_pi_k) / 2
+        b = (1 - exp_i_pi_k) / 2
+        c_pow_k = t_2_X0.expression**k
+        i_term = PauliTerm("I", None, c_pow_k * a)
+        p_term = PauliTerm.from_list(t_2_X0.arguments, coefficient=c_pow_k * b)
+
+        actual = t_2_X0**k
+        expected = i_term + p_term
+        assert set(actual.arguments) == set(expected.arguments)
+        for t0, t1 in zip(actual.terms, expected.terms):
+            assert set(t0.arguments) == set(t1.arguments)
+            assert (
+                t0.expression.into_simplified() == t1.expression.into_simplified()
+            ), f"{t0.expression.to_quil()} != {t1.expression.to_quil()}"
+
+    def test_int_vs_float(self, t_2_X0: PauliTerm):
+        assert t_2_X0**3 == t_2_X0**3.0
+
 
 class TestSumConstructor:
     """Confirm all variants of the `PauliSum` constructor work as expected."""
@@ -154,7 +208,6 @@ class TestSumConstructor:
         assert positional.terms == terms
         keyword = PauliSum(terms=terms)
         assert positional == keyword
-
 
     def test_new_two_param(self, terms: list[PauliTerm], arguments: list[PauliTargetDesignator]):
         """Confirm that the new construcotr works when given two parameters.
@@ -181,7 +234,7 @@ class TestSumConstructor:
             mixed = PauliSum(arguments, terms=terms)
         assert positional == mixed
 
-    def test_invalid(self,terms: list[PauliTerm], arguments: list[PauliTargetDesignator]):
+    def test_invalid(self, terms: list[PauliTerm], arguments: list[PauliTargetDesignator]):
         """Confirm we get errors for invalid constructions."""
         for args in itertools.combinations_with_replacement([terms, arguments], 3):
             with pytest.raises((TypeError, ValueError)):
@@ -194,8 +247,7 @@ class TestSumConstructor:
         with pytest.raises(TypeError):
             PauliSum(arguments, arguments)
         with pytest.raises(TypeError):
-            PauliSum(arguments=terms) # pyright: ignore
+            PauliSum(arguments=terms)  # pyright: ignore
 
         with pytest.raises(ValueError):
             PauliSum(arguments)
-

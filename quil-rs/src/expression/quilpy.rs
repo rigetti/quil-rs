@@ -146,13 +146,42 @@ enum Evaluated {
 }
 
 #[cfg(feature = "stubs")]
-mod stubs {
-    use pyo3_stub_gen::{derive::gen_methods_from_python, impl_stub_type, type_alias};
+pub(crate) mod stubs {
+    use pyo3_stub_gen::{
+        derive::gen_methods_from_python, impl_stub_type, runtime::PyRuntimeType, type_alias,
+        PyStubType, TypeInfo,
+    };
 
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    impl_stub_type!(ExpressionLike = Expression | MemoryReference | String | i64 | f64 | Complex64);
+    /// Type stub alias for `Expression` that forces the fully-qualified name.
+    ///
+    /// Used to force `from quil import _quil.expression` and `_quil.expression.Expression`
+    /// in places that would otherwise be `expression.Expression`;
+    /// since there are several struct fields named `expression`,
+    /// the latter would otherwise cause `mypy` and other type checkers to reject the stubs
+    /// because of the name collision.
+    pub(crate) struct QualifiedExpression;
+
+    impl PyStubType for QualifiedExpression {
+        fn type_output() -> TypeInfo {
+            TypeInfo::with_module(
+                "_quil.expression.Expression",
+                "quil._quil.expression".into(),
+            )
+        }
+    }
+
+    impl PyRuntimeType for QualifiedExpression {
+        fn runtime_type_object(py: Python<'_>) -> PyResult<Bound<'_, PyAny>> {
+            Ok(py.get_type::<Expression>().into_any())
+        }
+    }
+
+    impl_stub_type!(
+        ExpressionLike = QualifiedExpression | MemoryReference | String | i64 | f64 | Complex64
+    );
     impl_stub_type!(SubstitutionKey = String | MemoryReference);
     impl_stub_type!(SubstitutionValue = Complex64 | Vec<Complex64>);
     impl_stub_type!(Evaluated = Expression | Complex64);
