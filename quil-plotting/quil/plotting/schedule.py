@@ -1293,6 +1293,29 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
             block.frame_update_color = frame_update_color
         return self
 
+    def with_qubit_labels(self, labels: dict[FrameIdentifier, str]) -> Self:
+        """Relabel the `"Qubit"` field of every event on the given frames.
+
+        By default, the library will try to assign "Qubit: X" or "Coupler: Y"
+        labels with as much information as possible. This may not be correct in
+        specific situations. Here you can reassign labels to Frames.
+
+        Frames left out keep their inferred label, and a frame no event sits on
+        is ignored. Lanes, normalization and colors grouped by `"Qubit"` follow
+        the new labels, and frames given the same label share one lane.
+
+        Args:
+            labels: The new label for each frame, e.g.
+                `{FrameIdentifier("rf", [Qubit.Fixed(3)]): "Q3 (drive)"}`.
+
+        Returns:
+            This schedule, for chaining.
+        """
+        for block in self._blocks:
+            for event in block.events:
+                event.qubit = labels.get(event.frame, event.qubit)
+        return self
+
     def with_pan_y(self, on: bool = True) -> Self:
         """Pan the lane axis along with the time axis, or pan time only.
 

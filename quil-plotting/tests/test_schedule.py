@@ -60,6 +60,18 @@ def test_allowed_reset_is_marked_on_its_qubits_frames_before_the_pulse():
     block.draw().to_dict()
 
 
+def test_with_qubit_labels_relabels_only_the_given_frames():
+    schedule = PlottableProgramPulseSchedule(load("single_gate_rx_pi"))
+    block = schedule._blocks[0]
+    relabeled = block.pulses[0].frame
+    before = {event.frame: event.qubit for event in block.events}
+
+    schedule.with_qubit_labels({relabeled: "Drive"})
+    for event in block.events:
+        assert event.qubit == ("Drive" if event.frame == relabeled else before[event.frame])
+    block.draw().to_dict()
+
+
 def test_identical_invocations_share_one_cached_shape():
     block = PlottableProgramPulseSchedule(load("measure_ancilla_cycle"))._blocks[0]
     assert len(block.waveforms.table) < len(block.pulses)
