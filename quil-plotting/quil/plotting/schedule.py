@@ -22,9 +22,11 @@ import altair as alt
 import numpy as np
 from quil.instructions import (
     AttributeValue,
+    Fence,
     FrameIdentifier,
     Instruction,
     Qubit,
+    Reset,
 )
 from quil.program import BasicBlock, FrameSet, Program
 from typing_extensions import override
@@ -51,6 +53,7 @@ _FRAME_UPDATE_SHAPES = {
     "SHIFT-FREQUENCY": "triangle-down",
     "SET-SCALE": "cross",
     "SWAP-PHASES": "triangle-right",
+    "RESET": "circle",
 }
 
 # Instantaneous frame-state changes: no waveform, so drawn as a marker rather
@@ -239,7 +242,7 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
             # the one thing it cannot read back off the instruction.
             elif isinstance(instruction, Instruction.SwapPhases):
                 swap = instruction._0
-                for second, frame in enumerate((swap.frame_1, swap.frame_2)):
+                for frame in (swap.frame_1, swap.frame_2):
                     self.events.append(
                         PlottableFrameUpdate(
                             instruction=instruction,
@@ -247,7 +250,32 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
                             start_time=event.time_span.start,
                             channel_type=frame_to_channel_type_map[frame],
                             qubit=qubit_str_map[frame],
-                            second_swap_frame=bool(second),
+                            event_frame=frame,
+                            hidden=False,
+                        )
+                    )
+
+            # HACK: RESETs are swapped to FENCE instructions by `_expand_program`
+            # this is done so a scheduler can time it. This timing is incorrect,
+            # but at the request of the user. It names no frame, so it is
+            # marked on every single-qubit frame of the qubits it resets - all
+            # of them for a bare RESET.
+            elif (
+                isinstance(instruction, Instruction.Fence)
+                and instruction_name_map[event.instruction_index] == "RESET"
+            ):
+                qubits = instruction._0.qubits
+                for frame in frames.get_keys():
+                    if len(frame.qubits) != 1 or (qubits and frame.qubits[0] not in qubits):
+                        continue
+                    self.events.append(
+                        PlottableFrameUpdate(
+                            instruction=Instruction.Reset(Reset(frame.qubits[0])),
+                            logical_instruction_name="RESET",
+                            start_time=event.time_span.start,
+                            channel_type=frame_to_channel_type_map[frame],
+                            qubit=qubit_str_map[frame],
+                            event_frame=frame,
                             hidden=False,
                         )
                     )
@@ -743,7 +771,9 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
     The program must carry the definitions of the QPU it targets. This includes
     the `DEFCAL`s that turn its gates into pulses, the `DEFFRAME`s that give
     those pulses a sample rate, and any `DEFWAVEFORM`s they name. A gate left
-    with no calibration has no pulse to draw and will raise an error.
+    with no calibration has no pulse to draw and will raise an error. So does a
+    `RESET`, unless built with `allow_reset=True`, which draws each one as a
+    frame-update marker on its qubit's frames.
 
     This object follows a builder method to construct the final image or widget.
     Configuring a chart is a chain of `with_*` methods, each returning `self`;
@@ -797,25 +827,36 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
     """
 
     @override
-    def _build_blocks(self, program: Program) -> list[PlottableBlockPulseSchedule]:
+    def _build_blocks(
+        self,
+        program: Program,
+        allow_reset: bool = False,
+    ) -> list[PlottableBlockPulseSchedule]:
         """Expand `program`'s calibrations, schedule it, and lay out its blocks.
 
         Args:
             program: A Quil program including the `DEFCAL`, `DEFFRAME` and
                 `DEFWAVEFORM` definitions of the QPU it targets.
+            allow_reset: `RESET`s cannot be converted to pulses here. Normally,
+                if you try to draw a program with resets, it will raise an
+                error. However, if you set this, it will not, but at the cost of
+                an accurate pulse schedule. With this on, `RESET`s will be drawn
+                as an instant point rather than their pulses, which will shift
+                all of the pulse timings incorrectly.
 
         Returns:
             One block per basic block, in program order.
 
         Raises:
             ValueError: If a gate or measurement survives calibration expansion,
-                which leaves it with no pulse to draw.
+                which leaves it with no pulse to draw, or the program has a
+                `RESET` and `allow_reset` is off.
             RuntimeError: If a frame is missing a `DEFFRAME`, a waveform cannot
                 be resolved to samples, or - an internal invariant - the blocks
                 built from `program` do not partition its instructions.
         """
         # 1. Decompose the logical level program into primitive instructions
-        expansion, instruction_name_map = self._expand_program(program)
+        expansion, instruction_name_map = self._expand_program(program, allow_reset)
 
         # 2. Parse the blocks for plottable information. `instruction_name_map`
         #    is indexed by position in the expanded program's body, but a basic
@@ -842,7 +883,7 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
         return blocks
 
     @staticmethod
-    def _expand_program(program: Program) -> tuple[Program, list[str]]:
+    def _expand_program(program: Program, allow_reset: bool) -> tuple[Program, list[str]]:
         """Decompose `program`'s logical instructions via its calibrations.
 
         The returned program keeps only instructions the scheduler can assign a
@@ -850,6 +891,7 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
 
         Args:
             program: A Quil program with the calibrations to expand.
+            allow_reset: See `_build_blocks`.
 
         Returns:
             The expanded, filtered program, and one logical instruction name
@@ -858,7 +900,8 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
 
         Raises:
             ValueError: If a gate or measurement survives expansion, meaning the
-                program has no calibration for it.
+                program has no calibration for it, or the program has a `RESET`
+                and `allow_reset` is off.
 
         See Also:
             {py:obj}`quil.plotting.pulse.PlottablePulseEvent.logical_instruction_name`:
@@ -898,7 +941,28 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
                 "pulse level, so it needs the DEFCALs of the QPU it targets."
             )
 
-        # 4. Keep only instructions the scheduler can assign a duration to, plus
+        # 4. No calibration expands a RESET, and the scheduler cannot time one.
+        #    When allowed, it is hacked to a FENCE on the same qubits: zero
+        #    duration, and it waits on every frame of those qubits - exactly
+        #    when the reset happens. The name map marks which fences were
+        #    resets. This will be later captured and reset (pun) to a `RESET`
+        #    instruction.
+        for index, instruction in enumerate(expanded_instructions):
+            if isinstance(instruction, Instruction.Reset):
+                if not allow_reset:
+                    raise ValueError(
+                        "RESET cannot be expanded into pulses. If you want to "
+                        "continue and plot this diagram, build it with "
+                        "PlottableProgramPulseSchedule(program, allow_reset=True), "
+                        "which draws each RESET as a frame-update marker. This "
+                        "will make throw all pulse timings off, so be warned."
+                    )
+                qubit = instruction._0.qubit
+                fence = Fence([] if qubit is None else [qubit])
+                expanded_instructions[index] = Instruction.Fence(fence)
+                instruction_name_map[index] = "RESET"
+
+        # 5. Keep only instructions the scheduler can assign a duration to, plus
         #    the instructions that define the control-flow graph. The name map
         #    is indexed by instruction, so it has to be filtered alongside them
         #    or every name after the first drop is attributed to the wrong

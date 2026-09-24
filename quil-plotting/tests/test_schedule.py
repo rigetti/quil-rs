@@ -22,7 +22,7 @@ from quil.plotting.waveform import PlottableWaveformCache, WaveformKey
 
 
 def test_every_program_builds_and_draws_a_valid_spec(program):
-    schedule = PlottableProgramPulseSchedule(program)
+    schedule = PlottableProgramPulseSchedule(program, allow_reset=True)
     drawable = [block for block in schedule._blocks if block.events]
     assert drawable, "every program in the corpus plays at least one pulse"
 
@@ -40,6 +40,24 @@ def test_every_program_builds_and_draws_a_valid_spec(program):
         chart = block.draw()
         assert isinstance(chart, alt.LayerChart)
         chart.to_dict()
+
+
+def test_reset_raises_unless_allowed():
+    with pytest.raises(ValueError, match="allow_reset=True"):
+        PlottableProgramPulseSchedule(load("reset"))
+
+
+def test_allowed_reset_is_marked_on_its_qubits_frames_before_the_pulse():
+    block = PlottableProgramPulseSchedule(load("reset"), allow_reset=True)._blocks[0]
+    resets = [event for event in block.frame_updates if event.instruction.name == "RESET"]
+    assert resets
+    assert {event.qubit for event in resets} == {"Qubit: 10"}
+    assert len({event.frame for event in resets}) == len(resets), "one marker per frame"
+    start = resets[0].start_time
+    assert all(event.start_time == start for event in resets)
+    assert all(pulse.start_time >= start for pulse in block.pulses)
+    assert resets[0].build_record(lane=0)["label"] == "RESET"
+    block.draw().to_dict()
 
 
 def test_identical_invocations_share_one_cached_shape():
@@ -124,7 +142,8 @@ def test_swap_phases_is_drawn_on_both_frames_each_naming_the_other():
     assert first.frame != second.frame
     assert first.frame == second.partner_frame
     assert second.frame == first.partner_frame
-    assert {first.second_swap_frame, second.second_swap_frame} == {False, True}
+    swap = first.instruction._0
+    assert {first.frame, second.frame} == {swap.frame_1, swap.frame_2}
 
     # Every other kind of frame update names one frame and so has no partner to name.
     others = [event for event in updates if event.instruction.name != "SWAP-PHASES"]

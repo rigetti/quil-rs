@@ -121,21 +121,22 @@ class PlottableFrameUpdate(PlottablePulseEvent):
     Covers `SHIFT-PHASE`, `SET-PHASE`, `SET-FREQUENCY`, `SHIFT-FREQUENCY`,
     `SET-SCALE` and `SWAP-PHASES`. None of these plays a waveform - they change
     how a frame's carrier is generated for whatever comes next on it - so each
-    is drawn as a marker whose shape names the instruction.
+    is drawn as a marker whose shape names the instruction. A `RESET` is drawn
+    the same way when the schedule is built with `allow_reset=True`.
     """
 
-    # A swap is drawn on both lanes it touches, so the event has to be told
-    # which of them it is - the one thing its instruction cannot say.
-    second_swap_frame: bool = False
-    """Which of a `SWAP-PHASES`'s two frames this event was built for."""
+    # A swap touches two frames and a reset every frame of its qubit, so each
+    # event built from one is told which frame it is - the one thing its
+    # instruction cannot say. Every other kind names its frame itself.
+    event_frame: FrameIdentifier | None = None
+    """The frame of a `SWAP-PHASES` or `RESET` event, else `None`."""
 
     @property
     def frame(self) -> FrameIdentifier:
-        """The frame this event sits on - for a `SWAP-PHASES`, its own half."""
-        payload = self.instruction._0  # type: ignore
-        if isinstance(self.instruction, Instruction.SwapPhases):
-            return payload.frame_2 if self.second_swap_frame else payload.frame_1
-        return payload.frame
+        """The frame this event sits on."""
+        if self.event_frame is not None:
+            return self.event_frame
+        return self.instruction._0.frame  # type: ignore
 
     @property
     def partner_frame(self) -> FrameIdentifier | None:
@@ -143,7 +144,7 @@ class PlottableFrameUpdate(PlottablePulseEvent):
         if not isinstance(self.instruction, Instruction.SwapPhases):
             return None
         payload = self.instruction._0
-        return payload.frame_1 if self.second_swap_frame else payload.frame_2
+        return payload.frame_2 if self.frame == payload.frame_1 else payload.frame_1
 
     def build_record(self, lane: int) -> dict[str, Any]:
         """One chart row for this update, marking where it occurs.

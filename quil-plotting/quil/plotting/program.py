@@ -187,7 +187,7 @@ BlockT = TypeVar("BlockT", bound=PlottableBlock[Any])
 class PlottableProgram(abc.ABC, Generic[BlockT]):
     """A Quil program as a plottable set of blocks."""
 
-    def __init__(self, program: Program) -> None:
+    def __init__(self, program: Program, **kwargs: Any) -> None:
         """Parse `program` into a plottable representation.
 
         All of the work happens here, so a constructed view can be drawn
@@ -195,6 +195,10 @@ class PlottableProgram(abc.ABC, Generic[BlockT]):
 
         Args:
             program: The program to draw.
+            **kwargs: Options that change how `program` is parsed. These are
+                reserved this for options that you will be forced to learn about
+                if you need them. The program will complain if you need to
+                change a setting here.
 
         Raises:
             TypeError: If `program` is not a `quil.program.Program`.
@@ -203,7 +207,7 @@ class PlottableProgram(abc.ABC, Generic[BlockT]):
             expected_msg = "Expected quil.Program for `program` parameter"
             raise TypeError(f"{expected_msg}, got {type(program)}.")
 
-        self._blocks: list[BlockT] = self._build_blocks(program)
+        self._blocks: list[BlockT] = self._build_blocks(program, **kwargs)
         """The program's basic blocks as plottable objects."""
 
         self.shared_y_axis: bool = False
@@ -215,6 +219,9 @@ class PlottableProgram(abc.ABC, Generic[BlockT]):
     @abc.abstractmethod
     def _build_blocks(self, program: Program) -> list[BlockT]:
         """Turn `program` into this view's blocks, in program order."""
+        # Note **kwargs is not a parameter here to throw a standard error
+        # if one was passed in by error. Subclasses should override when
+        # necessary.
 
     @abc.abstractmethod
     def _resolve_rows(self) -> list[Any]:
