@@ -27,7 +27,7 @@ from quil.waveform import BuiltinWaveform, CommonBuiltinParameters
 
 import quil
 
-from .utils import (
+from ._utils import (
     _evaluate_complex,
     _evaluate_real,
     compress_constant_runs,

@@ -16,7 +16,7 @@
 
 import json
 import math
-from typing import Callable, Iterable, Self, cast
+from typing import Callable, Self, cast
 
 import altair as alt
 import numpy as np
@@ -29,6 +29,8 @@ from quil.instructions import (
 from quil.program import BasicBlock, FrameSet, Program
 from typing_extensions import override
 
+from ._render import BLUE, GRAY, TEAL, YELLOW, gate_name_color, order_labels
+from ._utils import _evaluate_real
 from .program import PlottableBlock, PlottableProgram
 from .pulse import (
     PlottableFrameUpdate,
@@ -36,8 +38,6 @@ from .pulse import (
     PlottablePulseEvent,
     PlottableRawCapture,
 )
-from .render import BLUE, GRAY, TEAL, YELLOW, gate_name_color, order_labels
-from .utils import _evaluate_real
 from .waveform import PlottableWaveformCache
 
 # A distinct point shape per frame-update kind, so e.g. SET-PHASE and

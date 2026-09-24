@@ -19,7 +19,7 @@ from typing import Any
 
 from quil.instructions import FrameIdentifier, Instruction
 
-from .utils import short
+from ._utils import short
 
 
 @dataclass(kw_only=True)

@@ -30,7 +30,7 @@ See Also:
 """
 
 import re
-from typing import Any, Iterable
+from typing import Any
 
 # The whole palette, defined once. Both views, the control-flow graph and the
 # saved page's back link color from these - a hex literal anywhere else is

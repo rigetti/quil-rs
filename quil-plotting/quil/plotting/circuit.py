@@ -45,9 +45,9 @@ from quil.instructions import (
 from quil.program import BasicBlock, Program
 from typing_extensions import override
 
+from ._render import GRAY, gate_name_color, natural_sort_key, order_labels
+from ._utils import _evaluate_real, short
 from .program import PlottableBlock, PlottableProgram
-from .render import GRAY, gate_name_color, natural_sort_key, order_labels
-from .utils import _evaluate_real, short
 
 
 @dataclass(frozen=True)

@@ -16,8 +16,8 @@ import numpy as np
 import pytest
 from conftest import sig_digits
 
-from quil.plotting.render import gate_name_color, natural_sort_key, order_labels
-from quil.plotting.utils import (
+from quil.plotting._render import gate_name_color, natural_sort_key, order_labels
+from quil.plotting._utils import (
     compress_constant_runs,
     decimate_to_max_points,
     round_sig,

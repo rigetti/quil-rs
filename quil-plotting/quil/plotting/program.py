@@ -23,8 +23,8 @@ import altair as alt
 from quil.instructions import Instruction
 from quil.program import BasicBlock, Program
 
+from ._render import BLUE, COLOR_PALETTE, EMBED_OPTIONS
 from .cfg import PlottableControlFlowGraph
-from .render import BLUE, COLOR_PALETTE, EMBED_OPTIONS
 
 EventT = TypeVar("EventT")
 
