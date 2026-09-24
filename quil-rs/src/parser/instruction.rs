@@ -769,10 +769,18 @@ mod tests {
     make_test!(
         parse_reset,
         parse_instructions,
-        "RESET\nRESET 0",
+        "RESET\nRESET 0\nRESET!foo 0",
         vec![
-            Instruction::Reset(Reset { qubit: None }),
             Instruction::Reset(Reset {
+                name: None,
+                qubit: None
+            }),
+            Instruction::Reset(Reset {
+                name: None,
+                qubit: Some(Qubit::Fixed(0))
+            }),
+            Instruction::Reset(Reset {
+                name: Some("foo".to_string()),
                 qubit: Some(Qubit::Fixed(0))
             })
         ]

@@ -621,7 +621,7 @@ impl Instruction {
                 }),
                 blocked: None,
             }),
-            Instruction::Reset(Reset { qubit }) => {
+            Instruction::Reset(Reset { qubit, .. }) => {
                 let qubits = match qubit {
                     Some(qubit) => {
                         let mut set = HashSet::new();

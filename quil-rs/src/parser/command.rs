@@ -561,10 +561,11 @@ pub(crate) fn parse_raw_capture(
 }
 
 /// Parse the contents of a `RESET` instruction.
-pub(crate) fn parse_reset(input: ParserInput) -> InternalParserResult<Instruction> {
+pub(crate) fn parse_reset<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
+    let (input, name) = opt(preceded(token!(Bang), token!(Identifier(name))))(input)?;
     let (input, qubit) = opt(parse_qubit)(input)?;
 
-    Ok((input, Instruction::Reset(Reset { qubit })))
+    Ok((input, Instruction::Reset(Reset { name, qubit })))
 }
 
 /// Parse the contents of a `SET-FREQUENCY` instruction.
