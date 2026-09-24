@@ -46,9 +46,41 @@ GRAY = "#8a8b92"
 # hands out.
 COLOR_PALETTE = (TEAL, YELLOW, BLUE, MAGENTA, GRAY)
 
-_TWO_QUBIT_GATES = frozenset({"CZ", "CPHASE", "CNOT", "CX", "CCNOT", "CCX", "ISWAP", "SWAP", "XY"})
+_MULTI_QUBIT_GATES = frozenset(
+    {
+        "CZ",
+        "CPHASE",
+        "CNOT",
+        "CX",
+        "CCNOT",
+        "CCX",
+        "ISWAP",
+        "SWAP",
+        "PSWAP",
+        "PISWAP",
+        "CSWAP",
+        "XY",
+        "CAN",
+    }
+)
 _ONE_QUBIT_GATES = frozenset(
-    {"H", "I", "PHASE", "RX", "RY", "RZ", "S", "SX", "SY", "SZ", "T", "U", "X", "Y", "Z"}
+    {
+        "H",
+        "I",
+        "PHASE",
+        "RX",
+        "RY",
+        "RZ",
+        "S",
+        "SX",
+        "SY",
+        "SZ",
+        "T",
+        "U",
+        "X",
+        "Y",
+        "Z",
+    }
 )
 
 
@@ -76,7 +108,7 @@ def gate_name_color(name: str) -> str | None:
         return MAGENTA
     if token.startswith("MEASURE"):
         return BLUE
-    if any(token.startswith(gate) for gate in _TWO_QUBIT_GATES):
+    if any(token.startswith(gate) for gate in _MULTI_QUBIT_GATES):
         return YELLOW
     if any(token.startswith(gate) for gate in _ONE_QUBIT_GATES):
         return TEAL
