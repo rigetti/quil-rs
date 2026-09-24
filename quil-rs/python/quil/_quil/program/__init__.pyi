@@ -21,6 +21,7 @@ __all__ = [
     "InstructionSourceMap",
     "InstructionSourceMapEntry",
     "InstructionTarget",
+    "InstructionTargetIterator",
     "MemoryRegion",
     "OwnedDefGateSequenceExpansion",
     "Program",
@@ -376,6 +377,7 @@ class InstructionTarget:
       within the resulting program's body instructions.
     """
     def __getnewargs__(self) -> tuple[CalibrationExpansion, builtins.int]: ...
+    def __iter__(self) -> InstructionTargetIterator: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -408,6 +410,12 @@ class InstructionTarget:
         def __len__(self) -> builtins.int: ...
         def __new__(cls, _0: builtins.int) -> InstructionTarget.Unmodified: ...
     
+
+@typing.final
+class InstructionTargetIterator:
+    def __iter__(self) -> InstructionTargetIterator: ...
+    def __length_hint__(self) -> builtins.int: ...
+    def __next__(self) -> typing.Optional[builtins.int]: ...
 
 class MemoryRegion:
     @property

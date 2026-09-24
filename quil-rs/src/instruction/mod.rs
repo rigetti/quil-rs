@@ -240,6 +240,60 @@ impl Instruction {
             | Instruction::UnaryLogic(_) => false,
         }
     }
+
+    /// The name of the operation the instruction performs.
+    ///
+    /// For instructions that reference, but not define, something nameable,
+    /// such as [`Gate`][Instruction::Gate] this is that name. Everything else
+    /// returns its fixed Quil mnemonic, e.g. `"HALT"` or `"JUMP-WHEN"`.
+    #[cfg(feature = "python")]
+    #[getter]
+    pub fn name(&self) -> &str {
+        match self {
+            Instruction::Arithmetic(arithmetic) => arithmetic.name(),
+            Instruction::BinaryLogic(binary_logic) => binary_logic.name(),
+            Instruction::CalibrationDefinition(_) => "DEFCAL",
+            Instruction::Call(call) => &call.name,
+            Instruction::Capture(_) => "CAPTURE",
+            Instruction::CircuitDefinition(_) => "DEFCIRCUIT",
+            Instruction::Convert(_) => "CONVERT",
+            Instruction::Comparison(comparison) => comparison.name(),
+            Instruction::Declaration(_) => "DECLARE",
+            Instruction::Delay(_) => "DELAY",
+            Instruction::Exchange(_) => "EXCHANGE",
+            Instruction::Fence(_) => "FENCE",
+            Instruction::FrameDefinition(_) => "DEFFRAME",
+            Instruction::Gate(gate) => &gate.name,
+            Instruction::GateDefinition(_) => "DEFGATE",
+            Instruction::Halt() => "HALT",
+            Instruction::Include(_) => "INCLUDE",
+            Instruction::Jump(_) => "JUMP",
+            Instruction::JumpUnless(_) => "JUMP-UNLESS",
+            Instruction::JumpWhen(_) => "JUMP-WHEN",
+            Instruction::Label(_) => "LABEL",
+            Instruction::Load(_) => "LOAD",
+            // The Quil-T name on the identifier, when present, qualifies which `MEASURE`
+            // calibration this is; it isn't a substitute identity, so the mnemonic is constant.
+            Instruction::MeasureCalibrationDefinition(_) => "DEFCAL MEASURE",
+            Instruction::Measurement(_) => "MEASURE",
+            Instruction::Move(_) => "MOVE",
+            Instruction::Nop() => "NOP",
+            Instruction::Pragma(pragma) => &pragma.name,
+            Instruction::Pulse(_) => "PULSE",
+            Instruction::RawCapture(_) => "RAW-CAPTURE",
+            Instruction::Reset(_) => "RESET",
+            Instruction::SetFrequency(_) => "SET-FREQUENCY",
+            Instruction::SetPhase(_) => "SET-PHASE",
+            Instruction::SetScale(_) => "SET-SCALE",
+            Instruction::ShiftFrequency(_) => "SHIFT-FREQUENCY",
+            Instruction::ShiftPhase(_) => "SHIFT-PHASE",
+            Instruction::Store(_) => "STORE",
+            Instruction::SwapPhases(_) => "SWAP-PHASES",
+            Instruction::UnaryLogic(unary_logic) => unary_logic.name(),
+            Instruction::WaveformDefinition(_) => "DEFWAVEFORM",
+            Instruction::Wait() => "WAIT",
+        }
+    }
 }
 
 /// What purpose an instruction serves in the program from a [Quil-T] perspective.
