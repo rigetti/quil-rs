@@ -425,23 +425,23 @@ pub struct ResetCalibrationIdentifier {
     /// The Quil-T name of the reset, if any.
     pub name: Option<String>,
 
-    /// The qubit which is being reset.
-    pub qubit: Qubit,
+    /// The qubit which is being reset, if specified.
+    pub qubit: Option<Qubit>,
 }
 
 impl ResetCalibrationIdentifier {
-    pub const fn new(name: Option<String>, qubit: Qubit) -> Self {
+    pub const fn new(name: Option<String>, qubit: Option<Qubit>) -> Self {
         Self { name, qubit }
     }
 }
 
 impl CalibrationSignature for ResetCalibrationIdentifier {
-    type Signature<'a> = (Option<&'a str>, &'a Qubit);
+    type Signature<'a> = (Option<&'a str>, Option<&'a Qubit>);
 
     fn signature(&self) -> Self::Signature<'_> {
         let Self { name, qubit } = self;
 
-        (name.as_deref(), qubit)
+        (name.as_deref(), qubit.as_ref())
     }
 
     fn has_signature(&self, signature: &Self::Signature<'_>) -> bool {
@@ -462,7 +462,10 @@ impl Quil for ResetCalibrationIdentifier {
             write!(f, "!{name}")?;
         }
         write!(f, " ")?;
-        qubit.write(f, fall_back_to_debug)
+        if let Some(qubit) = qubit {
+            qubit.write(f, fall_back_to_debug)?;
+        }
+        Ok(())
     }
 }
 
@@ -642,7 +645,7 @@ mod test_reset_calibration_definition {
         ResetCalibrationDefinition {
             identifier: ResetCalibrationIdentifier {
                 name: None,
-                qubit: Qubit::Fixed(0),
+                qubit: Some(Qubit::Fixed(0)),
             },
             instructions: vec![Instruction::Gate(Gate {
                 name: "X".to_string(),
@@ -657,7 +660,7 @@ mod test_reset_calibration_definition {
         ResetCalibrationDefinition {
             identifier: ResetCalibrationIdentifier {
                 name: Some("midcircuit".to_string()),
-                qubit: Qubit::Fixed(0),
+                qubit: Some(Qubit::Fixed(0)),
             },
             instructions: vec![Instruction::Gate(Gate {
                 name: "X".to_string(),
@@ -672,7 +675,7 @@ mod test_reset_calibration_definition {
         ResetCalibrationDefinition {
             identifier: ResetCalibrationIdentifier {
                 name: None,
-                qubit: Qubit::Fixed(0),
+                qubit: Some(Qubit::Fixed(0)),
             },
             instructions: vec![Instruction::Gate(Gate {
                 name: "X".to_string(),
@@ -687,7 +690,7 @@ mod test_reset_calibration_definition {
         ResetCalibrationDefinition {
             identifier: ResetCalibrationIdentifier {
                 name: Some("midcircuit".to_string()),
-                qubit: Qubit::Fixed(0),
+                qubit: Some(Qubit::Fixed(0)),
             },
             instructions: vec![Instruction::Gate(Gate {
                 name: "X".to_string(),
@@ -702,7 +705,7 @@ mod test_reset_calibration_definition {
         ResetCalibrationDefinition {
             identifier: ResetCalibrationIdentifier {
                 name: None,
-                qubit: Qubit::Variable("q".to_string()),
+                qubit: Some(Qubit::Variable("q".to_string())),
             },
             instructions: vec![Instruction::Gate(Gate {
                 name: "X".to_string(),
@@ -716,7 +719,7 @@ mod test_reset_calibration_definition {
         ResetCalibrationDefinition {
             identifier: ResetCalibrationIdentifier {
                 name: Some("midcircuit".to_string()),
-                qubit: Qubit::Variable("q".to_string()),
+                qubit: Some(Qubit::Variable("q".to_string())),
             },
             instructions: vec![Instruction::Gate(Gate {
                 name: "X".to_string(),
@@ -730,7 +733,7 @@ mod test_reset_calibration_definition {
         ResetCalibrationDefinition {
             identifier: ResetCalibrationIdentifier {
                 name: None,
-                qubit: Qubit::Variable("q".to_string()),
+                qubit: Some(Qubit::Variable("q".to_string())),
             },
             instructions: vec![Instruction::Gate(Gate {
                 name: "X".to_string(),
@@ -744,7 +747,7 @@ mod test_reset_calibration_definition {
         ResetCalibrationDefinition {
             identifier: ResetCalibrationIdentifier {
                 name: Some("midcircuit".to_string()),
-                qubit: Qubit::Variable("q".to_string()),
+                qubit: Some(Qubit::Variable("q".to_string())),
             },
             instructions: vec![Instruction::Gate(Gate {
                 name: "X".to_string(),

@@ -549,7 +549,10 @@ impl Program {
         for (index, instruction) in self.instructions.iter().enumerate() {
             let index = InstructionIndex(index);
 
-            match self.calibrations.expand_with_detail(instruction, &[])? {
+            match self
+                .calibrations
+                .expand_with_detail(instruction, &[], self.get_used_qubits())?
+            {
                 Some(expanded) => {
                     new_program.append_calibration_expansion_output_inner(
                         expanded,
@@ -1415,7 +1418,7 @@ NOP
                         calibration_used: CalibrationSource::ResetCalibration(
                             ResetCalibrationIdentifier {
                                 name: Some("foo".to_string()),
-                                qubit: Qubit::Fixed(0),
+                                qubit: Some(Qubit::Fixed(0)),
                             },
                         ),
                         range: InstructionIndex(0)..InstructionIndex(1),

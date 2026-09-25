@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::iter::FusedIterator;
 use std::ops::Range;
 
@@ -323,8 +323,9 @@ impl Calibrations {
         &self,
         instruction: &Instruction,
         previous_calibrations: &[Instruction],
+        qubits_available: &HashSet<Qubit>,
     ) -> Result<Option<Vec<Instruction>>, ProgramError> {
-        self.expand_inner(instruction, previous_calibrations, false)
+        self.expand_inner(instruction, previous_calibrations, qubits_available, false)
             .map(|expansion| expansion.map(|expansion| expansion.new_instructions))
     }
 
@@ -337,8 +338,9 @@ impl Calibrations {
         &self,
         instruction: &Instruction,
         previous_calibrations: &[Instruction],
+        qubits_available: &HashSet<Qubit>,
     ) -> Result<Option<CalibrationExpansionOutput>, ProgramError> {
-        self.expand_inner(instruction, previous_calibrations, true)
+        self.expand_inner(instruction, previous_calibrations, qubits_available, true)
     }
 
     /// Expand an instruction, returning an error if a calibration directly or indirectly
@@ -353,6 +355,7 @@ impl Calibrations {
         &self,
         instruction: &Instruction,
         previous_calibrations: &[Instruction],
+        qubits_available: &HashSet<Qubit>,
         build_source_map: bool,
     ) -> Result<Option<CalibrationExpansionOutput>, ProgramError> {
         if previous_calibrations.contains(instruction) {
@@ -493,17 +496,44 @@ impl Calibrations {
             Instruction::Reset(reset) => {
                 let matching_calibration = self.get_match_for_reset(reset);
 
-                matching_calibration.map(
-                    |ResetCalibrationDefinition {
-                         identifier,
-                         instructions,
-                     }| {
-                        (
-                            instructions.clone(),
-                            CalibrationSource::ResetCalibration(identifier.clone()),
-                        )
-                    },
-                )
+                matching_calibration
+                    .cloned()
+                    .or_else(|| {
+                        if reset.qubit.is_none() {
+                            let identifier = ResetCalibrationIdentifier {
+                                name: reset.name.clone(),
+                                qubit: None,
+                            };
+                            let instructions = qubits_available
+                                .iter()
+                                .cloned()
+                                .map(|qubit| {
+                                    Instruction::Reset(Reset {
+                                        name: reset.name.clone(),
+                                        qubit: Some(qubit),
+                                    })
+                                })
+                                .collect();
+
+                            Some(ResetCalibrationDefinition {
+                                identifier,
+                                instructions,
+                            })
+                        } else {
+                            None
+                        }
+                    })
+                    .map(
+                        |ResetCalibrationDefinition {
+                             identifier,
+                             instructions,
+                         }| {
+                            (
+                                instructions,
+                                CalibrationSource::ResetCalibration(identifier),
+                            )
+                        },
+                    )
             }
             _ => None,
         };
@@ -513,13 +543,19 @@ impl Calibrations {
         calibration_path.push(instruction.clone());
         calibration_path.extend_from_slice(previous_calibrations);
 
-        self.recursively_expand_inner(expansion_result, &calibration_path, build_source_map)
+        self.recursively_expand_inner(
+            expansion_result,
+            &calibration_path,
+            qubits_available,
+            build_source_map,
+        )
     }
 
     fn recursively_expand_inner(
         &self,
         expansion_result: Option<(Vec<Instruction>, CalibrationSource)>,
         calibration_path: &[Instruction],
+        qubits_available: &HashSet<Qubit>,
         build_source_map: bool,
     ) -> Result<Option<CalibrationExpansionOutput>, ProgramError> {
         Ok(match expansion_result {
@@ -534,8 +570,12 @@ impl Calibrations {
                 };
 
                 for (expanded_index, instruction) in instructions.into_iter().enumerate() {
-                    let expanded_instructions =
-                        self.expand_inner(&instruction, calibration_path, build_source_map)?;
+                    let expanded_instructions = self.expand_inner(
+                        &instruction,
+                        calibration_path,
+                        qubits_available,
+                        build_source_map,
+                    )?;
                     match expanded_instructions {
                         Some(mut output) => {
                             if build_source_map {
@@ -680,11 +720,6 @@ impl Calibrations {
     pub fn get_match_for_reset(&self, reset: &Reset) -> Option<&ResetCalibrationDefinition> {
         let Reset { name, qubit } = reset;
 
-        let Some(qubit) = qubit else {
-            // TODO: how to expand global reset?
-            return None;
-        };
-
         // Find the last matching measurement calibration, but prefer an exact qubit match to a
         // wildcard qubit match.
         let mut wildcard_match = None;
@@ -695,22 +730,30 @@ impl Calibrations {
             // reverse iteration to facilitate early return
             .rev()
         {
-            match (qubit, &potential_calibration.identifier.qubit) {
-                (left @ Qubit::Fixed(_), right @ Qubit::Fixed(_)) if left == right => {
+            match (
+                qubit.as_ref(),
+                potential_calibration.identifier.qubit.as_ref(),
+            ) {
+                (None, None) => {
+                    return Some(potential_calibration);
+                }
+                (left @ Some(Qubit::Fixed(_)), right @ Some(Qubit::Fixed(_))) if left == right => {
                     return Some(potential_calibration);
                 }
 
-                (Qubit::Variable(_), Qubit::Variable(_))
-                | (Qubit::Fixed(_), Qubit::Variable(_)) => {
+                (Some(Qubit::Variable(_)), Some(Qubit::Variable(_)))
+                | (Some(Qubit::Fixed(_)), Some(Qubit::Variable(_))) => {
                     if wildcard_match.is_none() {
                         wildcard_match = Some(potential_calibration)
                     }
                 }
 
-                (Qubit::Fixed(_), Qubit::Fixed(_))
-                | (Qubit::Variable(_), Qubit::Fixed(_))
-                | (_, Qubit::Placeholder(_))
-                | (Qubit::Placeholder(_), _) => {}
+                (None, Some(_))
+                | (Some(_), None)
+                | (Some(Qubit::Fixed(_)), Some(Qubit::Fixed(_)))
+                | (Some(Qubit::Variable(_)), Some(Qubit::Fixed(_)))
+                | (_, Some(Qubit::Placeholder(_)))
+                | (Some(Qubit::Placeholder(_)), _) => {}
             }
         }
 
@@ -851,6 +894,36 @@ mod tests {
             "DEFCAL RESET 1:\n",
             "    PRAGMA INCORRECT_QUBIT\n",
             "RESET 0\n",
+        ),
+    )]
+    #[case(
+        "Global-Reset-Calibration-Implicit",
+        concat!(
+            "DEFCAL RESET 0:\n",
+            "    PRAGMA ZERO\n",
+            "DEFCAL RESET 1:\n",
+            "    PRAGMA ONE\n",
+            "DEFCAL RESET 2:\n",
+            "    PRAGMA TWO\n",
+            "RESET\n",
+            "RX 0\n",
+            "RX 1\n",
+        ),
+    )]
+    #[case(
+        "Global-Reset-Calibration-Explicit",
+        concat!(
+            "DEFCAL RESET:\n",
+            "    PRAGMA CORRECT\n",
+            "DEFCAL RESET 0:\n",
+            "    PRAGMA INCORRECT_PRECEDENCE\n",
+            "DEFCAL RESET 1:\n",
+            "    PRAGMA INCORRECT_PRECEDENCE\n",
+            "DEFCAL RESET 2:\n",
+            "    PRAGMA INCORRECT_PRECEDENCE\n",
+            "RESET\n",
+            "RX 0\n",
+            "RX 1\n",
         ),
     )]
     #[case(
@@ -996,7 +1069,7 @@ X 0
         let instruction = program.instructions.last().unwrap();
         let expansion = program
             .calibrations
-            .expand_with_detail(instruction, &[])
+            .expand_with_detail(instruction, &[], program.get_used_qubits())
             .unwrap();
         let expected = CalibrationExpansionOutput {
             new_instructions: vec![

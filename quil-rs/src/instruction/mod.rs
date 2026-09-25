@@ -718,16 +718,17 @@ impl Instruction {
                     .collect()
             }
             Instruction::Measurement(measurement) => vec![&measurement.qubit],
-            Instruction::ResetCalibrationDefinition(reset_calibration) => {
-                iter::once(&reset_calibration.identifier.qubit)
-                    .chain(
-                        reset_calibration
-                            .instructions
-                            .iter()
-                            .flat_map(|inst| inst.get_qubits()),
-                    )
-                    .collect()
-            }
+            Instruction::ResetCalibrationDefinition(reset_calibration) => reset_calibration
+                .identifier
+                .qubit
+                .iter()
+                .chain(
+                    reset_calibration
+                        .instructions
+                        .iter()
+                        .flat_map(|inst| inst.get_qubits()),
+                )
+                .collect(),
             Instruction::Reset(reset) => match &reset.qubit {
                 Some(qubit) => vec![qubit],
                 None => vec![],
@@ -767,16 +768,17 @@ impl Instruction {
                     .collect()
             }
             Instruction::Measurement(measurement) => vec![&mut measurement.qubit],
-            Instruction::ResetCalibrationDefinition(reset_calibration) => {
-                iter::once(&mut reset_calibration.identifier.qubit)
-                    .chain(
-                        reset_calibration
-                            .instructions
-                            .iter_mut()
-                            .flat_map(|inst| inst.get_qubits_mut()),
-                    )
-                    .collect()
-            }
+            Instruction::ResetCalibrationDefinition(reset_calibration) => reset_calibration
+                .identifier
+                .qubit
+                .iter_mut()
+                .chain(
+                    reset_calibration
+                        .instructions
+                        .iter_mut()
+                        .flat_map(|inst| inst.get_qubits_mut()),
+                )
+                .collect(),
             Instruction::Reset(reset) => match &mut reset.qubit {
                 Some(qubit) => vec![qubit],
                 None => vec![],

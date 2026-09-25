@@ -261,7 +261,7 @@ pub(crate) fn parse_defcal_reset<'a>(
     input: ParserInput<'a>,
 ) -> InternalParserResult<'a, Instruction> {
     let (input, name) = opt(preceded(token!(Bang), token!(Identifier(name))))(input)?;
-    let (input, qubit) = parse_qubit(input)?;
+    let (input, qubit) = opt(parse_qubit)(input)?;
     let (input, _) = token!(Colon)(input)?;
     let (input, instructions) = parse_block(input)?;
     Ok((
