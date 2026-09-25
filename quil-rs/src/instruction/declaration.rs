@@ -264,7 +264,7 @@ mod test_declaration {
         frozen,
         hash,
         subclass,
-        skip_from_py_object
+        from_py_object
     )
 )]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]

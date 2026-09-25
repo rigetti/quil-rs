@@ -127,7 +127,7 @@ class Arithmetic(Instruction):
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[ArithmeticOperator, MemoryReference, ArithmeticOperand]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, operator: ArithmeticOperator, destination: MemoryReference, source: ArithmeticOperand) -> Arithmetic: ...
+    def __new__(cls, operator: ArithmeticOperator, destination: MemoryReference, source: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration) -> Arithmetic: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -216,7 +216,7 @@ class BinaryLogic(Instruction):
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[BinaryOperator, MemoryReference, BinaryOperand]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, operator: BinaryOperator, destination: MemoryReference, source: BinaryOperand) -> BinaryLogic: ...
+    def __new__(cls, operator: BinaryOperator, destination: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], source: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration) -> BinaryLogic: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -232,6 +232,7 @@ class BinaryLogic(Instruction):
 
 class BinaryOperand:
     def __getnewargs__(self) -> builtins.tuple[builtins.int | MemoryReference]: ...
+    def __new__(cls, operand: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration) -> BinaryOperand: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -661,8 +662,6 @@ class DeclarationAt:
     
     You can get an instance of `DeclarationAt` by indexing a `Declaration`,
     and you can then use it in places where a `MemoryReference` is expected.
-    The underlying objects share the same `Declaration` memory
-    and can provide additional validation on bounds-checking.
     
     # Example
     
@@ -671,16 +670,16 @@ class DeclarationAt:
     
     ```python
     instructions = [
-        top := Label("top"),                                        # LABEL @top
         counter := Declaration("counter", ScalarType.INTEGER),      # DECLARE counter INTEGER
         counter[0].move(10),                                        # MOVE counter[0] 10
+        top := Label("top"),                                        # LABEL @top
         # additional instructions...
-        counter[0] - 1,                                             # SUB counter[0] 1
+        counter[0].sub(1),                                          # SUB counter[0] 1
         JumpWhen(top, counter[0]),                                  # JUMP-WHEN @top counter[0]
     ]
     ```
     """
-    def add(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration) -> Arithmetic:
+    def add(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Arithmetic:
         r"""
         Return a new `Arithmetic` instruction representing `ADD self other`.
         
@@ -695,13 +694,64 @@ class DeclarationAt:
         assert arith.to_quil() == "ADD x[2] 5"
         ```
         """
-    def div(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration) -> Arithmetic: ...
-    def move(self, source: ArithmeticOperand) -> Move:
+    def and(self, other: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> BinaryLogic: ...
+    def convert(self, source: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Convert:
         r"""
-        Return a new `Move` instruction representing `self = source`.
+        Return a new `Convert` instruction representing `self = (T)source`.
+        
+        This is like a `Move` instruction with a cast from the source type to the destination type.
+        Note that in Quil, the source of a `CONVERT` instruction MUST be a `MemoryReference`,
+        so this method only accepts `MemoryReference`s and things that can be converted into them,
+        not arbitrary numeric literals.
+        
+        # Example
+        
+        ```python
+        from quil.instructions import Declaration, ScalarType, Convert
+        
+        x = Declaration("x", ScalarType.INTEGER, 3)
+        y = Declaration("y", ScalarType.REAL, 3)
+        cvt = x[2].convert(y[1])
+        assert isinstance(cvt, Convert)
+        assert cvt.to_quil() == "CONVERT x[2] y[1]"  # x[2] := (INTEGER) y[1]
+        ```
         """
-    def mul(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration) -> Arithmetic: ...
-    def set(self, value: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration) -> Move:
+    def div(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Arithmetic: ...
+    def exchange(self, other: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Exchange:
+        r"""
+        Return a new `Exchange` instruction representing the exchange of `self` and `other`.
+        
+        # Example
+        
+        ```Python
+        from quil.instructions import Declaration, ScalarType, Exchange
+        
+        x = Declaration("x", ScalarType.INTEGER, 3)
+        y = Declaration("y", ScalarType.INTEGER, 3)
+        ex = x[2].exchange(y[1])
+        assert isinstance(ex, Exchange)
+        assert ex.to_quil() == "EXCHANGE x[2] y[1]"  # x[2] <-> y[1]
+        ```
+        """
+    def ior(self, other: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> BinaryLogic: ...
+    def load_from(self, source: Declaration, offset: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Load:
+        r"""
+        Return a new `Load` instruction representing the indirect load `self = source[offset]`.
+        
+        # Example
+        
+        ```python
+        from quil.instructions import Declaration, ScalarType, Load
+        
+        x = Declaration("x", ScalarType.INTEGER, 3)
+        y = Declaration("y", ScalarType.INTEGER, 3)
+        z = Declaration("z", ScalarType.INTEGER, 3)
+        ld = x[2].load_from(y, z[1])
+        assert isinstance(ld, Load)
+        assert ld.to_quil() == "LOAD x[2] y z[1]"  # x[2] := y[z[1]]
+        ```
+        """
+    def move(self, value: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Move:
         r"""
         Return a new `Move` instruction representing `self = value`.
         
@@ -711,12 +761,60 @@ class DeclarationAt:
         from quil.instructions import Declaration, ScalarType, Move
         
         x = Declaration("x", ScalarType.INTEGER, 3)
-        mv = x[2].set(5)
+        mv = x[2].move(5)
         assert isinstance(mv, Move)
-        assert mv.to_quil() == "MOVE x[2] 5"
+        assert mv.to_quil() == "MOVE x[2] 5"  # x[2] := 5
         ```
         """
-    def sub(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration) -> Arithmetic: ...
+    def mul(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Arithmetic: ...
+    def neg(self) -> UnaryLogic: ...
+    def not(self) -> UnaryLogic:
+        r"""
+        Return a new instruction representing a logical `NOT` of this memory reference.
+        
+        # Example
+        
+        ```python
+        from quil.instructions import Declaration, ScalarType, UnaryLogic
+        
+        x = Declaration("x", ScalarType.INTEGER, 3)
+        n = x[2].not()
+        assert isinstance(n, UnaryLogic)
+        assert n.to_quil() == "NOT x[2]"  # x[2] := ~x[2]
+        ```
+        """
+    def store_eq(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Comparison:
+        r"""
+        Return a new `Comparison` instruction representing `self = (a == b)`.
+        
+        Note that `self` must represent a `MemoryReference` of type `BIT`,
+        the left-hand side of the comparison must be a `MemoryReference`-like object,
+        and the right-hand side must have a type compatible with the left-hand side.
+        See the Quil specification for more details on valid comparisons.
+        """
+    def store_ge(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Comparison: ...
+    def store_gt(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Comparison: ...
+    def store_le(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Comparison: ...
+    def store_lt(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Comparison: ...
+    def store_to(self, destination: Declaration, offset: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Store:
+        r"""
+        Return a new `Store` instruction representing the indirect store `destination[offset] = self`.
+        
+        # Example
+        
+        ```python
+        from quil.instructions import Declaration, ScalarType, Store
+        
+        x = Declaration("x", ScalarType.INTEGER, 3)
+        y = Declaration("y", ScalarType.INTEGER, 3)
+        z = Declaration("z", ScalarType.INTEGER, 3)
+        st = x[2].store_to(y, z[1])
+        assert isinstance(st, Store)
+        assert st.to_quil() == "STORE y z[1] x[2]"  # y[z[1]] := x[2]
+        ```
+        """
+    def sub(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Arithmetic: ...
+    def xor(self, other: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> BinaryLogic: ...
 
 class DefGateSequence:
     r"""
@@ -1638,7 +1736,7 @@ class MemoryReference:
         
         This requires that `self` has an `index` of 0.
         """
-    def __getnewargs__(self) -> tuple[str, int, int | None]: ...
+    def __getnewargs__(self) -> tuple[str, int]: ...
     def __hash__(self) -> builtins.int: ...
     def __mul__(self, other: ArithmeticOperand) -> Arithmetic: ...
     def __new__(cls, name: builtins.str, index: builtins.int = 0, declared_size: typing.Optional[builtins.int] = None, *, offset: typing.Optional[builtins.int] = None) -> MemoryReference:

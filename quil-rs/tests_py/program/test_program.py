@@ -33,7 +33,7 @@ def test_construction():
     prog = Program()
     prog.add_instructions(
         counter := Declaration("counter", ScalarType.INTEGER),
-        counter[0].set(10),
+        counter[0].move(10),
         top := Label("top"),
         ro := Declaration("ro", "BIT", 2),
         H(0),
