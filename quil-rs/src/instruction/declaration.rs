@@ -336,9 +336,13 @@ pub struct Load {
     pub offset: MemoryReference,
 }
 
-pickleable_new! {
-    impl Load {
-        pub fn new(destination: MemoryReference, source: String, offset: MemoryReference);
+impl Load {
+    pub fn new(destination: MemoryReference, source: String, offset: MemoryReference) -> Self {
+        Self {
+            destination,
+            source,
+            offset,
+        }
     }
 }
 
@@ -377,9 +381,9 @@ pub struct Store {
     pub source: ArithmeticOperand,
 }
 
-pickleable_new! {
-    impl Store {
-        pub fn new(destination: String, offset: MemoryReference, source: ArithmeticOperand);
+impl Store {
+    pub fn new(destination: String, offset: MemoryReference, source: ArithmeticOperand) -> Self {
+        Self { destination, offset, source }
     }
 }
 
