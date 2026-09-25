@@ -72,11 +72,12 @@ impl Quil for CalibrationDefinition {
         f: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> crate::quil::ToQuilResult<()> {
-        self.identifier.write(f, fall_back_to_debug)?;
-        writeln!(f, ":")?;
+        let Self {
+            identifier,
+            instructions,
+        } = self;
 
-        write_instruction_block(f, fall_back_to_debug, &self.instructions)?;
-        Ok(())
+        write_calibration_definition(f, fall_back_to_debug, identifier, instructions)
     }
 }
 
@@ -264,11 +265,12 @@ impl Quil for MeasureCalibrationDefinition {
         f: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> crate::quil::ToQuilResult<()> {
-        self.identifier.write(f, fall_back_to_debug)?;
-        writeln!(f, ":")?;
+        let Self {
+            identifier,
+            instructions,
+        } = self;
 
-        write_instruction_block(f, fall_back_to_debug, &self.instructions)?;
-        Ok(())
+        write_calibration_definition(f, fall_back_to_debug, identifier, instructions)
     }
 }
 
@@ -396,11 +398,12 @@ impl Quil for ResetCalibrationDefinition {
         f: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> crate::quil::ToQuilResult<()> {
-        self.identifier.write(f, fall_back_to_debug)?;
-        writeln!(f, ":")?;
+        let Self {
+            identifier,
+            instructions,
+        } = self;
 
-        write_instruction_block(f, fall_back_to_debug, &self.instructions)?;
-        Ok(())
+        write_calibration_definition(f, fall_back_to_debug, identifier, instructions)
     }
 }
 
@@ -461,6 +464,19 @@ impl Quil for ResetCalibrationIdentifier {
         write!(f, " ")?;
         qubit.write(f, fall_back_to_debug)
     }
+}
+
+fn write_calibration_definition(
+    f: &mut impl std::fmt::Write,
+    fall_back_to_debug: bool,
+    identifier: &impl Quil,
+    instructions: &[Instruction],
+) -> crate::quil::ToQuilResult<()> {
+    identifier.write(f, fall_back_to_debug)?;
+    writeln!(f, ":")?;
+
+    write_instruction_block(f, fall_back_to_debug, instructions)?;
+    Ok(())
 }
 
 #[cfg(test)]

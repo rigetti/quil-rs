@@ -493,8 +493,6 @@ impl Calibrations {
             Instruction::Reset(reset) => {
                 let matching_calibration = self.get_match_for_reset(reset);
 
-                dbg!(matching_calibration);
-
                 matching_calibration.map(
                     |ResetCalibrationDefinition {
                          identifier,
@@ -670,35 +668,16 @@ impl Calibrations {
         exact.or(wildcard)
     }
 
-    // TODO: refine
-    /// Returns the last-specified [`MeasureCalibrationDefinition`] that matches the target
+    /// Returns the last-specified [`ResetCalibrationDefinition`] that matches the target
     /// qubit (if any), or otherwise the last-specified one that specified no qubit.
     ///
     /// If multiple calibrations match the measurement, the precedence is as follows:
     ///
     ///   1. Match fixed qubit.
     ///   2. Match variable qubit.
-    ///   3. Match no qubit.
     ///
     /// In the case of multiple calibrations with equal precedence, the last one wins.
     pub fn get_match_for_reset(&self, reset: &Reset) -> Option<&ResetCalibrationDefinition> {
-        /// Utility type: when collecting from an iterator, return only the first value it produces.
-        struct First<T>(Option<T>);
-
-        impl<T> Default for First<T> {
-            fn default() -> Self {
-                Self(None)
-            }
-        }
-
-        impl<A> Extend<A> for First<A> {
-            fn extend<T: IntoIterator<Item = A>>(&mut self, iter: T) {
-                if self.0.is_none() {
-                    self.0 = iter.into_iter().next()
-                }
-            }
-        }
-
         let Reset { name, qubit } = reset;
 
         let Some(qubit) = qubit else {
@@ -708,34 +687,37 @@ impl Calibrations {
 
         // Find the last matching measurement calibration, but prefer an exact qubit match to a
         // wildcard qubit match.
-        let (First(exact), First(wildcard)) = self
+        let mut wildcard_match = None;
+        for potential_calibration in self
             .iter_reset_calibrations()
+            // get the calibrations with matching names
+            .filter(|calibration| &calibration.identifier.name == name)
+            // reverse iteration to facilitate early return
             .rev()
-            .filter_map(|calibration| {
-                let identifier = &calibration.identifier;
-
-                if !(name == &identifier.name) {
-                    return None;
+        {
+            match (qubit, &potential_calibration.identifier.qubit) {
+                (left @ Qubit::Fixed(_), right @ Qubit::Fixed(_)) if left == right => {
+                    return Some(potential_calibration);
                 }
 
-                match &identifier.qubit {
-                    fixed @ Qubit::Fixed(_) if qubit == fixed => Some((calibration, true)),
-                    Qubit::Variable(_) => Some((calibration, false)),
-                    Qubit::Fixed(_) | Qubit::Placeholder(_) => None,
+                (Qubit::Variable(_), Qubit::Variable(_))
+                | (Qubit::Fixed(_), Qubit::Variable(_)) => {
+                    if wildcard_match.is_none() {
+                        wildcard_match = Some(potential_calibration)
+                    }
                 }
-            })
-            .partition_map(|(calibration, exact)| {
-                if exact {
-                    Either::Left(calibration)
-                } else {
-                    Either::Right(calibration)
-                }
-            });
 
-        exact.or(wildcard)
+                (Qubit::Fixed(_), Qubit::Fixed(_))
+                | (Qubit::Variable(_), Qubit::Fixed(_))
+                | (_, Qubit::Placeholder(_))
+                | (Qubit::Placeholder(_), _) => {}
+            }
+        }
+
+        wildcard_match
     }
 
-    /// Return the final calibration which matches the gate per the QuilT specification:
+    /// Return the final calibration which matches the gate per the Quil-T specification:
     ///
     /// A calibration matches a gate if:
     /// 1. It has the same name
@@ -978,7 +960,6 @@ mod tests {
             "FENCES 0 1\n",
         )
     )]
-    // TODO: reset expansion test
     fn test_expansion(#[case] description: &str, #[case] input: &str) {
         let program = Program::from_str(input).unwrap();
         let calibrated_program = program.expand_calibrations().unwrap();
