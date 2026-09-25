@@ -28,9 +28,9 @@ pub struct Pragma {
     pub data: Option<String>,
 }
 
-pickleable_new! {
-    impl Pragma {
-        pub fn new(name: String, arguments: Vec<PragmaArgument>, data: Option<String>);
+impl Pragma {
+    pub fn new(name: String, arguments: Vec<PragmaArgument>, data: Option<String>) -> Self {
+        Self { name, arguments, data }
     }
 }
 
@@ -56,7 +56,7 @@ impl Quil for Pragma {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, from_py_object)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, skip_from_py_object)
 )]
 pub enum PragmaArgument {
     Identifier(String),

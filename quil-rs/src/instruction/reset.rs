@@ -3,7 +3,7 @@ use crate::instruction::quilpy::PyInstruction;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::gen_stub_pyclass;
 
-use crate::{pickleable_new, quil::Quil};
+use crate::quil::Quil;
 
 use super::Qubit;
 
@@ -24,12 +24,6 @@ use super::Qubit;
 )]
 pub struct Reset {
     pub qubit: Option<Qubit>,
-}
-
-pickleable_new! {
-    impl Reset {
-        pub fn new(qubit: Option<Qubit>);
-    }
 }
 
 impl Quil for Reset {

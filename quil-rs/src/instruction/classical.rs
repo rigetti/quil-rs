@@ -5,7 +5,7 @@ use pyo3_stub_gen::derive::{
 
 use super::MemoryReference;
 
-use crate::{floating_point_eq, pickleable_new, quil::Quil};
+use crate::{floating_point_eq, quil::Quil};
 
 #[cfg(feature = "python")]
 use crate::instruction::quilpy::PyInstruction;
@@ -451,14 +451,14 @@ pub struct Comparison {
     pub rhs: ComparisonOperand,
 }
 
-pickleable_new! {
-    impl Comparison {
-        pub fn new(
-            operator: ComparisonOperator,
-            destination: MemoryReference,
-            lhs: MemoryReference,
-            rhs: ComparisonOperand,
-        );
+impl Comparison {
+    pub fn new(
+        operator: ComparisonOperator,
+        destination: MemoryReference,
+        lhs: MemoryReference,
+        rhs: ComparisonOperand,
+    ) -> Self {
+        Self { operator, destination, lhs, rhs }
     }
 }
 

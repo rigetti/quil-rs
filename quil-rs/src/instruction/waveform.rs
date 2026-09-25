@@ -2,14 +2,9 @@ use indexmap::IndexMap;
 
 #[cfg(feature = "python")]
 use crate::instruction::quilpy::PyInstruction;
-#[cfg(not(feature = "python"))]
-use optipy::strip_pyo3;
-#[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::{
     expression::Expression,
-    pickleable_new,
     quil::{write_join_quil, Quil, INDENT},
 };
 
@@ -64,9 +59,9 @@ pub struct WaveformDefinition {
     pub definition: Waveform,
 }
 
-pickleable_new! {
-    impl WaveformDefinition {
-        pub fn new(name: String, definition: Waveform);
+impl WaveformDefinition {
+    pub fn new(name: String, definition: Waveform) -> Self {
+        Self { name, definition }
     }
 }
 
