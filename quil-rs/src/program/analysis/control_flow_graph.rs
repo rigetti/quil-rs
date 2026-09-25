@@ -252,7 +252,11 @@ impl<'p> BasicBlock<'p> {
 
         for (uncalibrated_instruction_index, instruction) in self.instructions.iter().enumerate() {
             let first_calibrated_instruction_index = calibrated_block_instructions.len();
-            if let Some(expanded) = program.calibrations.expand(instruction, &[])? {
+            if let Some(expanded) =
+                program
+                    .calibrations
+                    .expand(instruction, &[], program.get_used_qubits())?
+            {
                 calibrated_block_instructions.extend(expanded);
             } else {
                 calibrated_block_instructions.push((*instruction).clone());
@@ -532,6 +536,7 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
                 | Instruction::GateDefinition(_)
                 | Instruction::Include(_)
                 | Instruction::MeasureCalibrationDefinition(_)
+                | Instruction::ResetCalibrationDefinition(_)
                 | Instruction::WaveformDefinition(_) => {}
 
                 Instruction::Label(Label { target }) => {

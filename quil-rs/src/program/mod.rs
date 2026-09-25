@@ -270,6 +270,9 @@ impl Program {
                 self.calibrations
                     .insert_measurement_calibration(calibration);
             }
+            Instruction::ResetCalibrationDefinition(calibration) => {
+                self.calibrations.insert_reset_calibration(calibration);
+            }
             Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => {
                 self.waveforms.insert(name, definition);
             }
@@ -546,7 +549,10 @@ impl Program {
         for (index, instruction) in self.instructions.iter().enumerate() {
             let index = InstructionIndex(index);
 
-            match self.calibrations.expand_with_detail(instruction, &[])? {
+            match self
+                .calibrations
+                .expand_with_detail(instruction, &[], self.get_used_qubits())?
+            {
                 Some(expanded) => {
                     new_program.append_calibration_expansion_output_inner(
                         expanded,
@@ -1204,8 +1210,8 @@ mod tests {
             CalibrationIdentifier, Call, Declaration, DefGateSequence, DefaultHandler,
             ExternSignatureMap, Gate, GateDefinition, GateSpecification, Instruction,
             InstructionHandler, Jump, JumpUnless, JumpWhen, Label, Matrix, MemoryReference, Qubit,
-            QubitPlaceholder, ScalarType, Target, TargetPlaceholder, UnresolvedCallArgument,
-            Vector, RESERVED_PRAGMA_EXTERN,
+            QubitPlaceholder, ResetCalibrationIdentifier, ScalarType, Target, TargetPlaceholder,
+            UnresolvedCallArgument, Vector, RESERVED_PRAGMA_EXTERN,
         },
         program::{
             calibration::{CalibrationExpansion, CalibrationSource},
@@ -1372,6 +1378,10 @@ DEFCAL DECLAREMEM:
     DECLARE mem BIT[1]
     NOP
 
+DEFCAL RESET!foo 0:
+    NOP
+
+RESET!foo 0
 I 0
 PULSE 0 "a" custom_waveform
 I 0
@@ -1388,6 +1398,9 @@ DEFCAL I 0:
 DEFCAL DECLAREMEM:
     DECLARE mem BIT[1]
     NOP
+DEFCAL RESET!foo 0:
+    NOP
+NOP
 NOP
 NOP
 NOP
@@ -1402,6 +1415,24 @@ NOP
                 SourceMapEntry {
                     source_location: InstructionIndex(0),
                     target_location: ExpansionResult::Rewritten(CalibrationExpansion {
+                        calibration_used: CalibrationSource::ResetCalibration(
+                            ResetCalibrationIdentifier {
+                                name: Some("foo".to_string()),
+                                qubit: Some(Qubit::Fixed(0)),
+                            },
+                        ),
+                        range: InstructionIndex(0)..InstructionIndex(1),
+                        expansions: SourceMap {
+                            entries: vec![SourceMapEntry {
+                                source_location: InstructionIndex(0),
+                                target_location: ExpansionResult::Unmodified(InstructionIndex(0)),
+                            }],
+                        },
+                    }),
+                },
+                SourceMapEntry {
+                    source_location: InstructionIndex(1),
+                    target_location: ExpansionResult::Rewritten(CalibrationExpansion {
                         calibration_used: CalibrationIdentifier {
                             name: "I".to_string(),
                             qubits: vec![Qubit::Fixed(0)],
@@ -1409,7 +1440,7 @@ NOP
                             parameters: vec![],
                         }
                         .into(),
-                        range: InstructionIndex(0)..InstructionIndex(3),
+                        range: InstructionIndex(1)..InstructionIndex(4),
                         expansions: SourceMap {
                             entries: vec![
                                 SourceMapEntry {
@@ -1463,11 +1494,11 @@ NOP
                     }),
                 },
                 SourceMapEntry {
-                    source_location: InstructionIndex(1),
-                    target_location: ExpansionResult::Unmodified(InstructionIndex(3)),
+                    source_location: InstructionIndex(2),
+                    target_location: ExpansionResult::Unmodified(InstructionIndex(4)),
                 },
                 SourceMapEntry {
-                    source_location: InstructionIndex(2),
+                    source_location: InstructionIndex(3),
                     target_location: ExpansionResult::Rewritten(CalibrationExpansion {
                         calibration_used: CalibrationIdentifier {
                             name: "I".to_string(),
@@ -1476,7 +1507,7 @@ NOP
                             parameters: vec![],
                         }
                         .into(),
-                        range: InstructionIndex(4)..InstructionIndex(7),
+                        range: InstructionIndex(5)..InstructionIndex(8),
                         expansions: SourceMap {
                             entries: vec![
                                 SourceMapEntry {
@@ -2111,6 +2142,10 @@ DEFCAL MEASURE 0 addr:
 \tCAPTURE 0 \"ro_rx\" custom addr
 DEFCAL MEASURE 1 addr:
 \tCAPTURE 1 \"ro_rx\" custom addr
+DEFCAL RESET 0:
+\tCAPTURE 0 \"ro_rx\" custom foo
+DEFCAL RESET 1:
+\tCAPTURE 1 \"ro_rx\" custom foo
 DEFWAVEFORM custom:
 \t1,2
 DEFWAVEFORM custom2:

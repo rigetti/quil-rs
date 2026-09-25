@@ -27,7 +27,7 @@ use crate::{
         frame::{FrameMatchCondition, FrameMatchConditions},
         MatchedFrames, MemoryAccesses, MemoryAccessesError,
     },
-    quil::{write_join_quil, Quil, ToQuilResult},
+    quil::{write_join_quil, Quil, ToQuilResult, INDENT},
     Program,
 };
 
@@ -53,7 +53,8 @@ mod waveform;
 pub use self::{
     calibration::{
         CalibrationDefinition, CalibrationIdentifier, CalibrationSignature,
-        MeasureCalibrationDefinition, MeasureCalibrationIdentifier,
+        MeasureCalibrationDefinition, MeasureCalibrationIdentifier, ResetCalibrationDefinition,
+        ResetCalibrationIdentifier,
     },
     circuit::CircuitDefinition,
     classical::{
@@ -178,6 +179,7 @@ pub enum Instruction {
     Pragma(Pragma),
     Pulse(Pulse),
     RawCapture(RawCapture),
+    ResetCalibrationDefinition(ResetCalibrationDefinition),
     Reset(Reset),
     SetFrequency(SetFrequency),
     SetPhase(SetPhase),
@@ -205,6 +207,8 @@ impl Instruction {
             | Instruction::MeasureCalibrationDefinition(_)
             | Instruction::Pulse(_)
             | Instruction::RawCapture(_)
+            | Instruction::ResetCalibrationDefinition(_)
+            | Instruction::Reset(_)
             | Instruction::SetFrequency(_)
             | Instruction::SetPhase(_)
             | Instruction::SetScale(_)
@@ -234,7 +238,6 @@ impl Instruction {
             | Instruction::Move(_)
             | Instruction::Nop()
             | Instruction::Pragma(_)
-            | Instruction::Reset(_)
             | Instruction::Store(_)
             | Instruction::Wait()
             | Instruction::UnaryLogic(_) => false,
@@ -286,7 +289,7 @@ where
     I: IntoIterator<Item = &'i Q>,
     Q: Quil + 'i,
 {
-    write_join_quil(f, fall_back_to_debug, values, "\n", "\t")
+    write_join_quil(f, fall_back_to_debug, values, "\n", INDENT)
 }
 
 pub(crate) fn write_join(
@@ -411,6 +414,9 @@ impl Quil for Instruction {
             Instruction::Pulse(pulse) => pulse.write(f, fall_back_to_debug),
             Instruction::Pragma(pragma) => pragma.write(f, fall_back_to_debug),
             Instruction::RawCapture(raw_capture) => raw_capture.write(f, fall_back_to_debug),
+            Instruction::ResetCalibrationDefinition(reset_calibration) => {
+                reset_calibration.write(f, fall_back_to_debug)
+            }
             Instruction::Reset(reset) => reset.write(f, fall_back_to_debug),
             Instruction::SetFrequency(set_frequency) => set_frequency.write(f, fall_back_to_debug),
             Instruction::SetPhase(set_phase) => set_phase.write(f, fall_back_to_debug),
@@ -621,7 +627,7 @@ impl Instruction {
                 }),
                 blocked: None,
             }),
-            Instruction::Reset(Reset { qubit }) => {
+            Instruction::Reset(Reset { qubit, .. }) => {
                 let qubits = match qubit {
                     Some(qubit) => {
                         let mut set = HashSet::new();
@@ -677,6 +683,7 @@ impl Instruction {
             | Instruction::Move(_)
             | Instruction::Nop()
             | Instruction::Pragma(_)
+            | Instruction::ResetCalibrationDefinition(_)
             | Instruction::Store(_)
             | Instruction::UnaryLogic(_)
             | Instruction::WaveformDefinition(_)
@@ -711,6 +718,17 @@ impl Instruction {
                     .collect()
             }
             Instruction::Measurement(measurement) => vec![&measurement.qubit],
+            Instruction::ResetCalibrationDefinition(reset_calibration) => reset_calibration
+                .identifier
+                .qubit
+                .iter()
+                .chain(
+                    reset_calibration
+                        .instructions
+                        .iter()
+                        .flat_map(|inst| inst.get_qubits()),
+                )
+                .collect(),
             Instruction::Reset(reset) => match &reset.qubit {
                 Some(qubit) => vec![qubit],
                 None => vec![],
@@ -750,6 +768,17 @@ impl Instruction {
                     .collect()
             }
             Instruction::Measurement(measurement) => vec![&mut measurement.qubit],
+            Instruction::ResetCalibrationDefinition(reset_calibration) => reset_calibration
+                .identifier
+                .qubit
+                .iter_mut()
+                .chain(
+                    reset_calibration
+                        .instructions
+                        .iter_mut()
+                        .flat_map(|inst| inst.get_qubits_mut()),
+                )
+                .collect(),
             Instruction::Reset(reset) => match &mut reset.qubit {
                 Some(qubit) => vec![qubit],
                 None => vec![],
@@ -908,6 +937,7 @@ pub trait InstructionHandler {
 }
 
 /// The default instruction-handling behavior.
+// TODO: check RESET is treated as gate-level instruction
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct DefaultHandler;
 
@@ -938,6 +968,7 @@ impl InstructionHandler for DefaultHandler {
             | Instruction::Label(_)
             | Instruction::MeasureCalibrationDefinition(_)
             | Instruction::Measurement(_)
+            | Instruction::ResetCalibrationDefinition(_)
             | Instruction::WaveformDefinition(_) => InstructionRole::ProgramComposition,
 
             Instruction::Reset(_)
@@ -1252,6 +1283,10 @@ impl InstructionHandler for DefaultHandler {
                 qubit_variables: _,
             })
             | Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
+                instructions,
+                identifier: _,
+            })
+            | Instruction::ResetCalibrationDefinition(ResetCalibrationDefinition {
                 instructions,
                 identifier: _,
             }) => instructions
