@@ -878,7 +878,10 @@ impl<'a, 'py> FromPyObject<'a, 'py> for MemoryReferenceLike {
     }
 }
 
-
+// TODO(migration-guide):
+// - PyQuil v4 called `Arithmetic` `ArithmeticBinaryOp`
+// - The signature was `Arithmetic(left, right)`, with `operator` (called `op`)
+//   provided as a class attribute in subclasses.
 pickleable_new! {
     impl Arithmetic {
         fn __new__(
@@ -888,6 +891,31 @@ pickleable_new! {
         ) -> Arithmetic {
             Self::new(operator, destination, source.into())
         }
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Arithmetic {
+    #[pyo3(warn(message = "use `operator` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn op(&self) -> ArithmeticOperator {
+        self.operator
+    }
+
+    /// Get the destination [`MemoryReference`] for this arithmetic operation.
+    #[pyo3(warn(message = "use `destination` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn left(&self) -> MemoryReference {
+        self.destination.clone()
+    }
+
+    /// Get the source [`ArithmeticOperand`] for this arithmetic operation.
+    #[pyo3(warn(message = "use `source` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn right(&self) -> ArithmeticOperand {
+        self.source.clone()
     }
 }
 
@@ -936,6 +964,13 @@ impl BinaryOperand {
     }
 }
 
+// TODO(migration-guide):
+// - PyQuil v4 called `BinaryLogic` `LogicalBinaryOp` and had subclassed variants.
+// - The constructor took two parameters: `left` and `right`, which it exposed as properties.
+//   The `left` corresponds to the `destination`, and the `right` corresponds to the `source`.
+// - The operator was stored as a class attribute called `op`, defined within subclasses.
+// - As with many other classes, those properties were mutable;
+//   that's no longer the case because we intended for the class to be hashable.
 pickleable_new! {
     impl BinaryLogic {
         fn __new__(
@@ -945,6 +980,23 @@ pickleable_new! {
         ) -> BinaryLogic {
             Self::new(operator, destination.into(), source.into())
         }
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl BinaryLogic {
+    #[pyo3(warn(message = "use `destination` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn left(&self) -> MemoryReference {
+        self.destination.clone()
+    }
+
+    #[pyo3(warn(message = "use `source` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn right(&self) -> BinaryOperand {
+        self.source.clone()
     }
 }
 
@@ -1423,6 +1475,48 @@ impl<'py> ComparisonOperandLike<'py> {
 
 }
 
+// TODO(migration-guide):
+// - PyQuil v4 called `Convert` `ClassicalConvert`.
+// - The signature was `(left, right)`.
+pickleable_new! {
+    impl Convert {
+        fn __new__(
+            destination: MemoryReference as MemoryReferenceLike,
+            source: MemoryReference as MemoryReferenceLike,
+        ) -> Convert {
+            Self::new(destination.into(), source.into())
+        }
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Convert {
+    #[pyo3(warn(message = "use `destination` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn left(&self) -> MemoryReference {
+        self.destination.clone()
+    }
+
+    #[pyo3(warn(message = "use `source` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn right(&self) -> MemoryReference {
+        self.source.clone()
+    }
+}
+
+pickleable_new! {
+    impl Exchange {
+        fn __new__(
+            left: MemoryReference as MemoryReferenceLike,
+            right: MemoryReference as MemoryReferenceLike,
+        ) -> Exchange {
+            Self::new(left.into(), right.into())
+        }
+    }
+}
+
 #[cfg(feature = "stubs")]
 impl pyo3_stub_gen::PyStubType for ExternPragmaMap {
     fn type_output() -> pyo3_stub_gen::TypeInfo {
@@ -1693,6 +1787,45 @@ impl<'a> TryFrom<&'a OwnedGateSignature> for GateSignature<'a> {
         )
     }
 }
+
+// TODO(migration-guide):
+// - PyQuil v4 called `Load` `ClassicalLoad`.
+// - The signature was `(target, left, right)`.
+pickleable_new! {
+    impl Load {
+        fn __new__(
+            destination: MemoryReference as MemoryReferenceLike,
+            source: String, 
+            offset: MemoryReference as MemoryReferenceLike,
+        ) -> Load {
+            Self::new(destination.into(), source, offset.into())
+        }
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Load {
+    #[pyo3(warn(message = "use `destination` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn target(&self) -> MemoryReference {
+        self.destination.clone()
+    }
+
+    #[pyo3(warn(message = "use `source` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn left(&self) -> String {
+        self.source.clone()
+    }
+
+    #[pyo3(warn(message = "use `offset` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn right(&self) -> MemoryReference {
+        self.offset.clone()
+    }
+}
+
 
 // TODO(migration-guide): PyQuil v4 had a `quilatom.FormalArgument` class,
 // which corresponds to `Qubit.Variable`, which here is just backed by a `String`.
@@ -2127,6 +2260,40 @@ impl MemoryReference {
                 "not a valid memory reference expression",
             )),
         }
+    }
+}
+
+// TODO(migration-guide):
+// - PyQuil v4 called `Move` `ClassicalMove`.
+// - The signature was `Arithmetic(left, right)`.
+pickleable_new! {
+    impl Move {
+        fn __new__(
+            destination: MemoryReference,
+            source: ArithmeticOperand as ArithmeticOperandLike,
+        ) -> Move {
+            Self::new(destination, source.into())
+        }
+    }
+}
+
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Move {
+    /// Get the destination [`MemoryReference`] for this operation.
+    #[pyo3(warn(message = "use `destination` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn left(&self) -> MemoryReference {
+        self.destination.clone()
+    }
+
+    /// Get the source [`ArithmeticOperand`] for this operation.
+    #[pyo3(warn(message = "use `source` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn right(&self) -> ArithmeticOperand {
+        self.source.clone()
     }
 }
 
@@ -3959,6 +4126,45 @@ impl QubitPlaceholder {
     }
 }
 
+// TODO(migration-guide):
+// - PyQuil v4 called `Store` `ClassicalStore`.
+// - The signature was `(target, left, right)`.
+pickleable_new! {
+    impl Store {
+        fn __new__(
+            destination: String, 
+            offset: MemoryReference as MemoryReferenceLike,
+            source: ArithmeticOperand as ArithmeticOperandLike,
+        ) -> Store {
+            Self::new(destination, offset.into(), source.into())
+        }
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Store {
+    #[pyo3(warn(message = "use `destination` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn target(&self) -> String {
+        self.destination.clone()
+    }
+
+    #[pyo3(warn(message = "use `offset` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn left(&self) -> MemoryReference {
+        self.offset.clone()
+    }
+
+    #[pyo3(warn(message = "use `source` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn right(&self) -> ArithmeticOperand {
+        self.source.clone()
+    }
+}
+
+
 impl<'a, 'py> FromPyObject<'a, 'py> for Target {
     type Error = pyo3::PyErr;
 
@@ -4036,6 +4242,37 @@ impl TargetPlaceholder {
     #[pyo3(warn(message = "use `base_label` instead", category = PyDeprecationWarning))]
     fn prefix(&self) -> &str {
         self.as_inner()
+    }
+}
+
+// TODO(migration-guide):
+// - PyQuil v4 called `UnaryLogic` `UnaryClassicalInstruction`
+// - The constructor signature just took `target`; `op` was a classvar.
+pickleable_new! {
+    impl UnaryLogic {
+        fn __new__(
+            operator: UnaryOperator,
+            operand: MemoryReference as MemoryReferenceLike,
+        ) -> UnaryLogic {
+            Self::new(operator, operand.into())
+        }
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl UnaryLogic {
+    #[pyo3(warn(message = "use `operator` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn op(&self) -> UnaryOperator {
+        self.operator
+    }
+
+    #[pyo3(warn(message = "use `operand` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn target(&self) -> MemoryReference {
+        self.operand.clone()
     }
 }
 

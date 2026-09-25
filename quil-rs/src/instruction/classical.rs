@@ -329,9 +329,9 @@ pub struct Convert {
     pub source: MemoryReference,
 }
 
-pickleable_new! {
-    impl Convert {
-        pub fn new(destination: MemoryReference, source: MemoryReference);
+impl Convert {
+    pub fn new(destination: MemoryReference, source: MemoryReference) -> Self {
+        Self { destination, source }
     }
 }
 
@@ -369,9 +369,9 @@ pub struct Move {
     pub source: ArithmeticOperand,
 }
 
-pickleable_new! {
-    impl Move {
-        pub fn new(destination: MemoryReference, source: ArithmeticOperand);
+impl Move {
+    pub fn new(destination: MemoryReference, source: ArithmeticOperand) -> Self {
+        Self { destination, source, }
     }
 }
 
@@ -423,9 +423,9 @@ impl Quil for Exchange {
     }
 }
 
-pickleable_new! {
-    impl Exchange {
-        pub fn new(left: MemoryReference, right: MemoryReference);
+impl Exchange {
+    pub fn new(left: MemoryReference, right: MemoryReference) -> Self {
+        Self { left, right }
     }
 }
 
@@ -621,9 +621,9 @@ pub struct UnaryLogic {
     pub operand: MemoryReference,
 }
 
-pickleable_new! {
-    impl UnaryLogic {
-        pub fn new(operator: UnaryOperator, operand: MemoryReference);
+impl UnaryLogic {
+    pub fn new(operator: UnaryOperator, operand: MemoryReference) -> Self {
+        Self { operator, operand }
     }
 }
 
