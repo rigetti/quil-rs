@@ -9,7 +9,7 @@ use crate::{
         Instruction, Qubit,
     },
     pickleable_new,
-    quil::{Quil, INDENT},
+    quil::Quil,
     validation::identifier::{validate_identifier, IdentifierValidationError},
 };
 
@@ -73,11 +73,9 @@ impl Quil for CalibrationDefinition {
         fall_back_to_debug: bool,
     ) -> crate::quil::ToQuilResult<()> {
         self.identifier.write(f, fall_back_to_debug)?;
-        write!(f, ":")?;
-        for instruction in &self.instructions {
-            write!(f, "\n{INDENT}")?;
-            instruction.write(f, fall_back_to_debug)?;
-        }
+        writeln!(f, ":")?;
+
+        write_instruction_block(f, fall_back_to_debug, &self.instructions)?;
         Ok(())
     }
 }
@@ -270,7 +268,6 @@ impl Quil for MeasureCalibrationDefinition {
         writeln!(f, ":")?;
 
         write_instruction_block(f, fall_back_to_debug, &self.instructions)?;
-        writeln!(f)?;
         Ok(())
     }
 }
@@ -354,6 +351,115 @@ impl Quil for MeasureCalibrationIdentifier {
         }
 
         Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        get_all,
+        set_all,
+        subclass,
+        from_py_object
+    )
+)]
+pub struct ResetCalibrationDefinition {
+    pub identifier: ResetCalibrationIdentifier,
+    pub instructions: Vec<Instruction>,
+}
+
+pickleable_new! {
+    impl ResetCalibrationDefinition {
+        pub fn new(identifier: ResetCalibrationIdentifier, instructions: Vec<Instruction>);
+    }
+}
+
+impl CalibrationSignature for ResetCalibrationDefinition {
+    type Signature<'a> = <ResetCalibrationIdentifier as CalibrationSignature>::Signature<'a>;
+
+    fn signature(&self) -> Self::Signature<'_> {
+        self.identifier.signature()
+    }
+
+    fn has_signature(&self, signature: &Self::Signature<'_>) -> bool {
+        self.identifier.has_signature(signature)
+    }
+}
+
+impl Quil for ResetCalibrationDefinition {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        self.identifier.write(f, fall_back_to_debug)?;
+        writeln!(f, ":")?;
+
+        write_instruction_block(f, fall_back_to_debug, &self.instructions)?;
+        Ok(())
+    }
+}
+
+/// A unique identifier for a reset calibration definition within a program
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        get_all,
+        set_all,
+        subclass,
+        from_py_object
+    )
+)]
+pub struct ResetCalibrationIdentifier {
+    /// The Quil-T name of the reset, if any.
+    pub name: Option<String>,
+
+    /// The qubit which is being reset.
+    pub qubit: Qubit,
+}
+
+impl ResetCalibrationIdentifier {
+    pub const fn new(name: Option<String>, qubit: Qubit) -> Self {
+        Self { name, qubit }
+    }
+}
+
+impl CalibrationSignature for ResetCalibrationIdentifier {
+    type Signature<'a> = (Option<&'a str>, &'a Qubit);
+
+    fn signature(&self) -> Self::Signature<'_> {
+        let Self { name, qubit } = self;
+
+        (name.as_deref(), qubit)
+    }
+
+    fn has_signature(&self, signature: &Self::Signature<'_>) -> bool {
+        &self.signature() == signature
+    }
+}
+
+impl Quil for ResetCalibrationIdentifier {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        let Self { name, qubit } = self;
+
+        write!(f, "DEFCAL RESET")?;
+        if let Some(name) = name {
+            write!(f, "!{name}")?;
+        }
+        write!(f, " ")?;
+        qubit.write(f, fall_back_to_debug)
     }
 }
 
@@ -495,6 +601,145 @@ mod test_measure_calibration_definition {
     fn test_display(
         #[case] description: &str,
         #[case] measure_cal_def: MeasureCalibrationDefinition,
+    ) {
+        insta::with_settings!({
+            snapshot_suffix => description,
+        }, {
+            assert_snapshot!(measure_cal_def.to_quil_or_debug())
+        })
+    }
+}
+
+#[cfg(test)]
+mod test_reset_calibration_definition {
+    use super::ResetCalibrationDefinition;
+    use crate::expression::Expression;
+    use crate::instruction::calibration::ResetCalibrationIdentifier;
+    use crate::instruction::{Gate, Instruction, Qubit};
+    use crate::quil::Quil;
+    use insta::assert_snapshot;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case(
+        "With Fixed Qubit",
+        ResetCalibrationDefinition {
+            identifier: ResetCalibrationIdentifier {
+                name: None,
+                qubit: Qubit::Fixed(0),
+            },
+            instructions: vec![Instruction::Gate(Gate {
+                name: "X".to_string(),
+                parameters: vec![Expression::Variable("theta".to_string())],
+                qubits: vec![Qubit::Fixed(0)],
+                modifiers: vec![],
+
+            })]},
+    )]
+    #[case(
+        "Named With Fixed Qubit",
+        ResetCalibrationDefinition {
+            identifier: ResetCalibrationIdentifier {
+                name: Some("midcircuit".to_string()),
+                qubit: Qubit::Fixed(0),
+            },
+            instructions: vec![Instruction::Gate(Gate {
+                name: "X".to_string(),
+                parameters: vec![Expression::Variable("theta".to_string())],
+                qubits: vec![Qubit::Fixed(0)],
+                modifiers: vec![],
+
+            })]},
+    )]
+    #[case(
+        "Effect With Fixed Qubit",
+        ResetCalibrationDefinition {
+            identifier: ResetCalibrationIdentifier {
+                name: None,
+                qubit: Qubit::Fixed(0),
+            },
+            instructions: vec![Instruction::Gate(Gate {
+                name: "X".to_string(),
+                parameters: vec![Expression::PiConstant()],
+                qubits: vec![Qubit::Fixed(0)],
+                modifiers: vec![],
+
+            })]},
+    )]
+    #[case(
+        "Named Effect With Fixed Qubit",
+        ResetCalibrationDefinition {
+            identifier: ResetCalibrationIdentifier {
+                name: Some("midcircuit".to_string()),
+                qubit: Qubit::Fixed(0),
+            },
+            instructions: vec![Instruction::Gate(Gate {
+                name: "X".to_string(),
+                parameters: vec![Expression::PiConstant()],
+                qubits: vec![Qubit::Fixed(0)],
+                modifiers: vec![],
+
+            })]},
+    )]
+    #[case(
+        "With Variable Qubit",
+        ResetCalibrationDefinition {
+            identifier: ResetCalibrationIdentifier {
+                name: None,
+                qubit: Qubit::Variable("q".to_string()),
+            },
+            instructions: vec![Instruction::Gate(Gate {
+                name: "X".to_string(),
+                parameters: vec![Expression::Variable("theta".to_string())],
+                qubits: vec![Qubit::Variable("q".to_string())],
+                modifiers: vec![],
+            })]},
+    )]
+    #[case(
+        "Named With Variable Qubit",
+        ResetCalibrationDefinition {
+            identifier: ResetCalibrationIdentifier {
+                name: Some("midcircuit".to_string()),
+                qubit: Qubit::Variable("q".to_string()),
+            },
+            instructions: vec![Instruction::Gate(Gate {
+                name: "X".to_string(),
+                parameters: vec![Expression::Variable("theta".to_string())],
+                qubits: vec![Qubit::Variable("q".to_string())],
+                modifiers: vec![],
+            })]},
+    )]
+    #[case(
+        "Effect Variable Qubit",
+        ResetCalibrationDefinition {
+            identifier: ResetCalibrationIdentifier {
+                name: None,
+                qubit: Qubit::Variable("q".to_string()),
+            },
+            instructions: vec![Instruction::Gate(Gate {
+                name: "X".to_string(),
+                parameters: vec![Expression::PiConstant()],
+                qubits: vec![Qubit::Variable("q".to_string())],
+                modifiers: vec![],
+            })]},
+    )]
+    #[case(
+        "Named Effect Variable Qubit",
+        ResetCalibrationDefinition {
+            identifier: ResetCalibrationIdentifier {
+                name: Some("midcircuit".to_string()),
+                qubit: Qubit::Variable("q".to_string()),
+            },
+            instructions: vec![Instruction::Gate(Gate {
+                name: "X".to_string(),
+                parameters: vec![Expression::PiConstant()],
+                qubits: vec![Qubit::Variable("q".to_string())],
+                modifiers: vec![],
+            })]},
+    )]
+    fn test_display(
+        #[case] description: &str,
+        #[case] measure_cal_def: ResetCalibrationDefinition,
     ) {
         insta::with_settings!({
             snapshot_suffix => description,

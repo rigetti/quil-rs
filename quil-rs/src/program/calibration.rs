@@ -20,7 +20,10 @@ use itertools::{Either, Itertools as _};
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods};
 
-use crate::instruction::{CalibrationIdentifier, MeasureCalibrationIdentifier};
+use crate::instruction::{
+    CalibrationIdentifier, MeasureCalibrationIdentifier, Reset, ResetCalibrationDefinition,
+    ResetCalibrationIdentifier,
+};
 use crate::quil::Quil;
 use crate::{
     expression::Expression,
@@ -56,6 +59,7 @@ use optipy::strip_pyo3;
 pub struct Calibrations {
     pub calibrations: CalibrationSet<CalibrationDefinition>,
     pub measure_calibrations: CalibrationSet<MeasureCalibrationDefinition>,
+    pub reset_calibrations: CalibrationSet<ResetCalibrationDefinition>,
 }
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -95,6 +99,17 @@ impl Calibrations {
         self.measure_calibrations.replace(calibration)
     }
 
+    /// Insert a [`ResetCalibrationDefinition`] into the set.
+    ///
+    /// If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
+    /// exists in the set, it will be replaced and the old calibration will be returned.
+    pub fn insert_reset_calibration(
+        &mut self,
+        calibration: ResetCalibrationDefinition,
+    ) -> Option<ResetCalibrationDefinition> {
+        self.reset_calibrations.replace(calibration)
+    }
+
     /// Append another [`CalibrationSet`] onto this one.
     ///
     /// Calibrations with conflicting [signatures][crate::instruction::CalibrationSignature] are
@@ -102,6 +117,7 @@ impl Calibrations {
     pub fn extend(&mut self, other: Calibrations) {
         self.calibrations.extend(other.calibrations);
         self.measure_calibrations.extend(other.measure_calibrations);
+        self.reset_calibrations.extend(other.reset_calibrations);
     }
 
     /// Return the Quil instructions which describe the contained calibrations.
@@ -113,6 +129,11 @@ impl Calibrations {
                 self.iter_measure_calibrations()
                     .cloned()
                     .map(Instruction::MeasureCalibrationDefinition),
+            )
+            .chain(
+                self.iter_reset_calibrations()
+                    .cloned()
+                    .map(Instruction::ResetCalibrationDefinition),
             )
             .collect()
     }
@@ -247,6 +268,9 @@ pub enum CalibrationSource {
 
     /// Describes a `DEFCAL MEASURE` instruction
     MeasureCalibration(MeasureCalibrationIdentifier),
+
+    /// Describes a `DEFCAL RESET` instruction
+    ResetCalibration(ResetCalibrationIdentifier),
 }
 
 impl From<CalibrationIdentifier> for CalibrationSource {
@@ -258,6 +282,12 @@ impl From<CalibrationIdentifier> for CalibrationSource {
 impl From<MeasureCalibrationIdentifier> for CalibrationSource {
     fn from(value: MeasureCalibrationIdentifier) -> Self {
         Self::MeasureCalibration(value)
+    }
+}
+
+impl From<ResetCalibrationIdentifier> for CalibrationSource {
+    fn from(value: ResetCalibrationIdentifier) -> Self {
+        Self::ResetCalibration(value)
     }
 }
 
@@ -274,6 +304,13 @@ impl Calibrations {
         &self,
     ) -> impl DoubleEndedIterator<Item = &MeasureCalibrationDefinition> + FusedIterator {
         self.measure_calibrations.iter()
+    }
+
+    /// Iterate over all [`ResetCalibrationDefinition`]s calibrations in the set
+    pub fn iter_reset_calibrations(
+        &self,
+    ) -> impl DoubleEndedIterator<Item = &ResetCalibrationDefinition> + FusedIterator {
+        self.reset_calibrations.iter()
     }
 
     /// Given an instruction, return the instructions to which it is expanded if there is a match.
@@ -453,6 +490,23 @@ impl Calibrations {
                     None => None,
                 }
             }
+            Instruction::Reset(reset) => {
+                let matching_calibration = self.get_match_for_reset(reset);
+
+                dbg!(matching_calibration);
+
+                matching_calibration.map(
+                    |ResetCalibrationDefinition {
+                         identifier,
+                         instructions,
+                     }| {
+                        (
+                            instructions.clone(),
+                            CalibrationSource::ResetCalibration(identifier.clone()),
+                        )
+                    },
+                )
+            }
             _ => None,
         };
 
@@ -616,6 +670,71 @@ impl Calibrations {
         exact.or(wildcard)
     }
 
+    // TODO: refine
+    /// Returns the last-specified [`MeasureCalibrationDefinition`] that matches the target
+    /// qubit (if any), or otherwise the last-specified one that specified no qubit.
+    ///
+    /// If multiple calibrations match the measurement, the precedence is as follows:
+    ///
+    ///   1. Match fixed qubit.
+    ///   2. Match variable qubit.
+    ///   3. Match no qubit.
+    ///
+    /// In the case of multiple calibrations with equal precedence, the last one wins.
+    pub fn get_match_for_reset(&self, reset: &Reset) -> Option<&ResetCalibrationDefinition> {
+        /// Utility type: when collecting from an iterator, return only the first value it produces.
+        struct First<T>(Option<T>);
+
+        impl<T> Default for First<T> {
+            fn default() -> Self {
+                Self(None)
+            }
+        }
+
+        impl<A> Extend<A> for First<A> {
+            fn extend<T: IntoIterator<Item = A>>(&mut self, iter: T) {
+                if self.0.is_none() {
+                    self.0 = iter.into_iter().next()
+                }
+            }
+        }
+
+        let Reset { name, qubit } = reset;
+
+        let Some(qubit) = qubit else {
+            // TODO: how to expand global reset?
+            return None;
+        };
+
+        // Find the last matching measurement calibration, but prefer an exact qubit match to a
+        // wildcard qubit match.
+        let (First(exact), First(wildcard)) = self
+            .iter_reset_calibrations()
+            .rev()
+            .filter_map(|calibration| {
+                let identifier = &calibration.identifier;
+
+                if !(name == &identifier.name) {
+                    return None;
+                }
+
+                match &identifier.qubit {
+                    fixed @ Qubit::Fixed(_) if qubit == fixed => Some((calibration, true)),
+                    Qubit::Variable(_) => Some((calibration, false)),
+                    Qubit::Fixed(_) | Qubit::Placeholder(_) => None,
+                }
+            })
+            .partition_map(|(calibration, exact)| {
+                if exact {
+                    Either::Left(calibration)
+                } else {
+                    Either::Right(calibration)
+                }
+            });
+
+        exact.or(wildcard)
+    }
+
     /// Return the final calibration which matches the gate per the QuilT specification:
     ///
     /// A calibration matches a gate if:
@@ -657,6 +776,11 @@ impl Calibrations {
                 self.measure_calibrations
                     .into_iter()
                     .map(Instruction::MeasureCalibrationDefinition),
+            )
+            .chain(
+                self.reset_calibrations
+                    .into_iter()
+                    .map(Instruction::ResetCalibrationDefinition),
             )
             .collect()
     }
@@ -731,6 +855,20 @@ mod tests {
             "DEFCAL MEASURE q:\n",
             "    PRAGMA INCORRECT_RECORD_VS_EFFECT\n",
             "MEASURE 0 ro\n",
+        ),
+    )]
+    #[case(
+        "Reset-Calibration",
+        concat!(
+            "DEFCAL RESET 0:\n",
+            "    PRAGMA INCORRECT_ORDERING\n",
+            "DEFCAL RESET 0:\n",
+            "    PRAGMA CORRECT\n",
+            "DEFCAL RESET q:\n",
+            "    PRAGMA INCORRECT_PRECEDENCE\n",
+            "DEFCAL RESET 1:\n",
+            "    PRAGMA INCORRECT_QUBIT\n",
+            "RESET 0\n",
         ),
     )]
     #[case(
@@ -840,6 +978,7 @@ mod tests {
             "FENCES 0 1\n",
         )
     )]
+    // TODO: reset expansion test
     fn test_expansion(#[case] description: &str, #[case] input: &str) {
         let program = Program::from_str(input).unwrap();
         let calibrated_program = program.expand_calibrations().unwrap();

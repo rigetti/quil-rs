@@ -894,7 +894,7 @@ impl InstructionSourceMap {
         self.0.list_sources(&target_index)
     }
 
-    /// Given a particular calibration (`DEFCAL` or `DEFCAL MEASURE`), =
+    /// Given a particular calibration (`DEFCAL`, `DEFCAL MEASURE`, or `DEFCAL RESET`),
     /// return the locations in the source which were expanded using that calibration.
     ///
     /// This is `O(n)` where `n` is the number of first-level calibration expansions performed,

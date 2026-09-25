@@ -54,6 +54,8 @@ JUMP-UNLESS @label ro
 X 1
 X 0";
 
+// TODO: DEFCAL Reset
+// TODO: dedup
 pub const KITCHEN_SINK_QUIL: &str = "DECLARE ro BIT[1]
 DEFGATE HADAMARD AS MATRIX:
 \t(1/sqrt(2)),(1/sqrt(2))

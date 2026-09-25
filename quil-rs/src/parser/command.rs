@@ -10,9 +10,10 @@ use crate::instruction::{
     Convert, Declaration, DefGateSequence, Delay, Exchange, Fence, FrameDefinition, GateDefinition,
     GateSpecification, GateType, Include, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
     MeasureCalibrationDefinition, MeasureCalibrationIdentifier, Measurement, Move, PauliSum,
-    Pragma, PragmaArgument, Pulse, Qubit, RawCapture, Reset, SetFrequency, SetPhase, SetScale,
-    ShiftFrequency, ShiftPhase, Store, SwapPhases, Target, UnaryLogic, UnaryOperator,
-    UnresolvedCallArgument, ValidationError, Waveform, WaveformDefinition,
+    Pragma, PragmaArgument, Pulse, Qubit, RawCapture, Reset, ResetCalibrationDefinition,
+    ResetCalibrationIdentifier, SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase,
+    Store, SwapPhases, Target, UnaryLogic, UnaryOperator, UnresolvedCallArgument, ValidationError,
+    Waveform, WaveformDefinition,
 };
 
 use crate::parser::common::parse_sequence_elements;
@@ -191,19 +192,20 @@ pub(crate) fn parse_convert(input: ParserInput) -> InternalParserResult<Instruct
     ))
 }
 
-/// Parse the contents of a `DEFCAL` instruction (including `DEFCAL MEASURE`),
-/// following the `DEFCAL` token.
+/// Parse the contents of a `DEFCAL` instruction (including
+/// `DEFCAL MEASURE` and `DEFCAL RESET`), following the `DEFCAL` token.
 pub(crate) fn parse_defcal<'a>(input: ParserInput<'a>) -> InternalParserResult<'a, Instruction> {
-    use crate::parser::lexer::Command::Measure;
-    let (input, defcal_measure) = opt(token!(Command(Measure)))(input)?;
-    match defcal_measure {
-        Some(_) => parse_defcal_measure(input),
-        None => parse_defcal_gate(input),
-    }
+    use crate::parser::lexer::Command::{Measure, Reset};
+
+    alt((
+        preceded(token!(Command(Measure)), parse_defcal_measure),
+        preceded(token!(Command(Reset)), parse_defcal_reset),
+        parse_defcal_gate,
+    ))(input)
 }
 
-/// Parse the contents of a `DEFCAL` instruction (but not `DEFCAL MEASURE`),
-/// following the `DEFCAL` token.
+/// Parse the contents of a `DEFCAL` instruction (but not
+/// `DEFCAL MEASURE` or `DEFCAL RESET`), following the `DEFCAL` token.
 pub(crate) fn parse_defcal_gate<'a>(
     input: ParserInput<'a>,
 ) -> InternalParserResult<'a, Instruction> {
@@ -249,6 +251,23 @@ pub(crate) fn parse_defcal_measure<'a>(
                 qubit,
                 target,
             },
+            instructions,
+        }),
+    ))
+}
+
+/// Parse the contents of a `DEFCAL RESET` instruction, following the `RESET` token.
+pub(crate) fn parse_defcal_reset<'a>(
+    input: ParserInput<'a>,
+) -> InternalParserResult<'a, Instruction> {
+    let (input, name) = opt(preceded(token!(Bang), token!(Identifier(name))))(input)?;
+    let (input, qubit) = parse_qubit(input)?;
+    let (input, _) = token!(Colon)(input)?;
+    let (input, instructions) = parse_block(input)?;
+    Ok((
+        input,
+        Instruction::ResetCalibrationDefinition(ResetCalibrationDefinition {
+            identifier: ResetCalibrationIdentifier { name, qubit },
             instructions,
         }),
     ))

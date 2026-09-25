@@ -532,6 +532,7 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
                 | Instruction::GateDefinition(_)
                 | Instruction::Include(_)
                 | Instruction::MeasureCalibrationDefinition(_)
+                | Instruction::ResetCalibrationDefinition(_)
                 | Instruction::WaveformDefinition(_) => {}
 
                 Instruction::Label(Label { target }) => {
