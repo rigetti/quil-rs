@@ -124,7 +124,8 @@ pickleable_new! {
         pub fn new(
             name: String,
             #[pyo3(from_py_with = from_sequence::<Qubit, _>)]
-            qubits: Vec<Qubit>);
+            qubits: Vec<Qubit>
+        );
     }
 }
 

@@ -31,13 +31,17 @@ pub struct Arithmetic {
     pub source: ArithmeticOperand,
 }
 
-pickleable_new! {
-    impl Arithmetic {
-        pub fn new(
-            operator: ArithmeticOperator,
-            destination: MemoryReference,
-            source: ArithmeticOperand,
-        );
+impl Arithmetic {
+    pub fn new(
+        operator: ArithmeticOperator,
+        destination: MemoryReference,
+        source: ArithmeticOperand,
+    ) -> Self {
+        Self {
+            operator,
+            destination,
+            source,
+        }
     }
 }
 
@@ -170,7 +174,6 @@ impl Quil for ArithmeticOperator {
         get_all,
         skip_from_py_object
     ),
-    derive(pyo3::FromPyObject)
 )]
 pub enum BinaryOperand {
     LiteralInteger(i64),
@@ -292,13 +295,17 @@ impl Quil for BinaryLogic {
     }
 }
 
-pickleable_new! {
-    impl BinaryLogic {
-        pub fn new(
-            operator: BinaryOperator,
-            destination: MemoryReference,
-            source: BinaryOperand,
-        );
+impl BinaryLogic {
+    pub fn new(
+        operator: BinaryOperator,
+        destination: MemoryReference,
+        source: BinaryOperand
+    ) -> Self {
+        Self {
+            operator,
+            destination,
+            source,
+        }
     }
 }
 

@@ -502,10 +502,6 @@ where
 /// that first tries to cast the Python object to `E`, and if it doesn't work,
 /// then tries to extract `E` using its existing [`FromPyObject`] implementation.
 ///
-/// When the Python object is an existing instance of `T`,
-/// the "extracted" instance borrows from the existing Python object,
-///
-///
 /// This type is most useful with complex enums that act as a simple list of types.
 /// For such a type `E`, a `#[pymethod]` or `#[pyfunction]` that accepts `E`
 /// requires a Python object that is already an instace of `E`,
@@ -514,6 +510,14 @@ where
 /// You can get around that by marking `#[pyclass(skip_from_py_object)]`
 /// and then applying `#[derive(FromPyObject)]` for its default implementation,
 /// but then you'll have the opposite problem: users can't pass existing instances of `E`!
+/// By taking `Like<E>` as a parameter, you'll again be able to accept existing `E`s, 
+/// and only fall back to the `FromPyObject` implementation if it's not yet an instance.
+///
+/// In a sense, this works like an enumeration `E` and "things that extract into E"; 
+/// hence, if you `#[derive(FromPyObject)]` for `E`, `Like<E>` can work with both.
+///
+/// To allow for certain performance optimizations and mutable usecases,
+/// `Like<'a, 'py, T>` extracts existing instances to [`Borrowed<'a, 'py, T>`].
 #[derive(Debug, Copy, Clone)]
 pub(crate) enum Like<'a, 'py, T> {
     Borrowed(Borrowed<'a, 'py, T>),

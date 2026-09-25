@@ -676,47 +676,218 @@ impl From<AnyInstruction> for Instruction {
 // which would otherwise require either creating our own derive macro,
 // or using `paste!` (as is done in the macro version for `Instruction`).
 
-struct ArithmeticOperandLike(ArithmeticOperand);
-#[cfg(feature = "stubs")]
-impl_stub_type!(
-    ArithmeticOperandLike =
-        ArithmeticOperand | i64 | f64 | MemoryReference | DeclarationAt | Declaration
-);
+pub(crate) struct ArithmeticOperandLike(ArithmeticOperand);
+pub(crate) struct BinaryOperandLike(BinaryOperand);
+pub(crate) struct MemoryReferenceLike(MemoryReference);
+
+impl From<ArithmeticOperandLike> for ArithmeticOperand {
+    fn from(value: ArithmeticOperandLike) -> Self {
+        value.0
+    }
+}
+
+impl From<BinaryOperandLike> for BinaryOperand {
+    fn from(value: BinaryOperandLike) -> Self {
+        value.0
+    }
+}
+
+impl From<MemoryReferenceLike> for MemoryReference {
+    fn from(value: MemoryReferenceLike) -> Self {
+        value.0
+    }
+}
+
 
 impl<'a, 'py> FromPyObject<'a, 'py> for ArithmeticOperandLike {
     type Error = PyErr;
 
     fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-        if let Ok(val) = obj.cast::<ArithmeticOperand>() {
-            Ok(Self(val.get().clone()))
+        let operand = if let Ok(val) = obj.cast::<ArithmeticOperand>() {
+            val.get().clone()
         } else if let Ok(val) = obj.cast::<pyo3::types::PyInt>() {
-            Ok(Self(ArithmeticOperand::LiteralInteger(val.extract()?)))
+            ArithmeticOperand::LiteralInteger(val.extract()?)
         } else if let Ok(val) = obj.cast::<pyo3::types::PyFloat>() {
-            Ok(Self(ArithmeticOperand::LiteralReal(val.extract()?)))
+            ArithmeticOperand::LiteralReal(val.extract()?)
         } else if let Ok(val) = obj.cast::<DeclarationAt>() {
-            Ok(Self(ArithmeticOperand::MemoryReference(
-                val.borrow().memref(obj.py()),
-            )))
+            ArithmeticOperand::MemoryReference(val.get().memref(obj.py()))
         } else if let Ok(val) = obj.cast::<MemoryReference>() {
-            Ok(Self(ArithmeticOperand::MemoryReference(
-                val.borrow().clone(),
-            )))
+            ArithmeticOperand::MemoryReference(val.get().clone())
         } else if let Ok(val) = obj.cast::<Declaration>() {
-            Ok(Self(ArithmeticOperand::MemoryReference(
-                val.get().to_memory_reference(0),
-            )))
+            ArithmeticOperand::MemoryReference(val.get().to_memory_reference(0))
         } else {
-            Err(CastError::new(
-                obj,
-                ArithmeticOperand::classinfo_object(obj.py()),
-            ))?
+            return Err(CastError::new(obj, ArithmeticOperand::classinfo_object(obj.py())))?;
+        };
+
+        Ok(Self(operand))
+    }
+}
+
+impl<'py> IntoPyObject<'py> for ArithmeticOperandLike {
+    type Target = ArithmeticOperand;
+    type Output = Bound<'py, Self::Target>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        self.0.into_pyobject(py)
+    }
+}
+
+impl<'a, 'py> FromPyObject<'a, 'py> for BinaryOperandLike {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        let operand = if let Ok(operand) = obj.cast::<BinaryOperand>() {
+            operand.get().clone()
+        } else if let Ok(int) = obj.cast::<PyInt>() {
+            BinaryOperand::LiteralInteger(int.extract()?)
+        } else if let Ok(decl) = obj.cast::<DeclarationAt>() {
+            BinaryOperand::MemoryReference(decl.get().memref(obj.py()))
+        } else if let Ok(mem_ref) = obj.cast::<MemoryReference>() {
+            BinaryOperand::MemoryReference(mem_ref.borrow().clone())
+        } else if let Ok(decl) = obj.cast::<Declaration>() {
+            BinaryOperand::MemoryReference(decl.get().to_memory_reference(0))
+        } else {
+            return Err(CastError::new(obj, BinaryOperand::classinfo_object(obj.py())))?;
+        };
+
+        Ok(Self(operand))
+    }
+}
+
+#[derive(FromPyObject)]
+pub(crate) enum ComparisonOperandLike<'py> {
+    Int(i64),
+    Float(f64),
+    Wrapped(ComparisonOperand),
+    DeclarationAt(Bound<'py, DeclarationAt>),
+    Declaration(Bound<'py, Declaration>),
+    MemoryReference(MemoryReference),
+}
+
+impl From<ComparisonOperandLike<'_>> for ComparisonOperand {
+    fn from(value: ComparisonOperandLike<'_>) -> Self {
+        match value {
+            ComparisonOperandLike::Int(i) => ComparisonOperand::LiteralInteger(i),
+            ComparisonOperandLike::Float(f) => ComparisonOperand::LiteralReal(f),
+            ComparisonOperandLike::Wrapped(op) => op,
+            ComparisonOperandLike::DeclarationAt(decl_at) => {
+                ComparisonOperand::MemoryReference(decl_at.get().memref(decl_at.py()))
+            }
+            ComparisonOperandLike::Declaration(decl) => {
+                ComparisonOperand::MemoryReference(decl.get().to_memory_reference(0))
+            }
+            ComparisonOperandLike::MemoryReference(mem_ref) => {
+                ComparisonOperand::MemoryReference(mem_ref)
+            }
         }
     }
 }
 
-impl From<ArithmeticOperandLike> for ArithmeticOperand {
-    fn from(value: ArithmeticOperandLike) -> Self {
-        value.0
+/// An object in the Python heap that can be converted into a [`MemoryReference`].
+#[derive(FromPyObject)]
+enum PyMemRef<'py> {
+    DeclarationAt(Bound<'py, DeclarationAt>),
+    Declaration(Bound<'py, Declaration>),
+    MemoryReference(Bound<'py, MemoryReference>),
+}
+
+impl From<PyMemRef<'_>> for MemoryReference {
+    fn from(value: PyMemRef<'_>) -> Self {
+        match value {
+            PyMemRef::DeclarationAt(decl_at) => decl_at.get().memref(decl_at.py()),
+            PyMemRef::Declaration(decl) => decl.get().to_memory_reference(0),
+            PyMemRef::MemoryReference(mem_ref) => mem_ref.borrow().clone(),
+        }
+    }
+}
+
+trait BorrowDeclaration<'py> {
+    fn borrow_declaration<'a>(&'a self) -> Option<Borrowed<'a, 'py, Declaration>>;
+}
+
+impl<'py> BorrowDeclaration<'py> for ComparisonOperandLike<'py> {
+    fn borrow_declaration<'a>(&'a self) -> Option<Borrowed<'a, 'py, Declaration>> {
+        match self {
+            ComparisonOperandLike::Declaration(decl) => Some(decl.as_borrowed()),
+            ComparisonOperandLike::DeclarationAt(decl_at) => {
+                Some(decl_at.get().declaration.bind_borrowed(decl_at.py()))
+            }
+            _ => None,
+        }
+    }
+}
+
+impl<'py> BorrowDeclaration<'py> for PyMemRef<'py> {
+    fn borrow_declaration<'a>(&'a self) -> Option<Borrowed<'a, 'py, Declaration>> {
+        match self {
+            PyMemRef::Declaration(decl) => Some(decl.as_borrowed()),
+            PyMemRef::DeclarationAt(decl_at) => {
+                Some(decl_at.get().declaration.bind_borrowed(decl_at.py()))
+            }
+            _ => None,
+        }
+    }
+}
+
+fn can_compare<'py, T: BorrowDeclaration<'py>, U: BorrowDeclaration<'py>>(lhs: &T, rhs: &U) -> ComparisonValidity {
+    match (lhs.borrow_declaration(), rhs.borrow_declaration()) {
+        (Some(l), Some(r)) => {
+            if l.get().size.data_type == r.get().size.data_type {
+                ComparisonValidity::Valid
+            } else {
+                ComparisonValidity::Invalid
+            }
+        }
+        _ => ComparisonValidity::Unknown,
+    }
+}
+
+
+impl<'a, 'py> FromPyObject<'a, 'py> for MemoryReferenceLike {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        let mem_ref = if let Ok(mem_ref) = obj.cast::<MemoryReference>() {
+            mem_ref.borrow().clone()
+        } else if let Ok(decl) = obj.cast::<DeclarationAt>() {
+            // Create a new `MemoryReference` from an underlying `Declaration` and index.
+            decl.get().memref(obj.py())
+        } else if let Ok(decl) = obj.cast::<Declaration>() {
+            // Create a new `MemoryReference` from a `Declaration` assuming an index of 0.
+            decl.get().to_memory_reference(0)
+        } else if let Ok(s) = obj.cast::<PyTuple>() {
+            // Create a new `MemoryReference` from a tuple of `(str, int)` pair.
+            let (name, index) = s.extract()?;
+            MemoryReference::new(name, index)
+        } else if let Ok(s) = obj.cast::<PyList>() {
+            // As above, but from a list of `[str, int]` pair.
+            let len = obj.len()?;
+            if len != 2 {
+                return Err(PyValueError::new_err(
+                    "expected list of length 2, but got list of length {len}",
+                ))?;
+            }
+            let MemoryReferencePair { name, index } = s.extract()?;
+            MemoryReference::new(name, index)
+        } else {
+            return Err(CastError::new(obj, MemoryReference::classinfo_object(obj.py())))?;
+        };
+
+        Ok(Self(mem_ref))
+    }
+}
+
+
+pickleable_new! {
+    impl Arithmetic {
+        fn __new__(
+            operator: ArithmeticOperator,
+            destination: MemoryReference,
+            source: ArithmeticOperand as ArithmeticOperandLike,
+        ) -> Arithmetic {
+            Self::new(operator, destination, source.into())
+        }
     }
 }
 
@@ -751,6 +922,11 @@ impl AttributeValue {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl BinaryOperand {
+    #[new]
+    fn __new__(operand: BinaryOperandLike) -> Self {
+        operand.into()
+    }
+
     #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.int | MemoryReference]", imports = ("builtins")))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {
@@ -759,6 +935,19 @@ impl BinaryOperand {
         }
     }
 }
+
+pickleable_new! {
+    impl BinaryLogic {
+        fn __new__(
+            operator: BinaryOperator,
+            destination: MemoryReference as MemoryReferenceLike,
+            source: BinaryOperand as BinaryOperandLike
+        ) -> BinaryLogic {
+            Self::new(operator, destination.into(), source.into())
+        }
+    }
+}
+
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -910,12 +1099,12 @@ impl Declaration {
     }
 }
 
+// This is essentially what a "memory reference" really is:
+// a reference at a specific index to a declared region of memory.
 /// A wrapper around a [`Declaration`] for use in places we'd normally need a `MemoryReference`.
 ///
 /// You can get an instance of `DeclarationAt` by indexing a `Declaration`,
 /// and you can then use it in places where a `MemoryReference` is expected.
-/// The underlying objects share the same `Declaration` memory
-/// and can provide additional validation on bounds-checking.
 ///
 /// # Example
 ///
@@ -924,11 +1113,11 @@ impl Declaration {
 ///
 /// ```python
 /// instructions = [
-///     top := Label("top"),                                        # LABEL @top
 ///     counter := Declaration("counter", ScalarType.INTEGER),      # DECLARE counter INTEGER
 ///     counter[0].move(10),                                        # MOVE counter[0] 10
+///     top := Label("top"),                                        # LABEL @top
 ///     # additional instructions...
-///     counter[0] - 1,                                             # SUB counter[0] 1
+///     counter[0].sub(1),                                          # SUB counter[0] 1
 ///     JumpWhen(top, counter[0]),                                  # JUMP-WHEN @top counter[0]
 /// ]
 /// ```
@@ -940,6 +1129,29 @@ pub(crate) struct DeclarationAt {
     index: u64,
 }
 
+impl<'a, 'py> FromPyObject<'a, 'py> for DeclarationAt {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        // This "extraction" actually just increases the refcount.
+        let decl_at = if let Ok(decl) = obj.cast::<DeclarationAt>() {
+            DeclarationAt {
+                declaration: decl.get().declaration.clone_ref(obj.py()),
+                index: decl.get().index,
+            }
+        } else if let Ok(decl) = obj.cast::<Declaration>() {
+            DeclarationAt {
+                declaration: decl.to_owned().unbind(), // This just increases the refcount.
+                index: 0,
+            }
+        } else {
+            return Err(CastError::new(obj, Declaration::classinfo_object(obj.py())))?;
+        };
+
+        Ok(decl_at)
+    }
+}
+
 impl DeclarationAt {
     /// Return a `MemoryReference` to the underlying `Declaration` at the given index.
     ///
@@ -949,6 +1161,22 @@ impl DeclarationAt {
             .bind(py)
             .get()
             .to_memory_reference(self.index)
+    }
+
+    /// Return an error if a comparison instruction for `self := a <op> b` would be invalid Quil.
+    fn check_comparison<'py>(&self, a: &PyMemRef<'py>, b: &ComparisonOperandLike<'py>) -> PyResult<()> {
+        if self.declaration.get().size.data_type != ScalarType::Bit {
+            // TODO: make a custom error type for this
+            return Err(PyValueError::new_err("the destination of a comparison must be BIT-typed"));
+        }
+
+        if matches!(can_compare(a, b), ComparisonValidity::Invalid) {
+            return Err(PyValueError::new_err(
+                "the left-hand side and right-hand side of a comparison must have compatible types",
+            ));
+        }
+
+        Ok(())
     }
 }
 
@@ -964,19 +1192,137 @@ impl DeclarationAt {
     /// from quil.instructions import Declaration, ScalarType, Move
     ///
     /// x = Declaration("x", ScalarType.INTEGER, 3)
-    /// mv = x[2].set(5)
+    /// mv = x[2].move(5)
     /// assert isinstance(mv, Move)
-    /// assert mv.to_quil() == "MOVE x[2] 5"
+    /// assert mv.to_quil() == "MOVE x[2] 5"  # x[2] := 5
     /// ```
-    fn set<'py>(&self, py: Python<'py>, value: ArithmeticOperandLike) -> Move {
+    #[pyo3(name = "move", signature = (value, /))]
+    fn py_move<'py>(&self, py: Python<'py>, value: ArithmeticOperandLike) -> Move {
         Move::new(self.memref(py), value.into())
+    }
+
+    /// Return a new `Exchange` instruction representing the exchange of `self` and `other`.
+    ///
+    /// # Example
+    ///
+    /// ```Python
+    /// from quil.instructions import Declaration, ScalarType, Exchange
+    ///
+    /// x = Declaration("x", ScalarType.INTEGER, 3)
+    /// y = Declaration("y", ScalarType.INTEGER, 3)
+    /// ex = x[2].exchange(y[1])
+    /// assert isinstance(ex, Exchange)
+    /// assert ex.to_quil() == "EXCHANGE x[2] y[1]"  # x[2] <-> y[1]
+    /// ```
+    #[pyo3(signature = (other, /))]
+    fn exchange<'py>(&self, py: Python<'py>, other: MemoryReferenceLike) -> Exchange {
+        Exchange::new(self.memref(py), other.into())
+    }
+
+    /// Return a new `Load` instruction representing the indirect load `self = source[offset]`.
+    ///
+    /// # Example
+    ///
+    /// ```python
+    /// from quil.instructions import Declaration, ScalarType, Load
+    ///
+    /// x = Declaration("x", ScalarType.INTEGER, 3)
+    /// y = Declaration("y", ScalarType.INTEGER, 3)
+    /// z = Declaration("z", ScalarType.INTEGER, 3)
+    /// ld = x[2].load_from(y, z[1])
+    /// assert isinstance(ld, Load)
+    /// assert ld.to_quil() == "LOAD x[2] y z[1]"  # x[2] := y[z[1]]
+    /// ```
+    #[pyo3(signature = (source, offset, /))]
+    fn load_from<'py>(&self, py: Python<'py>, source: &Declaration, offset: MemoryReferenceLike) -> Load {
+        Load::new(self.memref(py), source.name.clone(), offset.into())
+    }
+
+    /// Return a new `Store` instruction representing the indirect store `destination[offset] = self`.
+    ///
+    /// # Example
+    ///
+    /// ```python
+    /// from quil.instructions import Declaration, ScalarType, Store
+    ///
+    /// x = Declaration("x", ScalarType.INTEGER, 3)
+    /// y = Declaration("y", ScalarType.INTEGER, 3)
+    /// z = Declaration("z", ScalarType.INTEGER, 3)
+    /// st = x[2].store_to(y, z[1])
+    /// assert isinstance(st, Store)
+    /// assert st.to_quil() == "STORE y z[1] x[2]"  # y[z[1]] := x[2]
+    /// ```
+    #[pyo3(signature = (destination, offset, /))]
+    fn store_to<'py>(&self, py: Python<'py>, destination: &Declaration, offset: MemoryReferenceLike) -> Store {
+        Store::new(destination.name.clone(), offset.into(), ArithmeticOperand::MemoryReference(self.memref(py)))
+    }
+
+    /// Return a new `Convert` instruction representing `self = (T)source`.
+    ///
+    /// This is like a `Move` instruction with a cast from the source type to the destination type.
+    /// Note that in Quil, the source of a `CONVERT` instruction MUST be a `MemoryReference`,
+    /// so this method only accepts `MemoryReference`s and things that can be converted into them,
+    /// not arbitrary numeric literals.
+    ///
+    /// # Example
+    ///
+    /// ```python
+    /// from quil.instructions import Declaration, ScalarType, Convert
+    ///
+    /// x = Declaration("x", ScalarType.INTEGER, 3)
+    /// y = Declaration("y", ScalarType.REAL, 3)
+    /// cvt = x[2].convert(y[1])
+    /// assert isinstance(cvt, Convert)
+    /// assert cvt.to_quil() == "CONVERT x[2] y[1]"  # x[2] := (INTEGER) y[1]
+    /// ```
+    #[pyo3(signature = (source, /))]
+    fn convert<'py>(&self, py: Python<'py>, source: MemoryReferenceLike) -> Convert {
+        Convert::new(self.memref(py), source.into())
     }
 
     // Note: These are not implemented as Python dunder arithmetic methods,
     // because the point is to return an `Arithmetic` instruction.
-    // If we implement them as operators, the semantics are confusing:
-    // what you really want to write is something like `x[0] += 1`,
-    // but you'd have to write `x[0] + 1` instead, which is not that intuitive.
+    //
+    // What might be nice in the future is to implement something that supports chained operations.
+    // For example, a user could write `x[2] + 5 - 3`, and we'd know it represents
+    // a sequence of instructions (`ADD x[2] 5` followed by `SUB x[2] 3`);
+    // but that would require a fair bit of implementation work we're not interested in right now,
+    // and we don't want to block ourselves from doing it in the future.
+
+    /// Return a new instruction representing a logical `NOT` of this memory reference.
+    ///
+    /// # Example
+    ///
+    /// ```python
+    /// from quil.instructions import Declaration, ScalarType, UnaryLogic
+    ///
+    /// x = Declaration("x", ScalarType.INTEGER, 3)
+    /// n = x[2].not()
+    /// assert isinstance(n, UnaryLogic)
+    /// assert n.to_quil() == "NOT x[2]"  # x[2] := ~x[2]
+    /// ```
+    fn not<'py>(&self, py: Python<'py>) -> UnaryLogic {
+        UnaryLogic::new(UnaryOperator::Not, self.memref(py))
+    }
+
+    fn neg<'py>(&self, py: Python<'py>) -> UnaryLogic {
+        UnaryLogic::new(UnaryOperator::Neg, self.memref(py))
+    }
+
+    #[pyo3(signature = (other, /))]
+    fn and<'py>(&self, py: Python<'py>, other: BinaryOperandLike) -> BinaryLogic {
+        BinaryLogic::new(BinaryOperator::And, self.memref(py), other.into())
+    }
+
+    #[pyo3(signature = (other, /))]
+    fn ior<'py>(&self, py: Python<'py>, other: BinaryOperandLike) -> BinaryLogic {
+        BinaryLogic::new(BinaryOperator::And, self.memref(py), other.into())
+    }
+
+    #[pyo3(signature = (other, /))]
+    fn xor<'py>(&self, py: Python<'py>, other: BinaryOperandLike) -> BinaryLogic {
+        BinaryLogic::new(BinaryOperator::And, self.memref(py), other.into())
+    }
 
     /// Return a new `Arithmetic` instruction representing `ADD self other`.
     ///
@@ -990,41 +1336,60 @@ impl DeclarationAt {
     /// assert isinstance(arith, Arithmetic)
     /// assert arith.to_quil() == "ADD x[2] 5"
     /// ```
+    #[pyo3(signature = (other, /))]
     fn add<'py>(&self, py: Python<'py>, other: ArithmeticOperandLike) -> Arithmetic {
         Arithmetic::new(ArithmeticOperator::Add, self.memref(py), other.into())
     }
 
+    #[pyo3(signature = (other, /))]
     fn sub<'py>(&self, py: Python<'py>, other: ArithmeticOperandLike) -> Arithmetic {
-        Arithmetic {
-            operator: ArithmeticOperator::Subtract,
-            destination: self.memref(py),
-            source: other.into(),
-        }
+        Arithmetic::new(ArithmeticOperator::Subtract, self.memref(py), other.into())
     }
 
+    #[pyo3(signature = (other, /))]
     fn div<'py>(&self, py: Python<'py>, other: ArithmeticOperandLike) -> Arithmetic {
-        Arithmetic {
-            operator: ArithmeticOperator::Divide,
-            destination: self.memref(py),
-            source: other.into(),
-        }
+        Arithmetic::new(ArithmeticOperator::Divide, self.memref(py), other.into())
     }
 
+    #[pyo3(signature = (other, /))]
     fn mul<'py>(&self, py: Python<'py>, other: ArithmeticOperandLike) -> Arithmetic {
-        Arithmetic {
-            operator: ArithmeticOperator::Multiply,
-            destination: self.memref(py),
-            source: other.into(),
-        }
+        Arithmetic::new(ArithmeticOperator::Multiply, self.memref(py), other.into())
     }
 
-    /// Return a new `Move` instruction representing `self = source`.
-    #[pyo3(name = "move")]
-    fn py_move<'py>(&self, py: Python<'py>, source: ArithmeticOperand) -> Move {
-        Move {
-            destination: self.memref(py),
-            source,
-        }
+    /// Return a new `Comparison` instruction representing `self = (a == b)`.
+    ///
+    /// Note that `self` must represent a `MemoryReference` of type `BIT`,
+    /// the left-hand side of the comparison must be a `MemoryReference`-like object,
+    /// and the right-hand side must have a type compatible with the left-hand side.
+    /// See the Quil specification for more details on valid comparisons.
+    #[pyo3(signature = (a, b, /))]
+    fn store_eq<'py>(&self, py: Python<'py>, a: PyMemRef<'py>, b: ComparisonOperandLike<'py>) -> PyResult<Comparison> {
+        self.check_comparison(&a, &b)?;
+        Ok(Comparison::new(ComparisonOperator::Equal, self.memref(py), a.into(), b.into()))
+    }
+
+    #[pyo3(signature = (a, b, /))]
+    fn store_gt<'py>(&self, py: Python<'py>, a: PyMemRef<'py>, b: ComparisonOperandLike<'py>) -> PyResult<Comparison> {
+        self.check_comparison(&a, &b)?;
+        Ok(Comparison::new(ComparisonOperator::GreaterThan, self.memref(py), a.into(), b.into()))
+    }
+
+    #[pyo3(signature = (a, b, /))]
+    fn store_ge<'py>(&self, py: Python<'py>, a: PyMemRef<'py>, b: ComparisonOperandLike<'py>) -> PyResult<Comparison> {
+        self.check_comparison(&a, &b)?;
+        Ok(Comparison::new(ComparisonOperator::GreaterThanOrEqual, self.memref(py), a.into(), b.into()))
+    }
+
+    #[pyo3(signature = (a, b, /))]
+    fn store_lt<'py>(&self, py: Python<'py>, a: PyMemRef<'py>, b: ComparisonOperandLike<'py>) -> PyResult<Comparison> {
+        self.check_comparison(&a, &b)?;
+        Ok(Comparison::new(ComparisonOperator::LessThan, self.memref(py), a.into(), b.into()))
+    }
+
+    #[pyo3(signature = (a, b, /))]
+    fn store_le<'py>(&self, py: Python<'py>, a: PyMemRef<'py>, b: ComparisonOperandLike<'py>) -> PyResult<Comparison> {
+        self.check_comparison(&a, &b)?;
+        Ok(Comparison::new(ComparisonOperator::LessThanOrEqual, self.memref(py), a.into(), b.into()))
     }
 
     // Garbage collection integration. For more information, see:
@@ -1034,6 +1399,28 @@ impl DeclarationAt {
         visit.call(&self.declaration)?;
         Ok(())
     }
+}
+
+enum ComparisonValidity {
+    Valid,
+    Invalid,
+    Unknown,
+}
+
+impl<'py> ComparisonOperandLike<'py> {
+    fn can_compare(lhs: &PyMemRef<'py>, rhs: &Self) -> ComparisonValidity {
+        match (lhs.borrow_declaration(), rhs.borrow_declaration()) {
+            (Some(l), Some(r)) => {
+                if l.get().size.data_type == r.get().size.data_type {
+                    ComparisonValidity::Valid
+                } else {
+                    ComparisonValidity::Invalid
+                }
+            }
+            _ => ComparisonValidity::Unknown,
+        }
+    }
+
 }
 
 #[cfg(feature = "stubs")]
@@ -1328,55 +1715,7 @@ impl<'a> TryFrom<&'a OwnedGateSignature> for GateSignature<'a> {
 #[pyfunction]
 #[pyo3(warn(message = "use `MemoryReference(...)` directly instead", category = PyDeprecationWarning))]
 fn unpack_classical_reg<'py>(obj: &Bound<'py, PyAny>) -> PyResult<MemoryReference> {
-    MemoryReference::extract(obj.as_borrowed())
-}
-
-/// Extract a `MemoryReference` from a Python instance of the same type,
-/// or from a `DeclarationAt` created from a `Declaration` instance.
-impl<'a, 'py> FromPyObject<'a, 'py> for MemoryReference {
-    type Error = PyErr;
-
-    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-        if let Ok(mem_ref) = obj.cast::<MemoryReference>() {
-            // This is the implementation PyO3 would use and clones the existing `MemoryReference`.
-            Ok(mem_ref.borrow().clone())
-        } else if let Ok(decl) = obj.cast::<DeclarationAt>() {
-            // Create a new `MemoryReference` from an underlying `Declaration` and index.
-            Ok(decl.get().memref(obj.py()))
-        } else if let Ok(decl) = obj.cast::<Declaration>() {
-            // Create a new `MemoryReference` from a `Declaration` assuming an index of 0.
-            Ok(decl.get().to_memory_reference(0))
-        } else if let Ok(s) = obj.cast::<PyTuple>() {
-            // Create a new `MemoryReference` from a tuple of `(str, int)` pair.
-            let (name, index) = s.extract()?;
-            Ok(MemoryReference::new(name, index))
-        } else if let Ok(s) = obj.cast::<PyList>() {
-            // As above, but from a list of `[str, int]` pair.
-            let len = obj.len()?;
-            if len != 2 {
-                return Err(PyValueError::new_err(
-                    "expected list of length 2, but got list of length {len}",
-                ))?;
-            }
-            let MemoryReferencePair { name, index } = s.extract()?;
-            Ok(MemoryReference::new(name, index))
-        }
-        /*
-        else if let Ok(s) = obj.cast::<PyString>() {
-            // TODO: reconsider this case, as it makes it too easy to mistakenly extract
-            // particularly when included in another enum that derives `FromPyObject`
-            let name = s.extract()
-                .map_err(|_| CastError::new(obj, MemoryReference::classinfo_object(obj.py())))?;
-            Ok(MemoryReference::new(name, 0))
-        }
-        */
-        else {
-            Err(CastError::new(
-                obj,
-                MemoryReference::classinfo_object(obj.py()),
-            ))?
-        }
-    }
+    Ok(obj.extract()?)
 }
 
 #[derive(FromPyObject)]
@@ -1693,7 +2032,7 @@ impl MemoryReference {
 
     // This is implemented manually (rather than with `pickleable_new!`)
     // because the Rust struct doesn't include `declared_size`.
-    #[gen_stub(override_return_type(type_repr = "tuple[str, int, int | None]"))]
+    #[gen_stub(override_return_type(type_repr = "tuple[str, int]"))]
     fn __getnewargs__(&self) -> (String, u64) {
         (self.name.clone(), self.index)
     }
@@ -3540,7 +3879,7 @@ impl Qubit {
 
 #[cfg(feature = "stubs")]
 mod stubs {
-    use pyo3_stub_gen::{impl_stub_type, type_alias};
+    use pyo3_stub_gen::{PyStubType, impl_stub_type, type_alias};
 
     // pyo3_stub_gen::export_verbatim!("quil.instructions", "Halt");
 
@@ -3552,13 +3891,28 @@ mod stubs {
     // but now we can explicitly type parameters to accept those (or a `Qubit` itself) instead.
     // impl_stub_type!(Like<'_, '_, Qubit> = Qubit | i64 | String | QubitPlaceholder);
 
-    impl_stub_type!(LabelTargetLike<'_> = String | Label | Target);
+    impl_stub_type!(
+        ArithmeticOperandLike =
+            ArithmeticOperand | i64 | f64 | MemoryReference | DeclarationAt | Declaration
+    );
 
-    impl_stub_type!(GateModifierDesignator = GateModifier | String);
+    impl_stub_type!(
+        BinaryOperandLike = BinaryOperand | i64 | MemoryReference | DeclarationAt | Declaration
+    );
+
+    impl_stub_type!(
+        ComparisonOperandLike<'_> =
+            ComparisonOperand | i64 | f64 | MemoryReference | DeclarationAt | Declaration
+    );
 
     impl_stub_type!(
         MemoryReferenceLike = MemoryReference | DeclarationAt | Declaration | (String, u64)
     );
+    impl_stub_type!(PyMemRef<'_> = MemoryReferenceLike);
+
+    impl_stub_type!(LabelTargetLike<'_> = String | Label | Target);
+
+    impl_stub_type!(GateModifierDesignator = GateModifier | String);
 
     impl_stub_type!(PauliArg = String | u64 | Qubit);
 
@@ -3575,17 +3929,10 @@ mod stubs {
         QubitDesignator = Qubit | QubitPlaceholder | String | u64
     );
     type_alias!("quil._quil.instructions", PauliTargetDesignator = PauliArg);
+
 }
 
 pub(crate) type QubitLike<'a, 'py> = Like<'a, 'py, Qubit>;
-
-#[derive(FromPyObject)]
-struct MemoryReferenceLike(MemoryReference);
-impl From<MemoryReferenceLike> for MemoryReference {
-    fn from(value: MemoryReferenceLike) -> Self {
-        value.0
-    }
-}
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
