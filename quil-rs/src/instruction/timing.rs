@@ -4,7 +4,7 @@ use crate::instruction::quilpy::PyInstruction;
 use pyo3_stub_gen::derive::gen_stub_pyclass;
 
 use super::Qubit;
-use crate::{expression::Expression, pickleable_new, quil::Quil};
+use crate::{expression::Expression, quil::Quil};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
@@ -27,9 +27,9 @@ pub struct Delay {
     pub qubits: Vec<Qubit>,
 }
 
-pickleable_new! {
-    impl Delay {
-        pub fn new(duration: Expression, frame_names: Vec<String>, qubits: Vec<Qubit>);
+impl Delay {
+    pub fn new(duration: Expression, frame_names: Vec<String>, qubits: Vec<Qubit>) -> Self {
+        Self { duration, frame_names, qubits }
     }
 }
 
@@ -71,6 +71,12 @@ pub struct Fence {
     pub qubits: Vec<Qubit>,
 }
 
+impl Fence {
+    pub fn new(qubits: Vec<Qubit>) -> Self {
+        Self { qubits }
+    }
+}
+
 impl Quil for Fence {
     fn write(
         &self,
@@ -83,11 +89,5 @@ impl Quil for Fence {
             qubit.write(writer, fall_back_to_debug)?;
         }
         Ok(())
-    }
-}
-
-pickleable_new! {
-    impl Fence {
-        pub fn new(qubits: Vec<Qubit>);
     }
 }

@@ -176,14 +176,14 @@ pub struct Capture {
     pub waveform: WaveformInvocation,
 }
 
-pickleable_new! {
-    impl Capture {
-        pub fn new(
-            blocking: bool,
-            frame: FrameIdentifier,
-            memory_reference: MemoryReference,
-            waveform: WaveformInvocation,
-        );
+impl Capture {
+    pub fn new(
+        blocking: bool,
+        frame: FrameIdentifier,
+        memory_reference: MemoryReference,
+        waveform: WaveformInvocation,
+    ) -> Self {
+        Self { blocking, frame, memory_reference, waveform }
     }
 }
 
@@ -230,9 +230,9 @@ pub struct Pulse {
     pub waveform: WaveformInvocation,
 }
 
-pickleable_new! {
-    impl Pulse {
-        pub fn new(blocking: bool, frame: FrameIdentifier, waveform: WaveformInvocation);
+impl Pulse {
+    pub fn new(blocking: bool, frame: FrameIdentifier, waveform: WaveformInvocation) -> Self {
+        Self { blocking, frame, waveform }
     }
 }
 
@@ -278,14 +278,14 @@ pub struct RawCapture {
     pub memory_reference: MemoryReference,
 }
 
-pickleable_new! {
-    impl RawCapture {
-        pub fn new(
-            blocking: bool,
-            frame: FrameIdentifier,
-            duration: Expression,
-            memory_reference: MemoryReference,
-        );
+impl RawCapture {
+    pub fn new(
+        blocking: bool,
+        frame: FrameIdentifier,
+        duration: Expression,
+        memory_reference: MemoryReference,
+    ) -> Self {
+        Self { blocking, frame, duration, memory_reference }
     }
 }
 
@@ -331,9 +331,9 @@ pub struct SetFrequency {
     pub frequency: Expression,
 }
 
-pickleable_new! {
-    impl SetFrequency {
-        pub fn new(frame: FrameIdentifier, frequency: Expression);
+impl SetFrequency {
+    pub fn new(frame: FrameIdentifier, frequency: Expression) -> Self {
+        Self { frame, frequency }
     }
 }
 
@@ -371,9 +371,9 @@ pub struct SetPhase {
     pub phase: Expression,
 }
 
-pickleable_new! {
-    impl SetPhase {
-        pub fn new(frame: FrameIdentifier, phase: Expression);
+impl SetPhase {
+    pub fn new(frame: FrameIdentifier, phase: Expression) -> Self {
+        Self { frame, phase }
     }
 }
 
@@ -411,9 +411,9 @@ pub struct SetScale {
     pub scale: Expression,
 }
 
-pickleable_new! {
-    impl SetScale {
-        pub fn new(frame: FrameIdentifier, scale: Expression);
+impl SetScale {
+    pub fn new(frame: FrameIdentifier, scale: Expression) -> Self {
+        Self { frame, scale }
     }
 }
 
@@ -451,9 +451,9 @@ pub struct ShiftFrequency {
     pub frequency: Expression,
 }
 
-pickleable_new! {
-    impl ShiftFrequency {
-        pub fn new(frame: FrameIdentifier, frequency: Expression);
+impl ShiftFrequency {
+    pub fn new(frame: FrameIdentifier, frequency: Expression) -> Self {
+        Self { frame, frequency }
     }
 }
 
@@ -491,9 +491,9 @@ pub struct ShiftPhase {
     pub phase: Expression,
 }
 
-pickleable_new! {
-    impl ShiftPhase {
-        pub fn new(frame: FrameIdentifier, phase: Expression);
+impl ShiftPhase {
+    pub fn new(frame: FrameIdentifier, phase: Expression) -> Self {
+        Self { frame, phase }
     }
 }
 
