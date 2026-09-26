@@ -22,7 +22,6 @@ use rigetti_pyo3::{create_init_submodule, impl_repr};
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::{
     derive::{gen_methods_from_python, gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pymethods},
-    impl_stub_type,
     inventory::submit,
 };
 
@@ -785,6 +784,10 @@ impl From<ComparisonOperandLike<'_>> for ComparisonOperand {
 }
 
 /// An object in the Python heap that can be converted into a [`MemoryReference`].
+///
+/// If a Python user derives values from [`Declaration`]s to use as [`MemoryReference`]s,
+/// we can provide additional validation when they use them to create instructions.
+/// See [`DeclarationAt`] for examples how these fit together for program building.
 #[derive(FromPyObject)]
 enum PyMemRef<'py> {
     DeclarationAt(Bound<'py, DeclarationAt>),
@@ -802,12 +805,13 @@ impl From<PyMemRef<'_>> for MemoryReference {
     }
 }
 
-trait BorrowDeclaration<'py> {
-    fn borrow_declaration<'a>(&'a self) -> Option<Borrowed<'a, 'py, Declaration>>;
+/// A trait for types that might be able to provide a [`Borrowed`] to Python data.
+trait TryAsBorrowed<'py, T> {
+    fn try_borrow<'a>(&'a self) -> Option<Borrowed<'a, 'py, T>>;
 }
 
-impl<'py> BorrowDeclaration<'py> for ComparisonOperandLike<'py> {
-    fn borrow_declaration<'a>(&'a self) -> Option<Borrowed<'a, 'py, Declaration>> {
+impl<'py> TryAsBorrowed<'py, Declaration> for ComparisonOperandLike<'py> {
+    fn try_borrow<'a>(&'a self) -> Option<Borrowed<'a, 'py, Declaration>> {
         match self {
             ComparisonOperandLike::Declaration(decl) => Some(decl.as_borrowed()),
             ComparisonOperandLike::DeclarationAt(decl_at) => {
@@ -818,8 +822,8 @@ impl<'py> BorrowDeclaration<'py> for ComparisonOperandLike<'py> {
     }
 }
 
-impl<'py> BorrowDeclaration<'py> for PyMemRef<'py> {
-    fn borrow_declaration<'a>(&'a self) -> Option<Borrowed<'a, 'py, Declaration>> {
+impl<'py> TryAsBorrowed<'py, Declaration> for PyMemRef<'py> {
+    fn try_borrow<'a>(&'a self) -> Option<Borrowed<'a, 'py, Declaration>> {
         match self {
             PyMemRef::Declaration(decl) => Some(decl.as_borrowed()),
             PyMemRef::DeclarationAt(decl_at) => {
@@ -830,17 +834,27 @@ impl<'py> BorrowDeclaration<'py> for PyMemRef<'py> {
     }
 }
 
-fn can_compare<'py, T: BorrowDeclaration<'py>, U: BorrowDeclaration<'py>>(lhs: &T, rhs: &U) -> ComparisonValidity {
-    match (lhs.borrow_declaration(), rhs.borrow_declaration()) {
-        (Some(l), Some(r)) => {
-            if l.get().size.data_type == r.get().size.data_type {
-                ComparisonValidity::Valid
-            } else {
-                ComparisonValidity::Invalid
-            }
-        }
-        _ => ComparisonValidity::Unknown,
-    }
+enum MemoryTypeMatch {
+    Valid,
+    Invalid,
+    Unknown,
+}
+
+/// Check if two values derived from [`Declaration`]s have the same data types.
+///
+/// If the underlying [`Declaration`]s are known, this returns `Some(b)`,
+/// where `b` is true if the data types match and false otherwise.
+/// If we can't get the underlying [`Declaration`]s, this returns `None`.
+fn same_type<'py, T, U>(lhs: &T, rhs: &U) -> Option<bool>
+where
+    T: TryAsBorrowed<'py, Declaration>,
+    U: TryAsBorrowed<'py, Declaration>,
+{
+    lhs.try_borrow().and_then(|l| {
+        rhs.try_borrow().map(|r| {
+            l.get().size.data_type == r.get().size.data_type
+        })
+    })
 }
 
 
@@ -866,7 +880,7 @@ impl<'a, 'py> FromPyObject<'a, 'py> for MemoryReferenceLike {
             if len != 2 {
                 return Err(PyValueError::new_err(
                     "expected list of length 2, but got list of length {len}",
-                ))?;
+                ));
             }
             let MemoryReferencePair { name, index } = s.extract()?;
             MemoryReference::new(name, index)
@@ -1262,16 +1276,17 @@ impl DeclarationAt {
             .to_memory_reference(self.index)
     }
 
-    /// Return an error if a comparison instruction for `self := a <op> b` would be invalid Quil.
+    /// Return an error if a comparison instruction for `self := a <op> b`
+    /// is known to produce invalid Quil.
     fn check_comparison<'py>(&self, a: &PyMemRef<'py>, b: &ComparisonOperandLike<'py>) -> PyResult<()> {
         if self.declaration.get().size.data_type != ScalarType::Bit {
             // TODO: make a custom error type for this
             return Err(PyValueError::new_err("the destination of a comparison must be BIT-typed"));
         }
 
-        if matches!(can_compare(a, b), ComparisonValidity::Invalid) {
+        if matches!(same_type(a, b), Some(false)) {
             return Err(PyValueError::new_err(
-                "the left-hand side and right-hand side of a comparison must have compatible types",
+                "the left-hand side and right-hand side of a comparison must have the same type",
             ));
         }
 
@@ -1498,28 +1513,6 @@ impl DeclarationAt {
         visit.call(&self.declaration)?;
         Ok(())
     }
-}
-
-enum ComparisonValidity {
-    Valid,
-    Invalid,
-    Unknown,
-}
-
-impl<'py> ComparisonOperandLike<'py> {
-    fn can_compare(lhs: &PyMemRef<'py>, rhs: &Self) -> ComparisonValidity {
-        match (lhs.borrow_declaration(), rhs.borrow_declaration()) {
-            (Some(l), Some(r)) => {
-                if l.get().size.data_type == r.get().size.data_type {
-                    ComparisonValidity::Valid
-                } else {
-                    ComparisonValidity::Invalid
-                }
-            }
-            _ => ComparisonValidity::Unknown,
-        }
-    }
-
 }
 
 // TODO(migration-guide):
@@ -2494,7 +2487,7 @@ impl Pulse {
         blocking: bool,
         nonblocking: Option<bool>,
     ) -> PyResult<Self> {
-        let blocking = deprecated_or_new!(py, new = blocking, old = nonblocking, |nb| !nb)?;
+        let blocking = deprecated_or_new!(py, new = blocking, old = nonblocking, |nb| Ok(!nb))?;
         Ok(Self::new(blocking, frame, waveform))
     }
 
@@ -4548,15 +4541,16 @@ impl Pragma {
     ) -> PyResult<Self> {
         let name = deprecated_or_new!(py, new = name, old = command)?;
 
-        let data = deprecated_or_new!(py, new = data, old = freeform_string, |old| Ok(Some(old)))?;
-        let data = if data.is_some_and(|s| s.is_empty()) {
-            py_deprecated!(
-                py,
-                c"providing `data` as an empty string is deprecated; use `None` instead"
-            )?;
-            None
-        } else {
-            data
+        let data = match deprecated_or_new!(py, new = data, old = freeform_string, |old| Ok(Some(old)))? {
+            None => None,
+            Some(s) if s.is_empty() => {
+                py_deprecated!(
+                    py,
+                    c"providing `data` as an empty string is deprecated; use `None` instead"
+                )?;
+                None
+            }
+            some => some,
         };
 
         Ok(Self::new(name, args, data))
@@ -4620,7 +4614,7 @@ impl Qubit {
 
 #[cfg(feature = "stubs")]
 mod stubs {
-    use pyo3_stub_gen::{PyStubType, impl_stub_type, type_alias};
+    use pyo3_stub_gen::{impl_stub_type, type_alias};
 
     // pyo3_stub_gen::export_verbatim!("quil.instructions", "Halt");
 
