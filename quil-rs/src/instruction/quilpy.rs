@@ -1663,14 +1663,13 @@ impl Gate {
         Ok(Self::new(&name, parameters, qubits, modifiers)?)
     }
 
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+    fn __getnewargs__(&self) -> (String, Vec<Expression>, Vec<Qubit>, Vec<GateModifier>) {
         (
             self.name.clone(),
             self.parameters.clone(),
             self.qubits.clone(),
             self.modifiers.clone(),
         )
-            .into_pyobject_or_pyerr(py)
     }
 
     /// Return a copy of the ``Gate`` with the ``DAGGER`` modifier added to it.
@@ -2491,9 +2490,18 @@ impl Pulse {
         Ok(Self::new(blocking, frame, waveform))
     }
 
-    // TODO(copilot): This needs to be __getnewargs_ex__
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        (self.frame.clone(), self.waveform.clone(), self.blocking).into_pyobject_or_pyerr(py)
+    #[gen_stub(override_return_type(
+        type_repr = "builtins.tuple[
+            builtins.tuple[FrameIdentifier, WaveformInvocation],
+            builtins.dict[builtins.str, builtins.bool]
+        ]",
+        imports = ("builtins",)
+    ))]
+    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        let positional: Bound<'py, PyTuple> =
+            (self.frame.clone(), self.waveform.clone()).into_pyobject(py)?;
+        let keyword: Bound<'py, PyDict> = [("blocking", self.blocking)].into_py_dict(py)?;
+        (positional, keyword).into_pyobject(py)
     }
 }
 
@@ -2539,15 +2547,22 @@ impl Capture {
         Ok(Self::new(blocking, frame, memory_region.into(), kernel))
     }
 
-    // TODO(copilot): This needs to be __getnewargs_ex__
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        (
+    #[gen_stub(override_return_type(
+        type_repr = "builtins.tuple[
+            builtins.tuple[FrameIdentifier, WaveformInvocation, MemoryReference],
+            builtins.dict[builtins.str, builtins.bool]
+        ]",
+        imports = ("builtins",)
+    ))]
+    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        let positional: Bound<'py, PyTuple> = (
             self.frame.clone(),
             self.waveform.clone(),
             self.memory_reference.clone(),
-            self.blocking,
         )
-            .into_pyobject_or_pyerr(py)
+            .into_pyobject(py)?;
+        let keyword: Bound<'py, PyDict> = [("blocking", self.blocking)].into_py_dict(py)?;
+        (positional, keyword).into_pyobject(py)
     }
 
     #[pyo3(warn(message = "use `not capture.blocking` instead", category = PyDeprecationWarning))]
@@ -2588,15 +2603,22 @@ impl RawCapture {
         Ok(Self::new( blocking, frame, duration.into(), memory_region.into()))
     }
 
-    // TODO(copilot): This needs to be __getnewargs_ex__
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        (
+    #[gen_stub(override_return_type(
+        type_repr = "builtins.tuple[
+            builtins.tuple[FrameIdentifier, expression.Expression, MemoryReference],
+            builtins.dict[builtins.str, builtins.bool]
+        ]",
+        imports = ("builtins", "quil._quil.expression")
+    ))]
+    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        let positional: Bound<'py, PyTuple> = (
             self.frame.clone(),
             self.duration.clone(),
             self.memory_reference.clone(),
-            self.blocking,
         )
-            .into_pyobject_or_pyerr(py)
+            .into_pyobject(py)?;
+        let keyword: Bound<'py, PyDict> = [("blocking", self.blocking)].into_py_dict(py)?;
+        (positional, keyword).into_pyobject(py)
     }
 
     #[pyo3(warn(message = "use `not blocking` instead", category = PyDeprecationWarning))]
@@ -2639,8 +2661,8 @@ impl SetFrequency {
         Ok(Self::new(frame, frequency.into()))
     }
 
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        (self.frame.clone(), self.frequency.clone()).into_pyobject_or_pyerr(py)
+    fn __getnewargs__(&self) -> (FrameIdentifier, Expression) {
+        (self.frame.clone(), self.frequency.clone())
     }
 
     #[pyo3(warn(message = "use `frequency` instead", category = PyDeprecationWarning))]
@@ -2677,8 +2699,8 @@ impl ShiftFrequency {
         Ok(Self::new(frame, frequency.into()))
     }
 
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        (self.frame.clone(), self.frequency.clone()).into_pyobject_or_pyerr(py)
+    fn __getnewargs__(&self) -> (FrameIdentifier, Expression) {
+        (self.frame.clone(), self.frequency.clone())
     }
 
     #[pyo3(warn(message = "use `frequency` instead", category = PyDeprecationWarning))]
@@ -2837,13 +2859,12 @@ impl Delay {
         Ok(Self::new(duration.into(), frame_names, qubits))
     }
 
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+    fn __getnewargs__(&self) -> (Vec<String>, Vec<Qubit>, Expression) {
         (
             self.frame_names.clone(),
             self.qubits.clone(),
             self.duration.clone(),
         )
-            .into_pyobject_or_pyerr(py)
     }
 }
 
@@ -4556,8 +4577,8 @@ impl Pragma {
         Ok(Self::new(name, args, data))
     }
 
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        (self.name.clone(), self.arguments.clone(), self.data.clone()).into_pyobject_or_pyerr(py)
+    fn __getnewargs__(&self) -> (String, Vec<PragmaArgument>, Option<String>) {
+        (self.name.clone(), self.arguments.clone(), self.data.clone())
     }
 
     #[pyo3(warn(message = "use `name` instead", category = PyDeprecationWarning))]
@@ -4880,13 +4901,12 @@ impl WaveformDefinition {
         Self::new(name, Waveform::new(entries, parameters))
     }
 
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+    fn __getnewargs__(&self) -> (String, Vec<String>, Vec<Expression>) {
         (
             self.name.clone(),
             self.definition.parameters.clone(),
             self.definition.matrix.clone(),
         )
-            .into_pyobject_or_pyerr(py)
     }
 
     /// Construct a `WaveformDefinition` directly from a `name` and existing waveform `definition`.
