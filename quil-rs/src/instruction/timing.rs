@@ -29,7 +29,11 @@ pub struct Delay {
 
 impl Delay {
     pub fn new(duration: Expression, frame_names: Vec<String>, qubits: Vec<Qubit>) -> Self {
-        Self { duration, frame_names, qubits }
+        Self {
+            duration,
+            frame_names,
+            qubits,
+        }
     }
 }
 

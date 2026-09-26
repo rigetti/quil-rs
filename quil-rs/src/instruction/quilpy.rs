@@ -697,7 +697,6 @@ impl From<MemoryReferenceLike> for MemoryReference {
     }
 }
 
-
 impl<'a, 'py> FromPyObject<'a, 'py> for ArithmeticOperandLike {
     type Error = PyErr;
 
@@ -715,7 +714,10 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ArithmeticOperandLike {
         } else if let Ok(val) = obj.cast::<Declaration>() {
             ArithmeticOperand::MemoryReference(val.get().to_memory_reference(0))
         } else {
-            return Err(CastError::new(obj, ArithmeticOperand::classinfo_object(obj.py())))?;
+            return Err(CastError::new(
+                obj,
+                ArithmeticOperand::classinfo_object(obj.py()),
+            ))?;
         };
 
         Ok(Self(operand))
@@ -747,7 +749,10 @@ impl<'a, 'py> FromPyObject<'a, 'py> for BinaryOperandLike {
         } else if let Ok(decl) = obj.cast::<Declaration>() {
             BinaryOperand::MemoryReference(decl.get().to_memory_reference(0))
         } else {
-            return Err(CastError::new(obj, BinaryOperand::classinfo_object(obj.py())))?;
+            return Err(CastError::new(
+                obj,
+                BinaryOperand::classinfo_object(obj.py()),
+            ))?;
         };
 
         Ok(Self(operand))
@@ -851,12 +856,10 @@ where
     U: TryAsBorrowed<'py, Declaration>,
 {
     lhs.try_borrow().and_then(|l| {
-        rhs.try_borrow().map(|r| {
-            l.get().size.data_type == r.get().size.data_type
-        })
+        rhs.try_borrow()
+            .map(|r| l.get().size.data_type == r.get().size.data_type)
     })
 }
-
 
 impl<'a, 'py> FromPyObject<'a, 'py> for MemoryReferenceLike {
     type Error = PyErr;
@@ -885,7 +888,10 @@ impl<'a, 'py> FromPyObject<'a, 'py> for MemoryReferenceLike {
             let MemoryReferencePair { name, index } = s.extract()?;
             MemoryReference::new(name, index)
         } else {
-            return Err(CastError::new(obj, MemoryReference::classinfo_object(obj.py())))?;
+            return Err(CastError::new(
+                obj,
+                MemoryReference::classinfo_object(obj.py()),
+            ))?;
         };
 
         Ok(Self(mem_ref))
@@ -1014,7 +1020,6 @@ impl BinaryLogic {
     }
 }
 
-
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
@@ -1028,7 +1033,6 @@ impl ComparisonOperand {
         }
     }
 }
-
 
 // TODO(migration-guide):
 // - PyQuil v4 called `Comparison` `ClassicalComparison`, with subclasses
@@ -1278,10 +1282,16 @@ impl DeclarationAt {
 
     /// Return an error if a comparison instruction for `self := a <op> b`
     /// is known to produce invalid Quil.
-    fn check_comparison<'py>(&self, a: &PyMemRef<'py>, b: &ComparisonOperandLike<'py>) -> PyResult<()> {
+    fn check_comparison<'py>(
+        &self,
+        a: &PyMemRef<'py>,
+        b: &ComparisonOperandLike<'py>,
+    ) -> PyResult<()> {
         if self.declaration.get().size.data_type != ScalarType::Bit {
             // TODO: make a custom error type for this
-            return Err(PyValueError::new_err("the destination of a comparison must be BIT-typed"));
+            return Err(PyValueError::new_err(
+                "the destination of a comparison must be BIT-typed",
+            ));
         }
 
         if matches!(same_type(a, b), Some(false)) {
@@ -1348,7 +1358,12 @@ impl DeclarationAt {
     /// assert ld.to_quil() == "LOAD x[2] y z[1]"  # x[2] := y[z[1]]
     /// ```
     #[pyo3(signature = (source, offset, /))]
-    fn load_from<'py>(&self, py: Python<'py>, source: &Declaration, offset: MemoryReferenceLike) -> Load {
+    fn load_from<'py>(
+        &self,
+        py: Python<'py>,
+        source: &Declaration,
+        offset: MemoryReferenceLike,
+    ) -> Load {
         Load::new(self.memref(py), source.name.clone(), offset.into())
     }
 
@@ -1367,8 +1382,17 @@ impl DeclarationAt {
     /// assert st.to_quil() == "STORE y z[1] x[2]"  # y[z[1]] := x[2]
     /// ```
     #[pyo3(signature = (destination, offset, /))]
-    fn store_to<'py>(&self, py: Python<'py>, destination: &Declaration, offset: MemoryReferenceLike) -> Store {
-        Store::new(destination.name.clone(), offset.into(), ArithmeticOperand::MemoryReference(self.memref(py)))
+    fn store_to<'py>(
+        &self,
+        py: Python<'py>,
+        destination: &Declaration,
+        offset: MemoryReferenceLike,
+    ) -> Store {
+        Store::new(
+            destination.name.clone(),
+            offset.into(),
+            ArithmeticOperand::MemoryReference(self.memref(py)),
+        )
     }
 
     /// Return a new `Convert` instruction representing `self = (T)source`.
@@ -1477,33 +1501,83 @@ impl DeclarationAt {
     /// and the right-hand side must have a type compatible with the left-hand side.
     /// See the Quil specification for more details on valid comparisons.
     #[pyo3(signature = (a, b, /))]
-    fn store_eq<'py>(&self, py: Python<'py>, a: PyMemRef<'py>, b: ComparisonOperandLike<'py>) -> PyResult<Comparison> {
+    fn store_eq<'py>(
+        &self,
+        py: Python<'py>,
+        a: PyMemRef<'py>,
+        b: ComparisonOperandLike<'py>,
+    ) -> PyResult<Comparison> {
         self.check_comparison(&a, &b)?;
-        Ok(Comparison::new(ComparisonOperator::Equal, self.memref(py), a.into(), b.into()))
+        Ok(Comparison::new(
+            ComparisonOperator::Equal,
+            self.memref(py),
+            a.into(),
+            b.into(),
+        ))
     }
 
     #[pyo3(signature = (a, b, /))]
-    fn store_gt<'py>(&self, py: Python<'py>, a: PyMemRef<'py>, b: ComparisonOperandLike<'py>) -> PyResult<Comparison> {
+    fn store_gt<'py>(
+        &self,
+        py: Python<'py>,
+        a: PyMemRef<'py>,
+        b: ComparisonOperandLike<'py>,
+    ) -> PyResult<Comparison> {
         self.check_comparison(&a, &b)?;
-        Ok(Comparison::new(ComparisonOperator::GreaterThan, self.memref(py), a.into(), b.into()))
+        Ok(Comparison::new(
+            ComparisonOperator::GreaterThan,
+            self.memref(py),
+            a.into(),
+            b.into(),
+        ))
     }
 
     #[pyo3(signature = (a, b, /))]
-    fn store_ge<'py>(&self, py: Python<'py>, a: PyMemRef<'py>, b: ComparisonOperandLike<'py>) -> PyResult<Comparison> {
+    fn store_ge<'py>(
+        &self,
+        py: Python<'py>,
+        a: PyMemRef<'py>,
+        b: ComparisonOperandLike<'py>,
+    ) -> PyResult<Comparison> {
         self.check_comparison(&a, &b)?;
-        Ok(Comparison::new(ComparisonOperator::GreaterThanOrEqual, self.memref(py), a.into(), b.into()))
+        Ok(Comparison::new(
+            ComparisonOperator::GreaterThanOrEqual,
+            self.memref(py),
+            a.into(),
+            b.into(),
+        ))
     }
 
     #[pyo3(signature = (a, b, /))]
-    fn store_lt<'py>(&self, py: Python<'py>, a: PyMemRef<'py>, b: ComparisonOperandLike<'py>) -> PyResult<Comparison> {
+    fn store_lt<'py>(
+        &self,
+        py: Python<'py>,
+        a: PyMemRef<'py>,
+        b: ComparisonOperandLike<'py>,
+    ) -> PyResult<Comparison> {
         self.check_comparison(&a, &b)?;
-        Ok(Comparison::new(ComparisonOperator::LessThan, self.memref(py), a.into(), b.into()))
+        Ok(Comparison::new(
+            ComparisonOperator::LessThan,
+            self.memref(py),
+            a.into(),
+            b.into(),
+        ))
     }
 
     #[pyo3(signature = (a, b, /))]
-    fn store_le<'py>(&self, py: Python<'py>, a: PyMemRef<'py>, b: ComparisonOperandLike<'py>) -> PyResult<Comparison> {
+    fn store_le<'py>(
+        &self,
+        py: Python<'py>,
+        a: PyMemRef<'py>,
+        b: ComparisonOperandLike<'py>,
+    ) -> PyResult<Comparison> {
         self.check_comparison(&a, &b)?;
-        Ok(Comparison::new(ComparisonOperator::LessThanOrEqual, self.memref(py), a.into(), b.into()))
+        Ok(Comparison::new(
+            ComparisonOperator::LessThanOrEqual,
+            self.memref(py),
+            a.into(),
+            b.into(),
+        ))
     }
 
     // Garbage collection integration. For more information, see:
@@ -1865,7 +1939,6 @@ impl Load {
     }
 }
 
-
 // TODO(migration-guide): PyQuil v4 had a `quilatom.FormalArgument` class,
 // which corresponds to `Qubit.Variable`, which here is just backed by a `String`.
 // At best, we could create an "alias" class for it, but it probably isn't worth it,
@@ -2190,7 +2263,9 @@ impl Reset {
     fn get_qubit_indices(&self) -> PyResult<Option<HashSet<u64>>> {
         match self.qubit {
             Some(Qubit::Fixed(index)) => Ok(Some(HashSet::from([index]))),
-            Some(_) => Err(errors::ValueError::new_err("this Reset operates on a non-fixed qubit")),
+            Some(_) => Err(errors::ValueError::new_err(
+                "this Reset operates on a non-fixed qubit",
+            )),
             None => Ok(None),
         }
     }
@@ -2343,7 +2418,6 @@ pickleable_new! {
     }
 }
 
-
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
@@ -2457,9 +2531,9 @@ fn frame_qubit_indices(qubits: &[Qubit]) -> PyResult<HashSet<u64>> {
         .iter()
         .map(|qubit| match qubit {
             Qubit::Fixed(index) => Ok(*index),
-            _ => Err(errors::ValueError::new_err(
-                format!("this instruction operates on a non-fixed qubit: {qubit:?}")
-            )),
+            _ => Err(errors::ValueError::new_err(format!(
+                "this instruction operates on a non-fixed qubit: {qubit:?}"
+            ))),
         })
         .collect()
 }
@@ -2600,7 +2674,12 @@ impl RawCapture {
     ) -> PyResult<Self> {
         let blocking = deprecated_or_new!(py, new = blocking, old = nonblocking, |nb| Ok(!nb))?;
 
-        Ok(Self::new( blocking, frame, duration.into(), memory_region.into()))
+        Ok(Self::new(
+            blocking,
+            frame,
+            duration.into(),
+            memory_region.into(),
+        ))
     }
 
     #[gen_stub(override_return_type(
@@ -4533,7 +4612,9 @@ impl<'a, 'py> FromPyObject<'a, 'py> for PragmaArgument {
         } else if let Ok(value) = obj.cast::<PyString>() {
             Ok(PragmaArgument::Identifier(value.extract::<String>()?))
         } else {
-            Err(PyTypeError::new_err( "expected a PragmaArgument, int, or str"))
+            Err(PyTypeError::new_err(
+                "expected a PragmaArgument, int, or str",
+            ))
         }
     }
 }
@@ -4562,17 +4643,18 @@ impl Pragma {
     ) -> PyResult<Self> {
         let name = deprecated_or_new!(py, new = name, old = command)?;
 
-        let data = match deprecated_or_new!(py, new = data, old = freeform_string, |old| Ok(Some(old)))? {
-            None => None,
-            Some(s) if s.is_empty() => {
-                py_deprecated!(
-                    py,
-                    c"providing `data` as an empty string is deprecated; use `None` instead"
-                )?;
-                None
-            }
-            some => some,
-        };
+        let data =
+            match deprecated_or_new!(py, new = data, old = freeform_string, |old| Ok(Some(old)))? {
+                None => None,
+                Some(s) if s.is_empty() => {
+                    py_deprecated!(
+                        py,
+                        c"providing `data` as an empty string is deprecated; use `None` instead"
+                    )?;
+                    None
+                }
+                some => some,
+            };
 
         Ok(Self::new(name, args, data))
     }
@@ -4593,7 +4675,6 @@ impl Pragma {
         self.data.clone()
     }
 }
-
 
 py_friendly_enum!(
     for Qubit = QubitPlaceholder | u64 | String
@@ -4687,7 +4768,6 @@ mod stubs {
         QubitDesignator = Qubit | QubitPlaceholder | String | u64
     );
     type_alias!("quil._quil.instructions", PauliTargetDesignator = PauliArg);
-
 }
 
 pub(crate) type QubitLike<'a, 'py> = Like<'a, 'py, Qubit>;
@@ -4754,7 +4834,6 @@ impl Store {
         self.source.clone()
     }
 }
-
 
 impl<'a, 'py> FromPyObject<'a, 'py> for Target {
     type Error = pyo3::PyErr;
@@ -4915,8 +4994,6 @@ impl WaveformDefinition {
         Self::new(name, definition)
     }
 }
-
-
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]

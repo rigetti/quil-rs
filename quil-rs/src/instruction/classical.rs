@@ -173,7 +173,7 @@ impl Quil for ArithmeticOperator {
         hash,
         get_all,
         skip_from_py_object
-    ),
+    )
 )]
 pub enum BinaryOperand {
     LiteralInteger(i64),
@@ -299,7 +299,7 @@ impl BinaryLogic {
     pub fn new(
         operator: BinaryOperator,
         destination: MemoryReference,
-        source: BinaryOperand
+        source: BinaryOperand,
     ) -> Self {
         Self {
             operator,
@@ -331,7 +331,10 @@ pub struct Convert {
 
 impl Convert {
     pub fn new(destination: MemoryReference, source: MemoryReference) -> Self {
-        Self { destination, source }
+        Self {
+            destination,
+            source,
+        }
     }
 }
 
@@ -371,7 +374,10 @@ pub struct Move {
 
 impl Move {
     pub fn new(destination: MemoryReference, source: ArithmeticOperand) -> Self {
-        Self { destination, source, }
+        Self {
+            destination,
+            source,
+        }
     }
 }
 
@@ -458,7 +464,12 @@ impl Comparison {
         lhs: MemoryReference,
         rhs: ComparisonOperand,
     ) -> Self {
-        Self { operator, destination, lhs, rhs }
+        Self {
+            operator,
+            destination,
+            lhs,
+            rhs,
+        }
     }
 }
 
