@@ -56,13 +56,19 @@ macro_rules! py_deprecated {
 macro_rules! deprecated_param_cstr {
     (old=$old: ident) => {
         $crate::quilpy::deprecations::_deprecated_param_cstr(concat!(
-            "`", stringify!($old), "` is deprecated and will be removed in the future\0",
+            "`",
+            stringify!($old),
+            "` is deprecated and will be removed in the future\0",
         ))
     };
 
     (new=$new: ident, old=$old: ident) => {
         $crate::quilpy::deprecations::_deprecated_param_cstr(concat!(
-            "`", stringify!($old), "` is deprecated; use `", stringify!($new), "` instead\0"
+            "`",
+            stringify!($old),
+            "` is deprecated; use `",
+            stringify!($new),
+            "` instead\0"
         ))
     };
 
@@ -167,8 +173,11 @@ macro_rules! deprecated_or_new {
             $py,
             $new_param,
             $old_param,
-            |$old| { $if_old },
-            $crate::quilpy::deprecations::deprecated_param_cstr!(new=$new_param, old=$old_param),
+            |$old| $if_old,
+            $crate::quilpy::deprecations::deprecated_param_cstr!(
+                new = $new_param,
+                old = $old_param
+            ),
         )
     };
 
@@ -178,8 +187,11 @@ macro_rules! deprecated_or_new {
             $py,
             $new_param,
             $old_param,
-            |old| { Ok(old) },
-            $crate::quilpy::deprecations::deprecated_param_cstr!(new=$new_param, old=$old_param),
+            |old| Ok(old),
+            $crate::quilpy::deprecations::deprecated_param_cstr!(
+                new = $new_param,
+                old = $old_param
+            ),
         )
     };
 
@@ -219,8 +231,7 @@ pub(crate) fn _deprecated_or_new<'py, T, U>(
     }
 }
 
-pub(crate) use py_deprecated;
-pub(crate) use deprecated_param_cstr;
 pub(crate) use deprecated_or_new;
 pub(crate) use deprecated_param;
-
+pub(crate) use deprecated_param_cstr;
+pub(crate) use py_deprecated;

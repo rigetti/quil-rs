@@ -17,7 +17,9 @@ pub(crate) mod errors;
 pub(crate) mod singleton;
 
 pub(crate) mod deprecations;
-pub(crate) use deprecations::{py_deprecated, deprecated_param_cstr, deprecated_or_new, deprecated_param};
+pub(crate) use deprecations::{
+    deprecated_or_new, deprecated_param, deprecated_param_cstr, py_deprecated,
+};
 
 create_init_submodule! {
     errors: [
@@ -766,8 +768,6 @@ pub(crate) fn py_cast_and_clone<'a, 'py, T: PyClass + FromPyObject<'a, 'py> + Cl
 ) -> PyResult<Option<T>> {
     py_cast_and_borrow(obj).map(|obj| obj.as_deref().cloned())
 }
-
-
 
 #[cfg(feature = "stubs")]
 pub(crate) mod stubs {

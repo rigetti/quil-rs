@@ -183,7 +183,12 @@ impl Capture {
         memory_reference: MemoryReference,
         waveform: WaveformInvocation,
     ) -> Self {
-        Self { blocking, frame, memory_reference, waveform }
+        Self {
+            blocking,
+            frame,
+            memory_reference,
+            waveform,
+        }
     }
 }
 
@@ -232,7 +237,11 @@ pub struct Pulse {
 
 impl Pulse {
     pub fn new(blocking: bool, frame: FrameIdentifier, waveform: WaveformInvocation) -> Self {
-        Self { blocking, frame, waveform }
+        Self {
+            blocking,
+            frame,
+            waveform,
+        }
     }
 }
 
@@ -285,7 +294,12 @@ impl RawCapture {
         duration: Expression,
         memory_reference: MemoryReference,
     ) -> Self {
-        Self { blocking, frame, duration, memory_reference }
+        Self {
+            blocking,
+            frame,
+            duration,
+            memory_reference,
+        }
     }
 }
 

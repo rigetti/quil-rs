@@ -383,7 +383,11 @@ pub struct Store {
 
 impl Store {
     pub fn new(destination: String, offset: MemoryReference, source: ArithmeticOperand) -> Self {
-        Self { destination, offset, source }
+        Self {
+            destination,
+            offset,
+            source,
+        }
     }
 }
 
