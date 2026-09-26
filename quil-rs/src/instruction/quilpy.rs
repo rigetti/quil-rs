@@ -1016,26 +1016,27 @@ impl ComparisonOperand {
 }
 
 
-// TODO(copilot): Use `pickleable_new!` here, remove the `__getnewargs__` method,
-// and split the additional methods into a separate `impl`.
 // TODO(migration-guide):
 // - PyQuil v4 called `Comparison` `ClassicalComparison`, with subclasses
 //   (`ClassicalEqual`, `ClassicalLessThan`, etc.) providing `operator` as a class attribute.
 // - The signature was `(target, left, right)`.
+pickleable_new! {
+    impl Comparison {
+        fn __new__(
+            operator: ComparisonOperator,
+            destination: MemoryReference as MemoryReferenceLike,
+            lhs: MemoryReference as MemoryReferenceLike,
+            rhs: ComparisonOperand as ComparisonOperandLike<'_>,
+        ) -> Comparison {
+            Self::new(operator, destination.into(), lhs.into(), rhs.into())
+        }
+    }
+}
+
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Comparison {
-    #[new]
-    fn __new__<'py>(
-        operator: ComparisonOperator,
-        destination: MemoryReferenceLike,
-        lhs: MemoryReferenceLike,
-        rhs: ComparisonOperandLike<'py>,
-    ) -> Self {
-        Self::new(operator, destination.into(), lhs.into(), rhs.into())
-    }
-
     #[pyo3(warn(message = "use `operator` instead", category = PyDeprecationWarning))]
     #[getter]
     fn op(&self) -> ComparisonOperator {
@@ -2455,136 +2456,252 @@ impl Offset {
     }
 }
 
-// TODO(copilot): Use `pickleable_new!` here, remove the `__getnewargs__` method,
-// and split the additional methods into a separate `impl`.
-// - In `__new__`, make `nonblocking` an optional keyword-only arg,
-//   add a kw-only `blocking: bool=True` argument,
-//   and issue a deprecation warning if `nonblocking` is passed (but assume it overrides `blocking`).
-// - Add a `get_qubit_indices` method similar to that of `Reset`.
-// - Add a deprecated `nonblocking` getter that returns `not self.blocking`.
-// TODO(migration-guide): PyQuil v4's `Pulse` took `nonblocking` (defaulting to `False`)
-// instead of `blocking`.
+/// Return the set of fixed qubit indices among `qubits`,
+/// or return a `ValueError` if any aren't `Fixed`.
+///
+/// PyQuil v4 used this basic logic in `get_qubit_indices` methods.
+fn frame_qubit_indices(qubits: &[Qubit]) -> PyResult<HashSet<u64>> {
+    qubits
+        .iter()
+        .map(|qubit| match qubit {
+            Qubit::Fixed(index) => Ok(*index),
+            _ => Err(errors::ValueError::new_err(
+                format!("this instruction operates on a non-fixed qubit: {qubit:?}")
+            )),
+        })
+        .collect()
+}
+
+// TODO(migration-guide): PyQuil v4's `Pulse` took `nonblocking=False` instead of `blocking`.
+// This version has `blocking=True`, so for callers that didn't specify either, nothing changes.
+// For users that specified `nonblocking` as a keyword argument,
+// they'll now receive a deprecation warning, but the behavior will be consistent.
+// If a caller set `nonblocking` as a positional argument, they'll now receive an error,
+// as this change makes it keyword-only to avoid accidentally changing behavior when upgrading.
+//
+// This is implemented manually (rather than with `pickleable_new!`)
+// because `nonblocking` isn't a field on the underlying struct.
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Pulse {
     #[new]
-    #[pyo3(signature = (frame, waveform, nonblocking = false))]
-    fn __new__(frame: FrameIdentifier, waveform: WaveformInvocation, nonblocking: bool) -> Self {
-        Self::new(!nonblocking, frame, waveform)
+    #[pyo3(signature = (frame, waveform, *, blocking = true, nonblocking = None))]
+    fn __new__(
+        py: Python<'_>,
+        frame: FrameIdentifier,
+        waveform: WaveformInvocation,
+        blocking: bool,
+        nonblocking: Option<bool>,
+    ) -> PyResult<Self> {
+        let blocking = deprecated_or_new!(py, new = blocking, old = nonblocking, |nb| !nb)?;
+        Ok(Self::new(blocking, frame, waveform))
     }
 
+    // TODO(copilot): This needs to be __getnewargs_ex__
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        (self.frame.clone(), self.waveform.clone(), !self.blocking).into_pyobject_or_pyerr(py)
+        (self.frame.clone(), self.waveform.clone(), self.blocking).into_pyobject_or_pyerr(py)
     }
 }
 
-// TODO(copilot): Use `pickleable_new!` here, remove the `__getnewargs__` method,
-// and split the additional methods into a separate `impl`.
-// - As with `Pulse`, transition `nonblocking` to `blocking`
-//   in a way that rejects positional-only `nonblocking` arguments and warns if used as a keyword, 
-//   adding `blocking` as a keyword-only argument with default `True`.
-// - Add a deprecated `nonblocking` getter that returns `not self.blocking`.
-// - Add a `get_qubit_indices` method similar to that of `Reset`
-//   which returns the fixed qubit indices of the `frame` (assuming they are all fixed).
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Pulse {
+    #[pyo3(warn(message = "use `not blocking` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn nonblocking(&self) -> bool {
+        !self.blocking
+    }
+
+    /// Return the fixed qubit indices used by this instruction's `frame`.
+    ///
+    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
+        frame_qubit_indices(&self.frame.qubits)
+    }
+}
+
 // TODO(migration-guide): PyQuil v4's `Capture` took `kernel` and `memory_region` (in that
 // order) and `nonblocking` (defaulting to `False`) instead of `waveform`, `memory_reference`,
 // and `blocking`.
+//
+// This is implemented manually (rather than with `pickleable_new!`)
+// because `nonblocking` isn't a field on the underlying struct.
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Capture {
     #[new]
-    #[pyo3(signature = (frame, kernel, memory_region, nonblocking = false))]
+    #[pyo3(signature = (frame, kernel, memory_region, *, blocking = true, nonblocking = None))]
     fn __new__(
+        py: Python<'_>,
         frame: FrameIdentifier,
         kernel: WaveformInvocation,
         memory_region: MemoryReferenceLike,
-        nonblocking: bool,
-    ) -> Self {
-        Self::new(!nonblocking, frame, memory_region.into(), kernel)
+        blocking: bool,
+        nonblocking: Option<bool>,
+    ) -> PyResult<Self> {
+        let blocking = deprecated_or_new!(py, new = blocking, old = nonblocking, |nb| Ok(!nb))?;
+        Ok(Self::new(blocking, frame, memory_region.into(), kernel))
     }
 
+    // TODO(copilot): This needs to be __getnewargs_ex__
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         (
             self.frame.clone(),
             self.waveform.clone(),
             self.memory_reference.clone(),
-            !self.blocking,
+            self.blocking,
         )
             .into_pyobject_or_pyerr(py)
     }
+
+    #[pyo3(warn(message = "use `not capture.blocking` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn nonblocking(&self) -> bool {
+        !self.blocking
+    }
+
+    /// Return the fixed qubit indices used by this instruction's `frame`.
+    ///
+    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
+        frame_qubit_indices(&self.frame.qubits)
+    }
 }
 
-// TODO(copilot): Use `pickleable_new!` here, remove the `__getnewargs__` method,
-// and split the additional methods into a separate `impl`.
-// - Transition `nonblocking` to `blocking` as was done with `Pulse` and `Capture`.
-// - Add a deprecated `nonblocking` getter that returns `not self.blocking`.
-// - Add a deprecated `memory_region` getter that returns `self.memory_reference`.
-// - Add a `get_qubit_indices` method 
 // TODO(migration-guide): PyQuil v4's `RawCapture` took `memory_region` instead of
 // `memory_reference`, and `nonblocking` (defaulting to `False`) instead of `blocking`.
+//
+// This is implemented manually (rather than with `pickleable_new!`)
+// because `nonblocking` isn't a field on the underlying struct.
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl RawCapture {
     #[new]
-    #[pyo3(signature = (frame, duration, memory_region, nonblocking = false))]
+    #[pyo3(signature = (frame, duration, memory_region, *, blocking = true, nonblocking = None))]
     fn __new__(
+        py: Python<'_>,
         frame: FrameIdentifier,
         duration: ExpressionLike,
         memory_region: MemoryReferenceLike,
-        nonblocking: bool,
-    ) -> Self {
-        Self::new(!nonblocking, frame, duration.into(), memory_region.into())
+        blocking: bool,
+        nonblocking: Option<bool>,
+    ) -> PyResult<Self> {
+        let blocking = deprecated_or_new!(py, new = blocking, old = nonblocking, |nb| Ok(!nb))?;
+
+        Ok(Self::new( blocking, frame, duration.into(), memory_region.into()))
     }
 
+    // TODO(copilot): This needs to be __getnewargs_ex__
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         (
             self.frame.clone(),
             self.duration.clone(),
             self.memory_reference.clone(),
-            !self.blocking,
+            self.blocking,
         )
             .into_pyobject_or_pyerr(py)
     }
+
+    #[pyo3(warn(message = "use `not blocking` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn nonblocking(&self) -> bool {
+        !self.blocking
+    }
+
+    #[pyo3(warn(message = "use `memory_reference` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn memory_region(&self) -> MemoryReference {
+        self.memory_reference.clone()
+    }
+
+    /// Return the fixed qubit indices used by this instruction's `frame`.
+    ///
+    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
+        frame_qubit_indices(&self.frame.qubits)
+    }
 }
 
-
-// TODO(copilot):
-// - Add a deprecated kw-only `freq` argument that overrides `frequency` and issues a warning. 
-// - Add a deprecated `freq` getter that returns `self.frequency`.
-// - Add a `get_qubit_indices` method.
 // TODO(migration-guide): PyQuil v4's `SetFrequency` took `freq` instead of `frequency`.
-pickleable_new! {
-    impl SetFrequency {
-        fn __new__(
-            frame: FrameIdentifier,
-            frequency: Expression as ExpressionLike,
-        ) -> SetFrequency {
-            Self::new(frame, frequency.into())
-        }
+//
+// This is implemented manually (rather than with `pickleable_new!`)
+// because `freq` isn't a field on the underlying struct.
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl SetFrequency {
+    #[new]
+    #[pyo3(signature = (frame, frequency, *, freq = None))]
+    fn __new__(
+        py: Python<'_>,
+        frame: FrameIdentifier,
+        frequency: ExpressionLike,
+        freq: Option<ExpressionLike>,
+    ) -> PyResult<Self> {
+        let frequency = deprecated_or_new!(py, new = frequency, old = freq)?;
+        Ok(Self::new(frame, frequency.into()))
+    }
+
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        (self.frame.clone(), self.frequency.clone()).into_pyobject_or_pyerr(py)
+    }
+
+    #[pyo3(warn(message = "use `frequency` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn freq(&self) -> Expression {
+        self.frequency.clone()
+    }
+
+    /// Return the fixed qubit indices used by this instruction's `frame`.
+    ///
+    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
+        frame_qubit_indices(&self.frame.qubits)
     }
 }
 
-// TODO(copilot):
-// - Add a deprecated kw-only `freq` argument that overrides `frequency` and issues a warning. 
-// - Add a deprecated `freq` getter that returns `self.frequency`.
-// - Add a `get_qubit_indices` method.
 // TODO(migration-guide): PyQuil v4's `ShiftFrequency` took `freq` instead of `frequency`.
-pickleable_new! {
-    impl ShiftFrequency {
-        fn __new__(
-            frame: FrameIdentifier,
-            frequency: Expression as ExpressionLike,
-        ) -> ShiftFrequency {
-            Self::new(frame, frequency.into())
-        }
+//
+// This is implemented manually (rather than with `pickleable_new!`)
+// because `freq` isn't a field on the underlying struct.
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl ShiftFrequency {
+    #[new]
+    #[pyo3(signature = (frame, frequency, *, freq = None))]
+    fn __new__(
+        py: Python<'_>,
+        frame: FrameIdentifier,
+        frequency: ExpressionLike,
+        freq: Option<ExpressionLike>,
+    ) -> PyResult<Self> {
+        let frequency = deprecated_or_new!(py, new = frequency, old = freq)?;
+        Ok(Self::new(frame, frequency.into()))
+    }
+
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        (self.frame.clone(), self.frequency.clone()).into_pyobject_or_pyerr(py)
+    }
+
+    #[pyo3(warn(message = "use `frequency` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn freq(&self) -> Expression {
+        self.frequency.clone()
+    }
+
+    /// Return the fixed qubit indices used by this instruction's `frame`.
+    ///
+    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
+        frame_qubit_indices(&self.frame.qubits)
     }
 }
 
-// TODO(copilot):
-// - Add a `get_qubit_indices` method.
 pickleable_new! {
     impl SetPhase {
         fn __new__(
@@ -2596,8 +2713,18 @@ pickleable_new! {
     }
 }
 
-// TODO(copilot):
-// - Add a `get_qubit_indices` method.
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl SetPhase {
+    /// Return the fixed qubit indices used by this instruction's `frame`.
+    ///
+    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
+        frame_qubit_indices(&self.frame.qubits)
+    }
+}
+
 pickleable_new! {
     impl ShiftPhase {
         fn __new__(
@@ -2609,8 +2736,18 @@ pickleable_new! {
     }
 }
 
-// TODO(copilot):
-// - Add a `get_qubit_indices` method.
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl ShiftPhase {
+    /// Return the fixed qubit indices used by this instruction's `frame`.
+    ///
+    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
+        frame_qubit_indices(&self.frame.qubits)
+    }
+}
+
 pickleable_new! {
     impl SetScale {
         fn __new__(
@@ -2622,13 +2759,55 @@ pickleable_new! {
     }
 }
 
-// TODO(copilot): 
-// - Adjust the `__new__` signature to accept a list of either strings or list of frame references,
-// and in the latter case, extract the frame names and issue a deprecation warning.
-// - Accept `frames` as a deprecated keyword-only argument
-//   and handle the conversion to `frame_names` with a deprecation warning.
-// - Add a deprecated getter for `frames`.
-//
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl SetScale {
+    /// Return the fixed qubit indices used by this instruction's `frame`.
+    ///
+    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
+        frame_qubit_indices(&self.frame.qubits)
+    }
+}
+
+/// A frame name, or a `FrameIdentifier` (in which case just its name is used).
+///
+/// Accepting `FrameIdentifier`s directly is deprecated: it issues a ``DeprecationWarning``.
+#[derive(Debug, Clone)]
+enum FrameNameLike {
+    Name(String),
+    Frame(FrameIdentifier),
+}
+
+impl<'a, 'py> FromPyObject<'a, 'py> for FrameNameLike {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(value) = obj.cast::<PyString>() {
+            Ok(Self::Name(value.extract()?))
+        } else if let Ok(value) = obj.cast::<FrameIdentifier>() {
+            let py = obj.py();
+            py_deprecated!(
+                py,
+                c"giving a `Frame` here is deprecated; give its name (a `str`) instead"
+            )?;
+            Ok(Self::Frame(value.get().clone()))
+        } else {
+            Err(PyTypeError::new_err("expected a str or Frame"))
+        }
+    }
+}
+
+impl From<FrameNameLike> for String {
+    fn from(value: FrameNameLike) -> Self {
+        match value {
+            FrameNameLike::Name(name) => name,
+            FrameNameLike::Frame(frame) => frame.name,
+        }
+    }
+}
+
 // TODO(migration-guide):
 // - PyQuil v4's `Delay` (and its subclasses `DelayFrames`/`DelayQubits`) took a list of
 //   `Frame`s, merging their qubits with the given qubits; here, we expect `frame_names`.
@@ -2639,16 +2818,56 @@ pickleable_new! {
 // - PyQuil v4's `DelayFrames` and `DelayQubits` were separate classes,
 //   but here we just have a single `Delay` class, but are more flexible in our constructor.
 //   The other two classes are aliases to this one within PyQuil v5.
-pickleable_new! {
-    impl Delay {
-        fn __new__(
-            frames_names: Vec<String>,
-            #[pyo3(from_py_with = from_sequence::<Qubit, _>)]
-            qubits: Vec<Qubit>,
-            duration: Expression as ExpressionLike,
-        ) -> Delay {
-            Self::new(duration.into(), frames, qubits)
-        }
+//
+// This is implemented manually (rather than with `pickleable_new!`)
+// because `frames` isn't a field on the underlying struct,
+// and `frame_names`/`frames` accept `str`s or `FrameIdentifier`s
+// rather than the plain `Vec<String>` the struct holds.
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Delay {
+    #[new]
+    #[pyo3(signature = (frame_names, qubits, duration, *, frames = None))]
+    fn __new__(
+        py: Python<'_>,
+        frame_names: Vec<FrameNameLike>,
+        #[pyo3(from_py_with = from_sequence::<Qubit, _>)] qubits: Vec<Qubit>,
+        duration: ExpressionLike,
+        frames: Option<Vec<FrameNameLike>>,
+    ) -> PyResult<Self> {
+        let frame_names = deprecated_or_new!(py, new = frame_names, old = frames)?
+            .into_iter()
+            .map(String::from)
+            .collect();
+
+        Ok(Self::new(duration.into(), frame_names, qubits))
+    }
+
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        (
+            self.frame_names.clone(),
+            self.qubits.clone(),
+            self.duration.clone(),
+        )
+            .into_pyobject_or_pyerr(py)
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Delay {
+    #[pyo3(warn(message = "use `frame_names` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn frames(&self) -> Vec<FrameIdentifier> {
+        self.frame_names
+            .iter()
+            .map(|name| FrameIdentifier {
+                name: name.clone(),
+                qubits: self.qubits.clone(),
+            })
+            .collect()
     }
 }
 
@@ -4305,39 +4524,58 @@ impl<'a, 'py> FromPyObject<'a, 'py> for PragmaArgument {
     }
 }
 
-// TODO(copilot): Use `pickleable_new!` here, remove the `__getnewargs__` method,
-// and split the additional methods into a separate `impl`.
-// - Adjust the constructor to accept `name` and `data` parameters
-//   and to issue warnings if `command` or `freeform_string` parameters are given as keywords.
-// - Make `data` optional and default to `None`. Issue a warning if its given as an empty string.
-// - Add deprecated getters for `command` and `freeform_string` that return `name` and `data`.
 // TODO(migration-guide):
 // - PyQuil v4 accepted `Qubit | FormalArgument | int | str` items for `args`;
 //   only integers and identifiers (`str`) can be given directly as `PragmaArgument`s here.
 // - PyQuil v4's `Pragma` took `command` and `freeform_string` instead of `name` and `data`.
+//
+// This is implemented manually (rather than with `pickleable_new!`) because `command`
+// and `freeform_string` aren't fields on the underlying struct.
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Pragma {
     /// Initialize a new PRAGMA instruction.
     #[new]
-    #[pyo3(signature = (command, args = Vec::new(), freeform_string = String::new()))]
-    fn __new__(command: String, args: Vec<PragmaArgument>, freeform_string: String) -> Self {
-        let data = if freeform_string.is_empty() {
+    #[pyo3(signature = (name, args = Vec::new(), data = None, *, command = None, freeform_string = None))]
+    fn __new__(
+        py: Python<'_>,
+        name: String,
+        args: Vec<PragmaArgument>,
+        data: Option<String>,
+        command: Option<String>,
+        freeform_string: Option<String>,
+    ) -> PyResult<Self> {
+        let name = deprecated_or_new!(py, new = name, old = command)?;
+
+        let data = deprecated_or_new!(py, new = data, old = freeform_string, |old| Ok(Some(old)))?;
+        let data = if data.is_some_and(|s| s.is_empty()) {
+            py_deprecated!(
+                py,
+                c"providing `data` as an empty string is deprecated; use `None` instead"
+            )?;
             None
         } else {
-            Some(freeform_string)
+            data
         };
-        Self::new(command, args, data)
+
+        Ok(Self::new(name, args, data))
     }
 
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        (
-            self.name.clone(),
-            self.arguments.clone(),
-            self.data.clone().unwrap_or_default(),
-        )
-            .into_pyobject_or_pyerr(py)
+        (self.name.clone(), self.arguments.clone(), self.data.clone()).into_pyobject_or_pyerr(py)
+    }
+
+    #[pyo3(warn(message = "use `name` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn command(&self) -> String {
+        self.name.clone()
+    }
+
+    #[pyo3(warn(message = "use `data` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn freeform_string(&self) -> Option<String> {
+        self.data.clone()
     }
 }
 
@@ -4418,6 +4656,8 @@ mod stubs {
     impl_stub_type!(GateModifierDesignator = GateModifier | String);
 
     impl_stub_type!(PauliArg = String | u64 | Qubit);
+
+    impl_stub_type!(FrameNameLike = String | FrameIdentifier);
 
     type_alias!(
         "quil._quil.instructions",
@@ -4627,12 +4867,12 @@ impl UnresolvedCallArgument {
 }
 
 // TODO(asaites): add v5 alias from DefWaveform to WaveformDefinition.
-// TODO(copilot):
-// - Use `pickleable_new!` here, remove the `__getnewargs__` method,
-//   and split the additional methods into a separate `impl`.
-// - Add an alternative `quil` constructor that takes `name` and `definition`.
 // TODO(migration-guide): PyQuil v4's `DefWaveform` took `parameters` (a list of `Parameter`s,
 // here just their names) and `entries` directly, building the `quil_rs.Waveform` internally.
+//
+// This is implemented manually (rather than with `pickleable_new!`)
+// because `parameters` and `entries` aren't fields on the underlying struct;
+// use `WaveformDefinition.quil` to construct one directly from a `name` and a `definition`.
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
@@ -4654,7 +4894,14 @@ impl WaveformDefinition {
         )
             .into_pyobject_or_pyerr(py)
     }
+
+    /// Construct a `WaveformDefinition` directly from a `name` and existing waveform `definition`.
+    #[staticmethod]
+    fn from_waveform(name: String, definition: Waveform) -> Self {
+        Self::new(name, definition)
+    }
 }
+
 
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
