@@ -16,6 +16,9 @@ use crate::waveform;
 pub(crate) mod errors;
 pub(crate) mod singleton;
 
+pub(crate) mod deprecations;
+pub(crate) use deprecations::{py_deprecated, deprecated_param_cstr, deprecated_or_new, deprecated_param};
+
 create_init_submodule! {
     errors: [
         errors::QuilError,
@@ -510,10 +513,10 @@ where
 /// You can get around that by marking `#[pyclass(skip_from_py_object)]`
 /// and then applying `#[derive(FromPyObject)]` for its default implementation,
 /// but then you'll have the opposite problem: users can't pass existing instances of `E`!
-/// By taking `Like<E>` as a parameter, you'll again be able to accept existing `E`s, 
+/// By taking `Like<E>` as a parameter, you'll again be able to accept existing `E`s,
 /// and only fall back to the `FromPyObject` implementation if it's not yet an instance.
 ///
-/// In a sense, this works like an enumeration `E` and "things that extract into E"; 
+/// In a sense, this works like an enumeration `E` and "things that extract into E";
 /// hence, if you `#[derive(FromPyObject)]` for `E`, `Like<E>` can work with both.
 ///
 /// To allow for certain performance optimizations and mutable usecases,
@@ -764,136 +767,7 @@ pub(crate) fn py_cast_and_clone<'a, 'py, T: PyClass + FromPyObject<'a, 'py> + Cl
     py_cast_and_borrow(obj).map(|obj| obj.as_deref().cloned())
 }
 
-/// Raise a deprecation warning.
-///
-/// This expands into [pyo3::PyErr::warn], which may return a [pyo3::PyErr],
-/// so when using the macro, you should return a [Result], and likely use `?`.
-/// If in the Python interpreter warnings are raised as exceptions,
-/// this will return an `Err`, and function execution will stop.
-///
-/// # Example
-///
-/// Pass a `Python` token and a `C`-string message:
-///
-/// ```ignore
-/// use pyo3::prelude::*;
-/// use quil_rs::quilpy::py_deprecated;
-///
-/// #[pyclass] struct Foo(Vec<u64>);
-///
-/// #[pymethods]
-/// impl Foo {
-///     #[pyo3(signature = (index, *, offset = None))]
-///     fn get_at(&self, py: Python<'_>, index: usize, offset: Option<usize>) -> PyResult<u64> {
-///         let index = if let Some(offset) = offset {
-///             py_deprecated!(py, c"`offset` is deprecated; use `index` instead")?;
-///             offset
-///         } else {
-///             index
-///         };
-///
-///         self.0.get(index).cloned()
-///             .ok_or_else(|| pyo3::exceptions::PyIndexError::new_err("index out of bounds"))
-///     }
-/// }
-/// ```
-///
-/// Optionally, you can set the `level` for [pyo3::PyErr::warn] as a third parameter.
-macro_rules! py_deprecated {
-    ($py: ident, $message: expr) => {
-        $crate::quilpy::py_deprecated!($py, $message, 1)
-    };
 
-    ($py: ident, $message: expr, $level: expr) => {
-        pyo3::PyErr::warn(
-            $py,
-            &<pyo3::exceptions::PyDeprecationWarning as pyo3::PyTypeInfo>::type_object($py),
-            $message,
-            $level,
-        )
-    };
-}
-
-pub(crate) use py_deprecated;
-
-/// Return the new parameter, or if the old parameter is present,
-/// warn that it's deprecated and return it instead.
-///
-/// # Example
-///
-/// ```ignore
-/// use pyo3::prelude::*;
-/// use quil_rs::quilpy::deprecated_or_new;
-///
-/// #[pyfunction(signature = (new_name, *, old_name=None))]
-/// fn add_one(py: Python<'_>, new_name: i64, old_name: Option<u64>) -> PyResult<i64> {
-///     let value = deprecated_or_new!(py, old=old_name, new=new_name)?;
-///     Ok(value + 1)
-/// }
-/// ```
-macro_rules! deprecated_or_new {
-    ($py: ident, old=$old_param: ident, new=$new_param: ident) => {
-        deprecated_or_new!($py, new = $new_param, old = $old_param)
-    };
-
-    ($py: ident, new=$new_param: ident, old=$old_param: ident) => {
-        $old_param.map_or(Ok($new_param), |old| {
-            $crate::quilpy::deprecated_param!($py, new = $new_param, old = $old_param)?;
-            Ok::<_, ::pyo3::PyErr>(old)
-        })
-    };
-}
-
-/// Warn that a parameter is deprecated.
-///
-/// See [`deprecated_or_new!`] for the common case of choosing between a new or old value.
-/// See [`py_deprecated!`] for more details on how the warning is raised.
-///
-/// # Usage
-///
-/// Give a `Python` token, the name of the deprecated parameter, and the replacement:
-///
-/// ```ignore
-/// use pyo3::prelude::*;
-/// use quil_rs::quilpy::deprecated_param;
-///
-/// #[pyfunction(signature = (new_name, *, old_name=None))]
-/// fn add_one(py: Python<'_>, new_name: i64, old_name: Option<u64>) -> PyResult<i64> {
-///     let value = if let Some(old) = old_name {
-///         deprecated_param!(py, new=old_name, old=new_name)?;
-///         i64::try_from(old)?
-///     } else {
-///         new_name
-///     };
-///
-///     Ok(value + 1)
-/// }
-/// ```
-macro_rules! deprecated_param {
-    ($py: ident, new=$new_param: ident, old=$old_param: ident) => {
-        $crate::quilpy::deprecated_param!($py, new = $new_param, old = $old_param, level = 1)
-    };
-
-    ($py: ident, new=$new_param: ident, old=$old_param: ident, level=$level: expr) => {
-        $crate::quilpy::py_deprecated!(
-            $py,
-            ::pyo3::ffi::c_str!(concat!(
-                "`",
-                stringify!($old_param),
-                "`",
-                " is deprecated; use ",
-                "`",
-                stringify!($new_param),
-                "`",
-                " instead"
-            )),
-            $level
-        )
-    };
-}
-
-pub(crate) use deprecated_or_new;
-pub(crate) use deprecated_param;
 
 #[cfg(feature = "stubs")]
 pub(crate) mod stubs {
