@@ -110,10 +110,10 @@ __all__ = [
     "unpack_classical_reg",
 ]
 
-LabelTargetParameter: TypeAlias = builtins.str  |  Target  |  Label
+LabelTargetParameter: TypeAlias = builtins.str  |  Label  |  Target
 MemoryReferenceDesignator: TypeAlias = MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]
-PauliTargetDesignator: TypeAlias = builtins.str  |  builtins.int  |  Qubit
-QubitDesignator: TypeAlias = Qubit  |  QubitPlaceholder  |  builtins.str  |  builtins.int
+PauliTargetDesignator: TypeAlias = Qubit  |  builtins.int  |  builtins.str
+QubitDesignator: TypeAlias = Qubit  |  builtins.int  |  builtins.str  |  QubitPlaceholder
 Halt: HaltType
 Nop: NopType
 Wait: WaitType
@@ -139,7 +139,7 @@ class Arithmetic(Instruction):
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[ArithmeticOperator, MemoryReference, ArithmeticOperand]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, operator: ArithmeticOperator, destination: MemoryReference, source: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration) -> Arithmetic: ...
+    def __new__(cls, operator: ArithmeticOperator, destination: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], source: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> Arithmetic: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -232,7 +232,7 @@ class BinaryLogic(Instruction):
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[BinaryOperator, MemoryReference, BinaryOperand]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, operator: BinaryOperator, destination: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], source: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration) -> BinaryLogic: ...
+    def __new__(cls, operator: BinaryOperator, destination: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], source: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> BinaryLogic: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -248,7 +248,7 @@ class BinaryLogic(Instruction):
 
 class BinaryOperand:
     def __getnewargs__(self) -> builtins.tuple[builtins.int | MemoryReference]: ...
-    def __new__(cls, operand: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration) -> BinaryOperand: ...
+    def __new__(cls, operand: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> BinaryOperand: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -584,7 +584,7 @@ class Comparison(Instruction):
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[ComparisonOperator, MemoryReference, MemoryReference, ComparisonOperand]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, operator: ComparisonOperator, destination: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], lhs: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], rhs: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration) -> Comparison: ...
+    def __new__(cls, operator: ComparisonOperator, destination: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], lhs: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], rhs: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> Comparison: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -718,7 +718,7 @@ class DeclarationAt:
     ]
     ```
     """
-    def add(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Arithmetic:
+    def add(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Arithmetic:
         r"""
         Return a new `Arithmetic` instruction representing `ADD self other`.
         
@@ -733,7 +733,7 @@ class DeclarationAt:
         assert arith.to_quil() == "ADD x[2] 5"
         ```
         """
-    def and(self, other: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> BinaryLogic: ...
+    def and(self, other: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> BinaryLogic: ...
     def convert(self, source: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Convert:
         r"""
         Return a new `Convert` instruction representing `self = (T)source`.
@@ -755,7 +755,7 @@ class DeclarationAt:
         assert cvt.to_quil() == "CONVERT x[2] y[1]"  # x[2] := (INTEGER) y[1]
         ```
         """
-    def div(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Arithmetic: ...
+    def div(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Arithmetic: ...
     def exchange(self, other: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Exchange:
         r"""
         Return a new `Exchange` instruction representing the exchange of `self` and `other`.
@@ -772,7 +772,7 @@ class DeclarationAt:
         assert ex.to_quil() == "EXCHANGE x[2] y[1]"  # x[2] <-> y[1]
         ```
         """
-    def ior(self, other: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> BinaryLogic: ...
+    def ior(self, other: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> BinaryLogic: ...
     def load_from(self, source: Declaration, offset: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Load:
         r"""
         Return a new `Load` instruction representing the indirect load `self = source[offset]`.
@@ -790,7 +790,7 @@ class DeclarationAt:
         assert ld.to_quil() == "LOAD x[2] y z[1]"  # x[2] := y[z[1]]
         ```
         """
-    def move(self, value: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Move:
+    def move(self, value: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Move:
         r"""
         Return a new `Move` instruction representing `self = value`.
         
@@ -805,7 +805,7 @@ class DeclarationAt:
         assert mv.to_quil() == "MOVE x[2] 5"  # x[2] := 5
         ```
         """
-    def mul(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Arithmetic: ...
+    def mul(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Arithmetic: ...
     def neg(self) -> UnaryLogic: ...
     def not(self) -> UnaryLogic:
         r"""
@@ -822,7 +822,7 @@ class DeclarationAt:
         assert n.to_quil() == "NOT x[2]"  # x[2] := ~x[2]
         ```
         """
-    def store_eq(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Comparison:
+    def store_eq(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Comparison:
         r"""
         Return a new `Comparison` instruction representing `self = (a == b)`.
         
@@ -831,10 +831,10 @@ class DeclarationAt:
         and the right-hand side must have a type compatible with the left-hand side.
         See the Quil specification for more details on valid comparisons.
         """
-    def store_ge(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Comparison: ...
-    def store_gt(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Comparison: ...
-    def store_le(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Comparison: ...
-    def store_lt(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Comparison: ...
+    def store_ge(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Comparison: ...
+    def store_gt(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Comparison: ...
+    def store_le(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Comparison: ...
+    def store_lt(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Comparison: ...
     def store_to(self, destination: Declaration, offset: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Store:
         r"""
         Return a new `Store` instruction representing the indirect store `destination[offset] = self`.
@@ -852,8 +852,8 @@ class DeclarationAt:
         assert st.to_quil() == "STORE y z[1] x[2]"  # y[z[1]] := x[2]
         ```
         """
-    def sub(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> Arithmetic: ...
-    def xor(self, other: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration, /) -> BinaryLogic: ...
+    def sub(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Arithmetic: ...
+    def xor(self, other: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> BinaryLogic: ...
 
 class DefGateSequence:
     r"""
@@ -903,13 +903,22 @@ class Delay(Instruction):
     @property
     def qubits(self) -> builtins.list[Qubit]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[builtins.list[builtins.str], builtins.list[Qubit], expression.Expression]: ...
+    def __getnewargs__(self) -> tuple[expression.Expression, builtins.list[Qubit], builtins.list[builtins.str]]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, frame_names: typing.Sequence[builtins.str  |  FrameIdentifier], qubits: typing.Sequence[Qubit], duration: _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, *, frames: typing.Optional[typing.Sequence[builtins.str  |  FrameIdentifier]] = None) -> Delay: ...
+    def __new__(cls, duration: _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, qubits: typing.Sequence[Qubit], frame_names: typing.Sequence[builtins.str] = []) -> Delay: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    @staticmethod
+    def from_frames(duration: _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, frames: typing.Sequence[FrameIdentifier]) -> Delay:
+        r"""
+        Create a new `Delay` instruction from a list of `FrameIdentifier`s.
+        """
+    def has_frames(self) -> builtins.bool:
+        r"""
+        Return `True` if this `Delay` has any frames, or `False` otherwise.
         """
     @staticmethod
     def is_quil_t() -> builtins.bool:
@@ -1161,9 +1170,9 @@ class Gate(Instruction):
     def __getnewargs__(self) -> tuple[builtins.str, builtins.list[expression.Expression], builtins.list[Qubit], builtins.list[GateModifier]]: ...
     def __hash__(self) -> builtins.int: ...
     @typing.overload
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> Gate: ...
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex], qubits: typing.Sequence[Qubit], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> Gate: ...
     @typing.overload
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None, *, params: typing.Optional[typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]]) -> typing_extensions.NoReturn: ...
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex], qubits: typing.Sequence[Qubit], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None, *, params: typing.Optional[typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]]) -> typing_extensions.NoReturn: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1173,7 +1182,7 @@ class Gate(Instruction):
         r"""
         Get a Quil-like representation as a string.
         """
-    def controlled(self, control_qubit: Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str) -> Gate:
+    def controlled(self, control_qubit: Qubit  |  builtins.int  |  builtins.str  |  QubitPlaceholder) -> Gate:
         r"""
         Return a copy of the ``Gate`` with the ``CONTROLLED`` modifier added to it.
         """
@@ -1181,7 +1190,7 @@ class Gate(Instruction):
         r"""
         Return a copy of the ``Gate`` with the ``DAGGER`` modifier added to it.
         """
-    def forked(self, fork_qubit: Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str, alt_params: typing.Sequence[expression.Expression]) -> Gate:
+    def forked(self, fork_qubit: Qubit  |  builtins.int  |  builtins.str  |  QubitPlaceholder, alt_params: typing.Sequence[expression.Expression]) -> Gate:
         r"""
         Return a copy of the ``Gate`` with the ``FORKED`` modifier added to it.
         
@@ -1472,7 +1481,7 @@ class JumpUnless(Instruction):
     def target(self, value: Target) -> None: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[Target, MemoryReference]: ...
-    def __new__(cls, target: Target, condition: MemoryReference) -> JumpUnless: ...
+    def __new__(cls, target: Target, condition: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> JumpUnless: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1497,7 +1506,7 @@ class JumpWhen(Instruction):
     def target(self, value: Target) -> None: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[Target, MemoryReference]: ...
-    def __new__(cls, target: Target, condition: MemoryReference) -> JumpWhen: ...
+    def __new__(cls, target: Target, condition: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> JumpWhen: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1728,7 +1737,7 @@ class Measurement(Instruction):
             builtins.dict[builtins.str, typing.Optional[builtins.str]]
         ]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, qubit: Qubit, target: typing.Optional[MemoryReference], *, name: typing.Optional[builtins.str] = None) -> Measurement: ...
+    def __new__(cls, qubit: Qubit, target: typing.Optional[MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]], *, name: typing.Optional[builtins.str] = None) -> Measurement: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1842,7 +1851,7 @@ class Move(Instruction):
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[MemoryReference, ArithmeticOperand]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, destination: MemoryReference, source: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration) -> Move: ...
+    def __new__(cls, destination: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], source: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> Move: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1958,7 +1967,7 @@ class PauliSum:
         This constructor is deprecated; use `(terms, arguments)` instead.
         """
     @typing.overload
-    def __new__(cls, terms_or_args: typing.Optional[builtins.list[PauliTerm]  |  builtins.list[builtins.str  |  builtins.int  |  Qubit]] = None, /, terms: typing.Optional[builtins.list[PauliTerm]  |  builtins.list[builtins.str  |  builtins.int  |  Qubit]] = None, arguments: typing.Optional[typing.Sequence[builtins.str  |  builtins.int  |  Qubit]] = None) -> PauliSum:
+    def __new__(cls, terms_or_args: typing.Optional[builtins.list[PauliTerm]  |  builtins.list[Qubit  |  builtins.int  |  builtins.str]] = None, /, terms: typing.Optional[builtins.list[PauliTerm]  |  builtins.list[Qubit  |  builtins.int  |  builtins.str]] = None, arguments: typing.Optional[typing.Sequence[Qubit  |  builtins.int  |  builtins.str]] = None) -> PauliSum:
         r"""
         Construct a new `PauliSum` from a list of `PauliTerm`s and an optional list of arguments.
         
@@ -2075,7 +2084,7 @@ class PauliTerm:
         Construct a `PauliTerm` from a sequence of arguments.
         """
     @typing.overload
-    def __new__(cls, op: typing.Optional[PauliGate  |  builtins.list[tuple[PauliGate, builtins.str  |  builtins.int  |  Qubit]]] = None, index: typing.Optional[builtins.str  |  builtins.int  |  Qubit  |  _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None, coefficient: typing.Optional[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None, arguments: typing.Optional[typing.Sequence[tuple[PauliGate, builtins.str  |  builtins.int  |  Qubit]]] = None, expression: typing.Optional[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None) -> PauliTerm:
+    def __new__(cls, op: typing.Optional[PauliGate  |  builtins.list[tuple[PauliGate, Qubit  |  builtins.int  |  builtins.str]]] = None, index: typing.Optional[Qubit  |  builtins.int  |  builtins.str  |  _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None, coefficient: typing.Optional[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None, arguments: typing.Optional[typing.Sequence[tuple[PauliGate, Qubit  |  builtins.int  |  builtins.str]]] = None, expression: typing.Optional[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = None) -> PauliTerm:
         r"""
         Construct a new `PauliTerm` from a single operator and qubit index.
         
@@ -2224,7 +2233,7 @@ class PauliTerm:
     @staticmethod
     def from_compact_str(str_pauli_term: builtins.str) -> PauliTerm: ...
     @staticmethod
-    def from_list(terms_list: typing.Sequence[tuple[PauliGate, builtins.str  |  builtins.int  |  Qubit]], coefficient: _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex = ...) -> PauliTerm:
+    def from_list(terms_list: typing.Sequence[tuple[PauliGate, Qubit  |  builtins.int  |  builtins.str]], coefficient: _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex = ...) -> PauliTerm:
         r"""
         Construct a new `PauliTerm` from a list of operators and an optional coefficient.
         
@@ -2394,7 +2403,7 @@ class Pulse(Instruction):
 
 class Qubit:
     def __getnewargs__(self) -> builtins.tuple[builtins.int | builtins.str | QubitPlaceholder]: ...
-    def __new__(cls, arg: Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str, /) -> Qubit: ...
+    def __new__(cls, qubit: Qubit  |  builtins.int  |  builtins.str  |  QubitPlaceholder) -> Qubit: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -2700,7 +2709,7 @@ class Store(Instruction):
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[builtins.str, MemoryReference, ArithmeticOperand]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, destination: builtins.str, offset: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], source: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration) -> Store: ...
+    def __new__(cls, destination: builtins.str, offset: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], source: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> Store: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust

@@ -574,6 +574,8 @@ impl<'a, 'py, T> Like<'a, 'py, T> {
     }
 
     /// Get a bound instance of `T`, moving it to the Python heap if necessary.
+    ///
+    /// This requires that `T` is `IntoPyObject`.
     pub(crate) fn into_bound(self, py: Python<'py>) -> Result<Bound<'py, T>, T::Error>
     where
         T: PyClass + IntoPyObject<'py, Output = Bound<'py, T>>,
@@ -583,11 +585,29 @@ impl<'a, 'py, T> Like<'a, 'py, T> {
             Self::Extracted(extracted) => extracted.into_pyobject(py),
         }
     }
+
+    pub(crate) fn try_into_bound(self) -> Option<Bound<'py, T>>
+    where
+        T: PyClass,
+    {
+        match self {
+            Self::Borrowed(bound) => Some(bound.to_owned()),
+            Self::Extracted(_) => None, 
+        }
+    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub(crate) struct MoreLike<'py, T> {
     inner: Bound<'py, T>,
+}
+
+impl<'py, T> Clone for MoreLike<'py, T> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
 }
 
 impl<'a, 'py, T> FromPyObject<'a, 'py> for MoreLike<'py, T>
@@ -670,7 +690,7 @@ where
 
         import.insert("builtins".into());
         pyo3_stub_gen::TypeInfo {
-            name: format!("tuple[{name}]"),
+            name: format!("builtins.tuple[{name}]"),
             import,
             source_module,
             type_refs,
@@ -678,8 +698,27 @@ where
     }
 }
 
+/// Make a Rust enum more friendly for Python users.
+/// 
+/// # Usage
+///
+/// ```rust,ignore
+/// enum MyEnum {
+///    Variant1(Variant1Type),
+///    Variant2(Variant2Type),
+/// }
+///
+/// py_friendly_enum!(MyEnum = Variant1Type | Variant2Type);
+/// ```
+///
+/// This implements `From<Like<'a, 'py, MyEnum>> for MyEnum`,
+/// `PyStubType` for `Like<'_, '_, MyEnum>`,
+/// and a `__new__` method for `MyEnum` that accepts any of the variants directly.
+/// As a consequence, a Rust-based `#[pymethod]` that accepts `Like<'_, '_, MyEnum>`
+/// as a parameter can accept both instances and variants directly from Python,
+/// and it'll be correctly typed in the generated type stubs.
 macro_rules! py_friendly_enum {
-    (for $T:ty = $first_ty:ty $(| $variant_ty:ty)*) => {
+    ($T:ty = $first_ty:ty $(| $variant_ty:ty)*) => {
         impl<'a, 'py> From<Like<'a, 'py, $T>> for $T {
             fn from(like: Like<'a, 'py, $T>) -> Self {
                 like.into_inner()

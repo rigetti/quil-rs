@@ -20,7 +20,7 @@ def test_calibration_getters():
 
     calibration = CalibrationDefinition(
         CalibrationIdentifier("MYCAL", [], [placeholder], []),
-        [Delay(Expression.Number(0.5), [], [placeholder])],
+        [Delay(Expression.Number(0.5), [placeholder])],
     )
 
     assert calibration.name == "MYCAL"

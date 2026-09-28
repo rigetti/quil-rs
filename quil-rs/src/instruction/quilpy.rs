@@ -38,8 +38,8 @@ use crate::{
     quilpy::{
         deprecated_or_new, deprecated_param,
         errors::{self, PickleError},
-        from_sequence, impl_newargs, impl_to_quil, py_deprecated, py_friendly_enum, singleton,
-        IntoNewArgs, Like, Migrate, NewArgs, NonZeroU64,
+        from_sequence, impl_newargs, impl_to_quil, py_deprecated, singleton,
+        IntoNewArgs, Migrate, NewArgs, NonZeroU64,
     },
     validation::identifier::IdentifierValidationError,
 };
@@ -112,6 +112,7 @@ create_init_submodule! {
         WaveformDefinition,
         WaveformInvocation,
 
+        // Python-specific types without a direct Rust equivalent.
         DeclarationAt,
 
         PyInstruction,
@@ -165,15 +166,14 @@ pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Add TypeAliases for use in annotations.
     m.add("LabelTargetParameter", union!(py, PyString, Target, Label)?)?;
     m.add(
+        "MemoryReferenceDesignator",
+        union!(py, MemoryReference, DeclarationAt, Declaration, PyTuple)?,
+    )?;
+    m.add(
         "QubitDesignator",
         union!(py, Qubit, QubitPlaceholder, PyInt, PyString)?,
     )?;
     m.add("PauliTargetDesignator", union!(py, Qubit, PyInt, PyString)?)?;
-
-    m.add(
-        "MemoryReferenceDesignator",
-        union!(py, MemoryReference, DeclarationAt, Declaration, PyTuple)?,
-    )?;
 
     Ok(())
 }
@@ -594,7 +594,7 @@ impl_instruction!([
 // Rust Developer Notes:
 //
 // Rather than expose the `Instruction` complex enum directly,
-// we annotate each variant's inner type as `#[pyclass(parent = PyInstruction)]`
+// we annotate each variant's inner type as `#[pyclass(extends = PyInstruction)]`
 // and add a constructor that attaches the parent class to new instances.
 // For the unit variants, we create a new type and expose them as singleton instances.
 #[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Eq)]
@@ -647,6 +647,8 @@ pub(crate) struct NopType;
     extends = PyInstruction, from_py_object, frozen, eq, hash
 )]
 pub(crate) struct WaitType;
+
+// TODO: likely just get rid of this and use `Instruction` directly.
 
 /// A wrapper around an [`Instruction`] for use in Python-exposed functions and methods
 /// where we want to accept any `Instruction` variant.
@@ -798,6 +800,9 @@ impl From<ComparisonOperandLike<'_>> for ComparisonOperand {
 /// If a Python user derives values from [`Declaration`]s to use as [`MemoryReference`]s,
 /// we can provide additional validation when they use them to create instructions.
 /// See [`DeclarationAt`] for examples how these fit together for program building.
+///
+/// Prefer this to `MemoryReferenceLike` if there would be value (e.g., for validation)
+/// in knowing the underlying [`Declaration`] it is meant to refer to,
 #[derive(FromPyObject)]
 enum PyMemRef<'py> {
     DeclarationAt(Bound<'py, DeclarationAt>),
@@ -842,12 +847,6 @@ impl<'py> TryAsBorrowed<'py, Declaration> for PyMemRef<'py> {
             _ => None,
         }
     }
-}
-
-enum MemoryTypeMatch {
-    Valid,
-    Invalid,
-    Unknown,
 }
 
 /// Check if two values derived from [`Declaration`]s have the same data types.
@@ -911,10 +910,10 @@ pickleable_new! {
     impl Arithmetic {
         fn __new__(
             operator: ArithmeticOperator,
-            destination: MemoryReference,
+            destination: MemoryReference as MemoryReferenceLike,
             source: ArithmeticOperand as ArithmeticOperandLike,
         ) -> Arithmetic {
-            Self::new(operator, destination, source.into())
+            Self::new(operator, destination.into(), source.into())
         }
     }
 }
@@ -1294,13 +1293,13 @@ impl DeclarationAt {
     ) -> PyResult<()> {
         if self.declaration.get().size.data_type != ScalarType::Bit {
             // TODO: make a custom error type for this
-            return Err(PyValueError::new_err(
+            return Err(errors::ValueError::new_err(
                 "the destination of a comparison must be BIT-typed",
             ));
         }
 
         if matches!(same_type(a, b), Some(false)) {
-            return Err(PyValueError::new_err(
+            return Err(errors::ValueError::new_err(
                 "the left-hand side and right-hand side of a comparison must have the same type",
             ));
         }
@@ -1692,7 +1691,7 @@ submit! {
                 cls,
                 name: builtins.str,
                 parameters: pyo3_stub_gen.RustType["Vec<ExpressionLike>"],
-                qubits: pyo3_stub_gen.RustType["Vec<QubitLike>"],
+                qubits: pyo3_stub_gen.RustType["Vec<Qubit>"],
                 modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
             ) -> Gate: ...
 
@@ -1702,7 +1701,7 @@ submit! {
                 cls,
                 name: builtins.str,
                 parameters: pyo3_stub_gen.RustType["Vec<ExpressionLike>"],
-                qubits: pyo3_stub_gen.RustType["Vec<QubitLike>"],
+                qubits: pyo3_stub_gen.RustType["Vec<Qubit>"],
                 modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
                 *,
                 params: pyo3_stub_gen.RustType["Option<Vec<ExpressionLike>>"],
@@ -1761,8 +1760,8 @@ impl Gate {
     /// Return a copy of the ``Gate`` with the ``CONTROLLED`` modifier added to it.
     #[pyo3(name = "controlled")]
     #[must_use]
-    fn py_controlled(&self, control_qubit: Like<Qubit>) -> Self {
-        self.clone().controlled(control_qubit.into_inner())
+    fn py_controlled(&self, control_qubit: QubitLike) -> Self {
+        self.clone().controlled(control_qubit.into())
     }
 
     /// Return a copy of the ``Gate`` with the ``FORKED`` modifier added to it.
@@ -1772,10 +1771,11 @@ impl Gate {
     #[pyo3(name = "forked")]
     fn py_forked(
         &self,
-        fork_qubit: Like<Qubit>,
+        fork_qubit: QubitLike,
+        #[pyo3(from_py_with = from_sequence::<ExpressionLike, _>)]
         alt_params: Vec<Expression>,
     ) -> Result<Self, GateError> {
-        self.clone().forked(fork_qubit.into_inner(), alt_params)
+        self.clone().forked(fork_qubit.into(), alt_params)
     }
 
     /// Get the matrix resulting from lifting this ``Gate``
@@ -1903,6 +1903,28 @@ impl<'a> TryFrom<&'a OwnedGateSignature> for GateSignature<'a> {
             signature.qubit_parameters.as_slice(),
             signature.gate_type,
         )
+    }
+}
+
+pickleable_new! {
+    impl JumpWhen {
+        fn __new__(
+            target: Target,
+            condition: MemoryReference as MemoryReferenceLike,
+        ) -> JumpWhen {
+            Self::new(target, condition.into())
+        }
+    }
+}
+
+pickleable_new! {
+    impl JumpUnless {
+        fn __new__(
+            target: Target,
+            condition: MemoryReference as MemoryReferenceLike,
+        ) -> JumpUnless {
+            Self::new(target, condition.into())
+        }
     }
 }
 
@@ -2224,8 +2246,8 @@ impl Measurement {
     // `__getnewargs_ex__` is consistent with `__new__`!
     #[pyo3(signature = (qubit, target, *, name = None))]
     #[new]
-    fn __new__(qubit: Qubit, target: Option<MemoryReference>, name: Option<String>) -> Self {
-        Self::new(name, qubit, target)
+    fn __new__(qubit: Qubit, target: Option<MemoryReferenceLike>, name: Option<String>) -> Self {
+        Self::new(name, qubit, target.map(|t| t.into()))
     }
 
     #[gen_stub(override_return_type(
@@ -2415,10 +2437,10 @@ impl MemoryReference {
 pickleable_new! {
     impl Move {
         fn __new__(
-            destination: MemoryReference,
+            destination: MemoryReference as MemoryReferenceLike,
             source: ArithmeticOperand as ArithmeticOperandLike,
         ) -> Move {
-            Self::new(destination, source.into())
+            Self::new(destination.into(), source.into())
         }
     }
 }
@@ -2907,48 +2929,56 @@ impl From<FrameNameLike> for String {
     }
 }
 
-// TODO(migration-guide):
-// - PyQuil v4's `Delay` (and its subclasses `DelayFrames`/`DelayQubits`) took a list of
-//   `Frame`s, merging their qubits with the given qubits; here, we expect `frame_names`.
+// TODO(migration-guide): The v4 constructor looked roughly like
+// `Delay(frames: list[FrameIdentifier], qubits: list[QubitDesignator], duration: float)`
+// while the old `quil` form looked roughly like
+// `Delay(duration: Expression, frame_names: list[str], qubits: list[Qubit])`.
+//
+// Quil indicates that the order of qubits in a `DEFFRAME` is significant,
+// but doesn't make it clear whether the order within a `DELAY` is significant.
+// The PyQuil constructor, when given `FrameIdentifier`s,
+// would extract its `qubits` and merge them with any `qubits` given to the constructor,
+// potentially change the order and/or adding qubits that weren't originally given.
+// Regardless, the actual usage seems to come via either `DelayFrames` or `DelayQubit`s,
+// subclasses of `Delay` that only accept a list of frames or list of qubits, respectively.
+// In the former case, merging the qubits into a single list is still a bit questionable,
+// but at least slightly less ambiguous what is meant by it.
+//
+// This signature has been updated to be more flexible with what it accepts
+// while making it more consistent with the required parameters of Quil's `DELAY` instruction:
+// a `duration` and at least one `Qubit` are required, but frame names are optional.
+// To accommodate some aspects of the old signature, this adds an alternative constructor
+// which makes it clear exactly how it handles `FrameIdentifier`s.
+//
+// - Users of PyQuil v4 who directly used the `Delay` constructor will get errors,
+//   but users of `DelayFrames` or `DelayQubits` will be not see a behavioral change.
+//   From code scans of relevant codebases, the latter seem to be the more common usage.
+// - Users of `quil` will also get errors from the constructor change,
+//   as the parameter order for `frame_names` and `qubits` has been swapped,
+//   but the type differences should make this obvious, and `quil`
+//   has fewer direct users/fewer backwards compatibility concerns than PyQuil.
 // - PyQuil v4 required that `duration` was a `float`, but here we accept arbitrary `Expression`s
 //   and things that can be converted into them (including `float`s);
 //   however, v4 _also_ coerced the `duration` back into a `float` in the property getter,
 //   which is no longer done in this version: instead, you must use `frame.duration.to_real()`.
 // - PyQuil v4's `DelayFrames` and `DelayQubits` were separate classes,
 //   but here we just have a single `Delay` class, but are more flexible in our constructor.
-//   The other two classes are aliases to this one within PyQuil v5.
-//
-// This is implemented manually (rather than with `pickleable_new!`)
-// because `frames` isn't a field on the underlying struct,
-// and `frame_names`/`frames` accept `str`s or `FrameIdentifier`s
-// rather than the plain `Vec<String>` the struct holds.
-#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl Delay {
-    #[new]
-    #[pyo3(signature = (frame_names, qubits, duration, *, frames = None))]
-    fn __new__(
-        py: Python<'_>,
-        frame_names: Vec<FrameNameLike>,
-        #[pyo3(from_py_with = from_sequence::<Qubit, _>)] qubits: Vec<Qubit>,
-        duration: ExpressionLike,
-        frames: Option<Vec<FrameNameLike>>,
-    ) -> PyResult<Self> {
-        let frame_names = deprecated_or_new!(py, new = frame_names, old = frames)?
-            .into_iter()
-            .map(String::from)
-            .collect();
+//   Because there are no corresponding `Instruction` variants for those,
+//   operating on `DelayFrames` or `DelayQubits` would have quietly converted into a `Delay`.
+//   By getting rid of those subclasses, we prevent `isinstance` check from passing,
+//   reducing the risk of unexpected errors.
 
-        Ok(Self::new(duration.into(), frame_names, qubits))
-    }
-
-    fn __getnewargs__(&self) -> (Vec<String>, Vec<Qubit>, Expression) {
-        (
-            self.frame_names.clone(),
-            self.qubits.clone(),
-            self.duration.clone(),
-        )
+pickleable_new! {
+    impl Delay {
+        #[pyo3(signature = (duration, qubits, frame_names = Vec::new()))]
+        fn __new__(
+            duration: Expression as ExpressionLike,
+            #[pyo3(from_py_with = from_sequence::<QubitLike, _>)]
+            qubits: Vec<Qubit>,
+            frame_names: Vec<String>,
+        ) -> Delay {
+            Self::new(duration.into(), frame_names, qubits)
+        }
     }
 }
 
@@ -2966,6 +2996,23 @@ impl Delay {
                 qubits: self.qubits.clone(),
             })
             .collect()
+    }
+
+    /// Create a new `Delay` instruction from a list of `FrameIdentifier`s.
+    #[staticmethod]
+    fn from_frames(duration: ExpressionLike, frames: Vec<FrameIdentifier>) -> Self {
+        let (qubits, frame_names) = frames.into_iter()
+            .fold((HashSet::new(), Vec::new()), |(mut qubits, mut frame_names), frame| {
+                qubits.extend(frame.qubits.clone());
+                frame_names.push(frame.name);
+                (qubits, frame_names)
+            });
+        Self::new(duration.into(), frame_names, qubits.into_iter().collect())
+    }
+
+    /// Return `True` if this `Delay` has any frames, or `False` otherwise.
+    fn has_frames(&self) -> bool {
+        !self.frame_names.is_empty()
     }
 }
 
@@ -4681,9 +4728,24 @@ impl Pragma {
     }
 }
 
-py_friendly_enum!(
-    for Qubit = QubitPlaceholder | u64 | String
-);
+#[derive(Debug, Clone, FromPyObject)]
+enum QubitLike {
+    Qubit(Qubit),
+    Placeholder(QubitPlaceholder),
+    Int(u64),
+    Str(String),
+}
+
+impl From<QubitLike> for Qubit {
+    fn from(value: QubitLike) -> Self {
+        match value {
+            QubitLike::Qubit(qubit) => qubit,
+            QubitLike::Placeholder(value) => Qubit::Placeholder(value),
+            QubitLike::Int(value) => Qubit::Fixed(value),
+            QubitLike::Str(value) => Qubit::Variable(value),
+        }
+    }
+}
 
 impl<'a, 'py> FromPyObject<'a, 'py> for Qubit {
     type Error = PyErr;
@@ -4709,6 +4771,11 @@ impl<'a, 'py> FromPyObject<'a, 'py> for Qubit {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Qubit {
+    #[new]
+    fn __new__(qubit: QubitLike) -> Self {
+        qubit.into()
+    }
+
     #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.int | builtins.str | QubitPlaceholder]", imports = ("builtins")))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<NewArgs<'py, Qubit>> {
         match self {
@@ -4718,64 +4785,6 @@ impl Qubit {
         }
     }
 }
-
-#[cfg(feature = "stubs")]
-mod stubs {
-    use pyo3_stub_gen::{impl_stub_type, type_alias};
-
-    // pyo3_stub_gen::export_verbatim!("quil.instructions", "Halt");
-
-    #[allow(clippy::wildcard_imports)]
-    use super::*;
-
-    // TODO(migration-guide):
-    // There was a `QubitDesignator` type alias = `QubitPlaceholder | int | str` in PyQuil v4,
-    // but now we can explicitly type parameters to accept those (or a `Qubit` itself) instead.
-    // impl_stub_type!(Like<'_, '_, Qubit> = Qubit | i64 | String | QubitPlaceholder);
-
-    impl_stub_type!(
-        ArithmeticOperandLike =
-            ArithmeticOperand | i64 | f64 | MemoryReference | DeclarationAt | Declaration
-    );
-
-    impl_stub_type!(
-        BinaryOperandLike = BinaryOperand | i64 | MemoryReference | DeclarationAt | Declaration
-    );
-
-    impl_stub_type!(
-        ComparisonOperandLike<'_> =
-            ComparisonOperand | i64 | f64 | MemoryReference | DeclarationAt | Declaration
-    );
-
-    impl_stub_type!(
-        MemoryReferenceLike = MemoryReference | DeclarationAt | Declaration | (String, u64)
-    );
-    impl_stub_type!(PyMemRef<'_> = MemoryReferenceLike);
-
-    impl_stub_type!(LabelTargetLike<'_> = String | Label | Target);
-
-    impl_stub_type!(GateModifierDesignator = GateModifier | String);
-
-    impl_stub_type!(PauliArg = String | u64 | Qubit);
-
-    impl_stub_type!(FrameNameLike = String | FrameIdentifier);
-
-    type_alias!(
-        "quil._quil.instructions",
-        LabelTargetParameter = String | Target | Label
-    );
-    type_alias!(
-        "quil._quil.instructions",
-        MemoryReferenceDesignator = MemoryReferenceLike
-    );
-    type_alias!(
-        "quil._quil.instructions",
-        QubitDesignator = Qubit | QubitPlaceholder | String | u64
-    );
-    type_alias!("quil._quil.instructions", PauliTargetDesignator = PauliArg);
-}
-
-pub(crate) type QubitLike<'a, 'py> = Like<'a, 'py, Qubit>;
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -5016,3 +5025,33 @@ impl WaveformInvocation {
         (self.name.clone(), self.parameters.clone())
     }
 }
+
+#[cfg(feature = "stubs")]
+mod stubs {
+    use pyo3_stub_gen::{impl_stub_type, type_alias};
+
+    // pyo3_stub_gen::export_verbatim!("quil.instructions", "Halt");
+
+    #[allow(clippy::wildcard_imports)]
+    use super::*;
+
+    impl_stub_type!(ArithmeticOperandLike = ArithmeticOperand | i64 | f64 | MemoryReferenceLike);
+    impl_stub_type!(BinaryOperandLike = BinaryOperand | i64 | MemoryReferenceLike);
+    impl_stub_type!(ComparisonOperandLike<'_> = ComparisonOperand | i64 | f64 | MemoryReferenceLike);
+    impl_stub_type!(FrameNameLike = String | FrameIdentifier);
+    impl_stub_type!(GateModifierDesignator = GateModifier | String);
+    impl_stub_type!(LabelTargetLike<'_> = String | Label | Target);
+    impl_stub_type!(
+        MemoryReferenceLike = MemoryReference | DeclarationAt | Declaration | (String, u64)
+    );
+    impl_stub_type!(PauliArg = Qubit | i64 | String);
+    impl_stub_type!(PyMemRef<'_> = MemoryReferenceLike);
+    impl_stub_type!(QubitLike = Qubit | i64 | String | QubitPlaceholder);
+
+    // Expose some of these as type aliases. Note that these must be added to the module.
+    type_alias!("quil._quil.instructions", LabelTargetParameter = LabelTargetLike<'_>);
+    type_alias!("quil._quil.instructions", MemoryReferenceDesignator = MemoryReferenceLike);
+    type_alias!("quil._quil.instructions", QubitDesignator = QubitLike);
+    type_alias!("quil._quil.instructions", PauliTargetDesignator = PauliArg);
+}
+
