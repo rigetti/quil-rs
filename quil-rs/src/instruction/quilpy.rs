@@ -759,6 +759,11 @@ impl<'a, 'py> FromPyObject<'a, 'py> for BinaryOperandLike {
     }
 }
 
+/// Things that can be used when we need a `ComparisonOperand` from Python.
+///
+/// Python users can provide integers, floats, existing `ComparisonOperand` instances,
+/// or things that can be converted into a `MemoryReference`s,
+/// including `DeclarationAt`s, `Declaration`s, and `MemoryReference`s themselves.
 #[derive(FromPyObject)]
 pub(crate) enum ComparisonOperandLike<'py> {
     Int(i64),
