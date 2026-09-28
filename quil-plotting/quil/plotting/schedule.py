@@ -16,7 +16,7 @@
 
 import json
 import math
-from typing import Callable, Self, cast
+from typing import Callable, Iterable, Self, cast
 
 import altair as alt
 import numpy as np
