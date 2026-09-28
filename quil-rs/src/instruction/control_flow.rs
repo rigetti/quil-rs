@@ -217,9 +217,9 @@ pub struct JumpWhen {
     pub condition: MemoryReference,
 }
 
-pickleable_new! {
-    impl JumpWhen {
-        pub fn new(target: Target, condition: MemoryReference);
+impl JumpWhen {
+    pub fn new(target: Target, condition: MemoryReference) -> Self {
+        Self { target, condition }
     }
 }
 
@@ -255,9 +255,9 @@ pub struct JumpUnless {
     pub condition: MemoryReference,
 }
 
-pickleable_new! {
-    impl JumpUnless {
-        pub fn new(target: Target, condition: MemoryReference);
+impl JumpUnless {
+    pub fn new(target: Target, condition: MemoryReference) -> Self {
+        Self { target, condition }
     }
 }
 

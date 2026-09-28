@@ -27,9 +27,8 @@ def qubit(request: pytest.FixtureRequest) -> Qubit:
 def _calibration(qubit: Qubit) -> CalibrationDefinition:
     return CalibrationDefinition(
         CalibrationIdentifier("MYCAL", [], [qubit], []),
-        [Delay(Expression.Number(complex(0.5)), [], [qubit])],
+        [Delay(Expression.Number(complex(0.5)), [qubit])],
     )
-
 
 def _pulse(qubit: Qubit) -> Pulse:
     return Pulse(blocking=False, frame=FrameIdentifier("frame", [qubit]), waveform=WaveformInvocation("wf", {}))

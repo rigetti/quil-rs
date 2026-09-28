@@ -610,7 +610,7 @@ class Program:
         """
     def add_instructions(self, instructions: _quil.instructions.Instruction  |  builtins.list[_quil.instructions.Instruction], *more: typing.Any) -> None:
         r"""
-        Add a list of instructions to the end of the program.
+        Add one or more instructions to the end of the program.
         """
     def clone_without_body_instructions(self) -> Program:
         r"""

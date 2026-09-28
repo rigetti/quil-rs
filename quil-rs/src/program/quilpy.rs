@@ -98,6 +98,35 @@ enum OneOrMore<T> {
     More(Vec<T>),
 }
 
+/// An iterator over a `OneOrMore<T>`.
+enum OneOrMoreIter<T> {
+    One(std::iter::Once<T>),
+    More(std::vec::IntoIter<T>),
+}
+
+impl<T> IntoIterator for OneOrMore<T> {
+    type Item = T;
+    type IntoIter = OneOrMoreIter<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            OneOrMore::One(item) => OneOrMoreIter::One(std::iter::once(item)),
+            OneOrMore::More(items) => OneOrMoreIter::More(items.into_iter()),
+        }
+    }
+}
+
+impl<T> Iterator for OneOrMoreIter<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            OneOrMoreIter::One(iter) => iter.next(),
+            OneOrMoreIter::More(vec) => vec.next(),
+        }
+    }
+}
+
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
@@ -344,32 +373,17 @@ impl Program {
         self.add_instruction(instruction.into());
     }
 
-    /// Add a list of instructions to the end of the program.
+    /// Add one or more instructions to the end of the program.
     #[pyo3(name = "add_instructions", signature = (instructions, *more))]
     fn py_add_instructions(
         &mut self,
-        py: Python<'_>,
         instructions: OneOrMore<AnyInstruction>,
         more: Vec<AnyInstruction>,
-    ) -> PyResult<()> {
-        match instructions {
-            OneOrMore::One(instruction) => {
-                self.py_add_instruction(instruction);
-            }
-            OneOrMore::More(instructions) => {
-                py_deprecated!(
-                    py,
-                    c"`instructions` should no longer be wrapped in a sequence"
-                )?;
-                instructions
-                    .into_iter()
-                    .for_each(|i| self.py_add_instruction(i));
-            }
-        }
-
-        more.into_iter().for_each(|i| self.py_add_instruction(i));
-
-        Ok(())
+    ) {
+        instructions
+            .into_iter()
+            .chain(more)
+            .for_each(|i| self.py_add_instruction(i));
     }
 
     /// Return a new ``Program`` containing only the instructions
