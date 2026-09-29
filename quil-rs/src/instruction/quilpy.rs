@@ -3221,6 +3221,10 @@ pickleable_new! {
         #[pyo3(signature = (duration, qubits, frame_names = Vec::new()))]
         fn __new__(
             duration: Expression as ExpressionLike,
+            #[gen_stub(override_type(
+                type_repr = "typing.Sequence[QubitDesignator]",
+                imports = ("typing",)
+            ))]
             #[pyo3(from_py_with = from_sequence::<QubitLike, _>)]
             qubits: Vec<Qubit>,
             frame_names: Vec<String>,
