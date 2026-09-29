@@ -2965,218 +2965,6 @@ impl Capture {
     }
 }
 
-// TODO(migration-guide): PyQuil v4's `RawCapture` took `memory_region` instead of
-// `memory_reference`, and `nonblocking` (defaulting to `False`) instead of `blocking`.
-//
-// This is implemented manually (rather than with `pickleable_new!`)
-// because `nonblocking` isn't a field on the underlying struct.
-#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl RawCapture {
-    #[new]
-    #[pyo3(signature = (frame, duration, memory_region, *, blocking = true, nonblocking = None))]
-    fn __new__(
-        py: Python<'_>,
-        frame: FrameIdentifier,
-        duration: ExpressionLike,
-        memory_region: MemoryReferenceLike,
-        blocking: bool,
-        nonblocking: Option<bool>,
-    ) -> PyResult<Self> {
-        let blocking = deprecated_or_new!(py, new = blocking, old = nonblocking, |nb| Ok(!nb))?;
-
-        Ok(Self::new(
-            blocking,
-            frame,
-            duration.into(),
-            memory_region.into(),
-        ))
-    }
-
-    #[gen_stub(override_return_type(
-        type_repr = "builtins.tuple[
-            builtins.tuple[FrameIdentifier, expression.Expression, MemoryReference],
-            builtins.dict[builtins.str, builtins.bool]
-        ]",
-        imports = ("builtins", "quil._quil.expression")
-    ))]
-    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        let positional: Bound<'py, PyTuple> = (
-            self.frame.clone(),
-            self.duration.clone(),
-            self.memory_reference.clone(),
-        )
-            .into_pyobject(py)?;
-        let keyword: Bound<'py, PyDict> = [("blocking", self.blocking)].into_py_dict(py)?;
-        (positional, keyword).into_pyobject(py)
-    }
-
-    #[pyo3(warn(message = "use `not blocking` instead", category = PyDeprecationWarning))]
-    #[getter]
-    fn nonblocking(&self) -> bool {
-        !self.blocking
-    }
-
-    #[pyo3(warn(message = "use `memory_reference` instead", category = PyDeprecationWarning))]
-    #[getter]
-    fn memory_region(&self) -> MemoryReference {
-        self.memory_reference.clone()
-    }
-
-    /// Return the fixed qubit indices used by this instruction's `frame`.
-    ///
-    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
-    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
-        frame_qubit_indices(&self.frame.qubits)
-    }
-}
-
-// TODO(migration-guide): PyQuil v4's `SetFrequency` took `freq` instead of `frequency`.
-//
-// This is implemented manually (rather than with `pickleable_new!`)
-// because `freq` isn't a field on the underlying struct.
-#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl SetFrequency {
-    #[new]
-    #[pyo3(signature = (frame, frequency, *, freq = None))]
-    fn __new__(
-        py: Python<'_>,
-        frame: FrameIdentifier,
-        frequency: ExpressionLike,
-        freq: Option<ExpressionLike>,
-    ) -> PyResult<Self> {
-        let frequency = deprecated_or_new!(py, new = frequency, old = freq)?;
-        Ok(Self::new(frame, frequency.into()))
-    }
-
-    fn __getnewargs__(&self) -> (FrameIdentifier, Expression) {
-        (self.frame.clone(), self.frequency.clone())
-    }
-
-    #[pyo3(warn(message = "use `frequency` instead", category = PyDeprecationWarning))]
-    #[getter]
-    fn freq(&self) -> Expression {
-        self.frequency.clone()
-    }
-
-    /// Return the fixed qubit indices used by this instruction's `frame`.
-    ///
-    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
-    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
-        frame_qubit_indices(&self.frame.qubits)
-    }
-}
-
-// TODO(migration-guide): PyQuil v4's `ShiftFrequency` took `freq` instead of `frequency`.
-//
-// This is implemented manually (rather than with `pickleable_new!`)
-// because `freq` isn't a field on the underlying struct.
-#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl ShiftFrequency {
-    #[new]
-    #[pyo3(signature = (frame, frequency, *, freq = None))]
-    fn __new__(
-        py: Python<'_>,
-        frame: FrameIdentifier,
-        frequency: ExpressionLike,
-        freq: Option<ExpressionLike>,
-    ) -> PyResult<Self> {
-        let frequency = deprecated_or_new!(py, new = frequency, old = freq)?;
-        Ok(Self::new(frame, frequency.into()))
-    }
-
-    fn __getnewargs__(&self) -> (FrameIdentifier, Expression) {
-        (self.frame.clone(), self.frequency.clone())
-    }
-
-    #[pyo3(warn(message = "use `frequency` instead", category = PyDeprecationWarning))]
-    #[getter]
-    fn freq(&self) -> Expression {
-        self.frequency.clone()
-    }
-
-    /// Return the fixed qubit indices used by this instruction's `frame`.
-    ///
-    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
-    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
-        frame_qubit_indices(&self.frame.qubits)
-    }
-}
-
-pickleable_new! {
-    impl SetPhase {
-        fn __new__(
-            frame: FrameIdentifier,
-            phase: Expression as ExpressionLike,
-        ) -> SetPhase {
-            Self::new(frame, phase.into())
-        }
-    }
-}
-
-#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl SetPhase {
-    /// Return the fixed qubit indices used by this instruction's `frame`.
-    ///
-    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
-    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
-        frame_qubit_indices(&self.frame.qubits)
-    }
-}
-
-pickleable_new! {
-    impl ShiftPhase {
-        fn __new__(
-            frame: FrameIdentifier,
-            phase: Expression as ExpressionLike,
-        ) -> ShiftPhase {
-            Self::new(frame, phase.into())
-        }
-    }
-}
-
-#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl ShiftPhase {
-    /// Return the fixed qubit indices used by this instruction's `frame`.
-    ///
-    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
-    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
-        frame_qubit_indices(&self.frame.qubits)
-    }
-}
-
-pickleable_new! {
-    impl SetScale {
-        fn __new__(
-            frame: FrameIdentifier,
-            scale: Expression as ExpressionLike,
-        ) -> SetScale {
-            Self::new(frame, scale.into())
-        }
-    }
-}
-
-#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl SetScale {
-    /// Return the fixed qubit indices used by this instruction's `frame`.
-    ///
-    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
-    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
-        frame_qubit_indices(&self.frame.qubits)
-    }
-}
-
 // TODO(migration-guide): The v4 constructor looked roughly like
 // `Delay(frames: list[FrameIdentifier], qubits: list[QubitDesignator], duration: float)`
 // while the old `quil` form looked roughly like
@@ -5168,6 +4956,218 @@ impl QubitPlaceholder {
         Err(PickleError::new_err(
             "Unable to pickle or deepcopy a QubitPlaceholder.",
         ))
+    }
+}
+
+// TODO(migration-guide): PyQuil v4's `RawCapture` took `memory_region` instead of
+// `memory_reference`, and `nonblocking` (defaulting to `False`) instead of `blocking`.
+//
+// This is implemented manually (rather than with `pickleable_new!`)
+// because `nonblocking` isn't a field on the underlying struct.
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl RawCapture {
+    #[new]
+    #[pyo3(signature = (frame, duration, memory_region, *, blocking = true, nonblocking = None))]
+    fn __new__(
+        py: Python<'_>,
+        frame: FrameIdentifier,
+        duration: ExpressionLike,
+        memory_region: MemoryReferenceLike,
+        blocking: bool,
+        nonblocking: Option<bool>,
+    ) -> PyResult<Self> {
+        let blocking = deprecated_or_new!(py, new = blocking, old = nonblocking, |nb| Ok(!nb))?;
+
+        Ok(Self::new(
+            blocking,
+            frame,
+            duration.into(),
+            memory_region.into(),
+        ))
+    }
+
+    #[gen_stub(override_return_type(
+        type_repr = "builtins.tuple[
+            builtins.tuple[FrameIdentifier, expression.Expression, MemoryReference],
+            builtins.dict[builtins.str, builtins.bool]
+        ]",
+        imports = ("builtins", "quil._quil.expression")
+    ))]
+    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        let positional: Bound<'py, PyTuple> = (
+            self.frame.clone(),
+            self.duration.clone(),
+            self.memory_reference.clone(),
+        )
+            .into_pyobject(py)?;
+        let keyword: Bound<'py, PyDict> = [("blocking", self.blocking)].into_py_dict(py)?;
+        (positional, keyword).into_pyobject(py)
+    }
+
+    #[pyo3(warn(message = "use `not blocking` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn nonblocking(&self) -> bool {
+        !self.blocking
+    }
+
+    #[pyo3(warn(message = "use `memory_reference` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn memory_region(&self) -> MemoryReference {
+        self.memory_reference.clone()
+    }
+
+    /// Return the fixed qubit indices used by this instruction's `frame`.
+    ///
+    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
+        frame_qubit_indices(&self.frame.qubits)
+    }
+}
+
+// TODO(migration-guide): PyQuil v4's `SetFrequency` took `freq` instead of `frequency`.
+//
+// This is implemented manually (rather than with `pickleable_new!`)
+// because `freq` isn't a field on the underlying struct.
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl SetFrequency {
+    #[new]
+    #[pyo3(signature = (frame, frequency, *, freq = None))]
+    fn __new__(
+        py: Python<'_>,
+        frame: FrameIdentifier,
+        frequency: ExpressionLike,
+        freq: Option<ExpressionLike>,
+    ) -> PyResult<Self> {
+        let frequency = deprecated_or_new!(py, new = frequency, old = freq)?;
+        Ok(Self::new(frame, frequency.into()))
+    }
+
+    fn __getnewargs__(&self) -> (FrameIdentifier, Expression) {
+        (self.frame.clone(), self.frequency.clone())
+    }
+
+    #[pyo3(warn(message = "use `frequency` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn freq(&self) -> Expression {
+        self.frequency.clone()
+    }
+
+    /// Return the fixed qubit indices used by this instruction's `frame`.
+    ///
+    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
+        frame_qubit_indices(&self.frame.qubits)
+    }
+}
+
+// TODO(migration-guide): PyQuil v4's `ShiftFrequency` took `freq` instead of `frequency`.
+//
+// This is implemented manually (rather than with `pickleable_new!`)
+// because `freq` isn't a field on the underlying struct.
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl ShiftFrequency {
+    #[new]
+    #[pyo3(signature = (frame, frequency, *, freq = None))]
+    fn __new__(
+        py: Python<'_>,
+        frame: FrameIdentifier,
+        frequency: ExpressionLike,
+        freq: Option<ExpressionLike>,
+    ) -> PyResult<Self> {
+        let frequency = deprecated_or_new!(py, new = frequency, old = freq)?;
+        Ok(Self::new(frame, frequency.into()))
+    }
+
+    fn __getnewargs__(&self) -> (FrameIdentifier, Expression) {
+        (self.frame.clone(), self.frequency.clone())
+    }
+
+    #[pyo3(warn(message = "use `frequency` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn freq(&self) -> Expression {
+        self.frequency.clone()
+    }
+
+    /// Return the fixed qubit indices used by this instruction's `frame`.
+    ///
+    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
+        frame_qubit_indices(&self.frame.qubits)
+    }
+}
+
+pickleable_new! {
+    impl SetPhase {
+        fn __new__(
+            frame: FrameIdentifier,
+            phase: Expression as ExpressionLike,
+        ) -> SetPhase {
+            Self::new(frame, phase.into())
+        }
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl SetPhase {
+    /// Return the fixed qubit indices used by this instruction's `frame`.
+    ///
+    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
+        frame_qubit_indices(&self.frame.qubits)
+    }
+}
+
+pickleable_new! {
+    impl ShiftPhase {
+        fn __new__(
+            frame: FrameIdentifier,
+            phase: Expression as ExpressionLike,
+        ) -> ShiftPhase {
+            Self::new(frame, phase.into())
+        }
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl ShiftPhase {
+    /// Return the fixed qubit indices used by this instruction's `frame`.
+    ///
+    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
+        frame_qubit_indices(&self.frame.qubits)
+    }
+}
+
+pickleable_new! {
+    impl SetScale {
+        fn __new__(
+            frame: FrameIdentifier,
+            scale: Expression as ExpressionLike,
+        ) -> SetScale {
+            Self::new(frame, scale.into())
+        }
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl SetScale {
+    /// Return the fixed qubit indices used by this instruction's `frame`.
+    ///
+    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
+        frame_qubit_indices(&self.frame.qubits)
     }
 }
 
