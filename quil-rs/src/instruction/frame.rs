@@ -61,7 +61,6 @@ pub type FrameAttributes = IndexMap<String, AttributeValue>;
         extends = PyInstruction,
         eq,
         get_all,
-        set_all,
         subclass,
         from_py_object
     )
@@ -71,9 +70,9 @@ pub struct FrameDefinition {
     pub attributes: FrameAttributes,
 }
 
-pickleable_new! {
-    impl FrameDefinition {
-        pub fn new(identifier: FrameIdentifier, attributes: FrameAttributes);
+impl FrameDefinition {
+    pub fn new(identifier: FrameIdentifier, attributes: FrameAttributes) -> Self {
+        Self { identifier, attributes }
     }
 }
 
