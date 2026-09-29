@@ -38,8 +38,8 @@ use crate::{
     quilpy::{
         deprecated_or_new, deprecated_param,
         errors::{self, PickleError},
-        from_sequence, impl_newargs, impl_to_quil, py_deprecated, singleton,
-        IntoNewArgs, Migrate, NewArgs, NonZeroU64,
+        from_sequence, impl_newargs, impl_to_quil, py_deprecated, singleton, IntoNewArgs, Migrate,
+        NewArgs, NonZeroU64,
     },
     validation::identifier::IdentifierValidationError,
 };
@@ -1042,23 +1042,34 @@ impl ComparisonOperand {
 // - PyQuil v4 called `Comparison` `ClassicalComparison`, with subclasses
 //   (`ClassicalEqual`, `ClassicalLessThan`, etc.) providing `operator` as a class attribute.
 // - The signature was `(target, left, right)`.
-pickleable_new! {
-    impl Comparison {
-        fn __new__(
-            operator: ComparisonOperator,
-            destination: MemoryReference as MemoryReferenceLike,
-            lhs: MemoryReference as MemoryReferenceLike,
-            rhs: ComparisonOperand as ComparisonOperandLike<'_>,
-        ) -> Comparison {
-            Self::new(operator, destination.into(), lhs.into(), rhs.into())
-        }
-    }
-}
-
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Comparison {
+    #[pyo3(signature = (operator, destination, lhs, rhs, *, target = None, left = None, right = None))]
+    #[new]
+    fn __new__<'py>(
+        py: Python<'py>,
+        operator: ComparisonOperator,
+        destination: MemoryReferenceLike,
+        lhs: MemoryReferenceLike,
+        rhs: ComparisonOperandLike<'_>,
+        // old names for backwards compatibility
+        target: Option<MemoryReferenceLike>,
+        left: Option<MemoryReferenceLike>,
+        right: Option<ComparisonOperandLike<'_>>,
+    ) -> PyResult<Comparison> {
+        let destination = deprecated_or_new!(py, new = destination, old = target)?;
+        let lhs = deprecated_or_new!(py, new = lhs, old = left)?;
+        let rhs = deprecated_or_new!(py, new = rhs, old = right)?;
+        Ok(Self::new(
+            operator,
+            destination.into(),
+            lhs.into(),
+            rhs.into(),
+        ))
+    }
+
     #[pyo3(warn(message = "use `operator` instead", category = PyDeprecationWarning))]
     #[getter]
     fn op(&self) -> ComparisonOperator {
@@ -1084,9 +1095,141 @@ impl Comparison {
     }
 }
 
+
+// TODO(copilot):
+// Finish migrating the DefFrame class to the FrameDefinition form, 
+// making the old and new constructors compatible.
+
+#[cfg(feature = "stubs")]
+submit! {
+    gen_methods_from_python! {
+        r#"
+        import typing
+        import typing_extensions
+
+        from quil._quil import expression
+
+        class CalibrationDefinition:
+            @typing_extensions.deprecated("use `CalibrationDefinition.from_parts` instead")
+            @typing.overload
+            def __new__(
+                cls,
+                name: builtins.str,
+                parameters: pyo3_stub_gen.RustType["Vec<ExpressionLike>"],
+                qubits: pyo3_stub_gen.RustType["Vec<Qubit>"],
+                instrs: pyo3_stub_gen.RustType["Vec<Instruction>"],
+                modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
+            ) -> CalibrationDefinition: ...
+
+            @typing.overload
+            def __new__(
+                cls,
+                identifier: pyo3_stub_gen.RustType["Vec<CalibrationIdentifier>"],
+                instructions: pyo3_stub_gen.RustType["Vec<Instruction>"],
+            ) -> CalibrationDefinition: ...
+        "#
+    }
+}
+
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl CalibrationDefinition {
+    // TODO(migration-guide):
+    // PyQuil v4's constructor was `(name, parameters, qubits, instrs, modifiers)`.
+    // We handle the old form for compatibility,
+    // but issue deprecation warnings which suggests using `from_parts`.
+    #[pyo3(signature = (
+            identifier = None,
+            instructions = None,
+            qubits = None,
+            instrs = None,
+            modifiers = None,
+            *,
+            name = None,
+            parameters = None,
+            ))]
+    #[new]
+    fn __new__(
+        identifier: Option<Migrate<CalibrationIdentifier, String>>,
+        instructions: Option<Migrate<Vec<Instruction>, Vec<Expression>>>,
+
+        qubits: Option<Vec<Qubit>>,
+        instrs: Option<Vec<Instruction>>,
+        modifiers: Option<Vec<GateModifier>>,
+
+        name: Option<String>,
+        parameters: Option<Vec<Expression>>,
+    ) -> PyResult<Self> {
+        match (
+            identifier,
+            instructions,
+            qubits,
+            instrs,
+            modifiers,
+            name,
+            parameters,
+        ) {
+            (
+                Some(Migrate::New(identifier)),
+                Some(Migrate::New(instructions)),
+                None,
+                None,
+                None,
+                None,
+                None,
+            ) => Ok(Self::new(identifier, instructions)),
+
+            (
+                Some(Migrate::Old(name)),
+                Some(Migrate::Old(parameters)),
+                Some(qubits),
+                Some(instructions),
+                modifiers,
+                None,
+                None,
+            )
+            | (
+                None,
+                Some(Migrate::Old(parameters)),
+                Some(qubits),
+                Some(instructions),
+                modifiers,
+                Some(name),
+                None,
+            )
+            | (
+                None,
+                None,
+                Some(qubits),
+                Some(instructions),
+                modifiers,
+                Some(name),
+                Some(parameters),
+            ) => Self::from_parts(name, parameters, qubits, instructions, modifiers),
+
+            _ => Err(errors::ValueError::new_err(
+                "CalibrationDefinition does not permit mixing old and new constructor arguments",
+            )),
+        }
+    }
+
+    fn __getnewargs__(&self) -> PyResult<(CalibrationIdentifier, Vec<Instruction>)> {
+        Ok((self.identifier.clone(), self.instructions.clone()))
+    }
+
+    #[staticmethod]
+    fn from_parts(
+        name: String,
+        #[pyo3(from_py_with = from_sequence::<ExpressionLike, _>)] parameters: Vec<Expression>,
+        #[pyo3(from_py_with = from_sequence::<QubitLike, _>)] qubits: Vec<Qubit>,
+        instructions: Vec<Instruction>,
+        modifiers: Option<Vec<GateModifier>>,
+    ) -> PyResult<Self> {
+        let identifier =
+            CalibrationIdentifier::new(name, modifiers.unwrap_or_default(), parameters, qubits)?;
+        Ok(Self::new(identifier, instructions))
+    }
+
     /// The gate name that this calibration definition is for.
     #[getter]
     fn name(&self) -> &str {
@@ -1110,6 +1253,12 @@ impl CalibrationDefinition {
     fn modifiers(&self) -> Vec<GateModifier> {
         self.identifier.modifiers.clone()
     }
+
+    #[pyo3(warn(message = "use `instructions` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn instrs(&self) -> Vec<Instruction> {
+        self.instructions.clone()
+    }
 }
 
 pickleable_new! {
@@ -1130,6 +1279,46 @@ pickleable_new! {
             Self::new(name, modifiers, parameters, qubits)
         }
     }
+}
+
+// TODO(migration-guide): So far, we've not replaced the `Parameter` or `FormalArgument` types,
+// which were wrappers around a `name: str` with special formatting rules.
+// In Rust, these are really handled by `Expression::Variable` and `Qubit::Variable` variants,
+// which does somewhat motivate dropping their explicit representation.
+// On the other hand, it may instead be worth introducing the types back
+// in order to enable backwards compatibility, and to enable more restrictive parameter types.
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl CircuitDefinition {
+    // TODO(migration-guide): PyQuil v4's constructor calls `qubit_variables` just `qubits`.
+    // It also used to require the inputs were wrapped in `Parameter` and `FormalArgument`s,
+    // but here we just accept `str` instances directly.
+    #[new]
+    #[pyo3(signature = (name, parameters, qubit_variables, instructions, *, qubits = None))]
+    fn __new__<'py>(
+        py: Python<'py>,
+        name: String,
+        parameters: Vec<String>,
+        qubit_variables: Vec<String>,
+        instructions: Vec<Instruction>,
+        qubits: Option<Vec<String>>,
+    ) -> PyResult<Self> {
+        let qubit_variables = deprecated_or_new!(py, new = qubit_variables, old = qubits)?;
+        Ok(Self::new(name, parameters, qubit_variables, instructions))
+    }
+
+    fn __getnewargs__(&self) -> PyResult<(String, Vec<String>, Vec<String>, Vec<Instruction>)> {
+        Ok((
+            self.name.clone(),
+            self.parameters.clone(),
+            self.qubit_variables.clone(),
+            self.instructions.clone(),
+        ))
+    }
+
+    // Oddly, there never was a `qubits` property.
 }
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
@@ -1210,6 +1399,58 @@ impl Declaration {
             declaration: slf.unbind(),
             index,
         })
+    }
+
+    /// Get a string representation of the type of memory being declared.
+    #[getter]
+    fn memory_type(&self) -> String {
+        let mut s = self.size.data_type.to_quil_or_debug();
+        s.make_ascii_uppercase();
+        s
+    }
+
+    /// Get the number of elements being declared.
+    #[getter]
+    fn memory_size(&self) -> u64 {
+        self.size.length
+    }
+
+    /// Get the memory region name this declaration is sharing with, if any.
+    #[getter]
+    fn shared_region(&self) -> Option<String> {
+        self.sharing.as_ref().map(|s| s.name.clone())
+    }
+
+    /// Get the offsets for this declaration.
+    fn offsets(&self) -> Vec<(u64, String)> {
+        self.sharing
+            .as_ref()
+            .map(|s| {
+                s.offsets
+                    .iter()
+                    .map(|o| {
+                        let mut data_type = o.data_type().to_quil_or_debug();
+                        data_type.make_ascii_uppercase();
+                        (o.offset(), data_type)
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default()
+    }
+
+    /// Get the DECLARE directive as a dictionary.
+    #[gen_stub(override_return_type(
+            type_repr = "builtins.dict[str, builtins.list[builtins.tuple[builtins.int, builtins.str]] | builtins.str | builtins.int | None]",
+            imports = ("builtins")
+    ))]
+    fn asdict<'py>(&self, py: Python<'py>) -> PyResult<Py<PyDict>> {
+        let dict = PyDict::new(py);
+        dict.set_item("name", self.name.clone())?;
+        dict.set_item("memory_type", self.size.data_type.to_quil_or_debug())?;
+        dict.set_item("memory_size", self.size.length)?;
+        dict.set_item("shared_region", self.shared_region())?;
+        dict.set_item("offsets", self.offsets())?;
+        Ok(dict.into())
     }
 }
 
@@ -1772,8 +2013,7 @@ impl Gate {
     fn py_forked(
         &self,
         fork_qubit: QubitLike,
-        #[pyo3(from_py_with = from_sequence::<ExpressionLike, _>)]
-        alt_params: Vec<Expression>,
+        #[pyo3(from_py_with = from_sequence::<ExpressionLike, _>)] alt_params: Vec<Expression>,
     ) -> Result<Self, GateError> {
         self.clone().forked(fork_qubit.into(), alt_params)
     }
@@ -2181,6 +2421,43 @@ impl Label {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl MeasureCalibrationDefinition {
+    // TODO(migration-guide): This has been modified to match the PyQuil v4 signature,
+    // except that the `instrs` parameter has been renamed `instructions`.
+    // Direct `quil` users can migrate using the new `from_calibration` constructor.
+    //
+    // TODO(copilot): Take this approach with CalibrationDefinition as well,
+    // rather than its `from_parts` constructor.
+    #[new]
+    #[pyo3(signature = (qubit, memory_reference, instructions, *, instrs=None))]
+    fn __new__(
+        py: Python<'_>,
+        qubit: QubitLike,
+        memory_reference: Option<MemoryReferenceLike>,
+        instructions: Vec<Instruction>,
+        instrs: Option<Vec<Instruction>>,
+    ) -> PyResult<Self> {
+        let instructions = deprecated_or_new!(py, new = instructions, old = instrs)?;
+        let target = match memory_reference {
+            Some(memref) => Some(MemoryReference::from(memref).to_quil()?),
+            None => None,
+        };
+
+        let ident = MeasureCalibrationIdentifier::new(None, qubit.into(), target);
+        Ok(Self::new(ident, instructions))
+    }
+
+    fn __getnewargs__(&self) -> (Qubit, Option<String>, Vec<Instruction>) { 
+        (self.identifier.qubit.clone(), self.identifier.target.clone(), self.instructions.clone())
+    }
+
+    #[staticmethod]
+    fn from_calibration(
+        identifier: MeasureCalibrationIdentifier,
+        instructions: Vec<Instruction>,
+    ) -> Self {
+        Self::new(identifier, instructions)
+    }
+
     /// The Quil-T name of the measurement that this measure calibration definition is for, if any.
     #[getter]
     fn name(&self) -> Option<&str> {
@@ -2198,6 +2475,17 @@ impl MeasureCalibrationDefinition {
     #[getter]
     fn target(&self) -> Option<&str> {
         self.identifier.target.as_deref()
+    }
+
+    #[getter]
+    fn memory_reference(&self) -> Option<MemoryReference> {
+        self.identifier.target.as_ref().map(|t| MemoryReference::new(t.clone(), 0))
+    }
+
+    #[pyo3(warn(message = "use `instructions` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn instrs(&self) -> Vec<Instruction> {
+        self.instructions.clone()
     }
 }
 
@@ -2604,12 +2892,7 @@ impl Pulse {
         let keyword: Bound<'py, PyDict> = [("blocking", self.blocking)].into_py_dict(py)?;
         (positional, keyword).into_pyobject(py)
     }
-}
 
-#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl Pulse {
     #[pyo3(warn(message = "use `not blocking` instead", category = PyDeprecationWarning))]
     #[getter]
     fn nonblocking(&self) -> bool {
@@ -3001,12 +3284,14 @@ impl Delay {
     /// Create a new `Delay` instruction from a list of `FrameIdentifier`s.
     #[staticmethod]
     fn from_frames(duration: ExpressionLike, frames: Vec<FrameIdentifier>) -> Self {
-        let (qubits, frame_names) = frames.into_iter()
-            .fold((HashSet::new(), Vec::new()), |(mut qubits, mut frame_names), frame| {
+        let (qubits, frame_names) = frames.into_iter().fold(
+            (HashSet::new(), Vec::new()),
+            |(mut qubits, mut frame_names), frame| {
                 qubits.extend(frame.qubits.clone());
                 frame_names.push(frame.name);
                 (qubits, frame_names)
-            });
+            },
+        );
         Self::new(duration.into(), frame_names, qubits.into_iter().collect())
     }
 
@@ -4675,7 +4960,7 @@ impl<'a, 'py> FromPyObject<'a, 'py> for PragmaArgument {
 // - PyQuil v4 accepted `Qubit | FormalArgument | int | str` items for `args`;
 //   only integers and identifiers (`str`) can be given directly as `PragmaArgument`s here.
 // - PyQuil v4's `Pragma` took `command` and `freeform_string` instead of `name` and `data`.
-//
+
 // This is implemented manually (rather than with `pickleable_new!`) because `command`
 // and `freeform_string` aren't fields on the underlying struct.
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
@@ -4808,6 +5093,54 @@ impl QubitPlaceholder {
         Err(PickleError::new_err(
             "Unable to pickle or deepcopy a QubitPlaceholder.",
         ))
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl SwapPhases {
+    // TODO(migration-guide): The signature in PyQuil v4 was `(frameA, frameB)`.
+    #[new]
+    #[pyo3(signature = (frame_1, frame_2, *, frameA=None, frameB=None))]
+    fn __new__<'py>(
+        py: Python<'py>,
+        frame_1: FrameIdentifier,
+        frame_2: FrameIdentifier,
+        #[expect(non_snake_case)] frameA: Option<FrameIdentifier>,
+        #[expect(non_snake_case)] frameB: Option<FrameIdentifier>,
+    ) -> PyResult<Self> {
+        let frame_1 = deprecated_or_new!(py, new = frame_1, old = frameA)?;
+        let frame_2 = deprecated_or_new!(py, new = frame_2, old = frameB)?;
+        Ok(Self { frame_1, frame_2 })
+    }
+
+    fn __getnewargs__(&self) -> (FrameIdentifier, FrameIdentifier) {
+        (self.frame_1.clone(), self.frame_2.clone())
+    }
+
+    #[expect(non_snake_case)]
+    #[getter]
+    #[pyo3(warn(message = "use `frame_1` instead", category = PyDeprecationWarning))]
+    fn frameA(&self) -> FrameIdentifier {
+        self.frame_1.clone()
+    }
+
+    #[expect(non_snake_case)]
+    #[getter]
+    #[pyo3(warn(message = "use `frame_2` instead", category = PyDeprecationWarning))]
+    fn frameB(&self) -> FrameIdentifier {
+        self.frame_2.clone()
+    }
+
+    /// Return the fixed qubit indices used by this instruction's `frame`.
+    ///
+    /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
+        frame_qubit_indices(&self.frame_1.qubits).and_then(|mut indices| {
+            indices.extend(frame_qubit_indices(&self.frame_2.qubits)?);
+            Ok(indices)
+        })
     }
 }
 
@@ -4974,7 +5307,6 @@ impl UnresolvedCallArgument {
     }
 }
 
-// TODO(asaites): add v5 alias from DefWaveform to WaveformDefinition.
 // TODO(migration-guide): PyQuil v4's `DefWaveform` took `parameters` (a list of `Parameter`s,
 // here just their names) and `entries` directly, building the `quil_rs.Waveform` internally.
 //
@@ -5006,6 +5338,12 @@ impl WaveformDefinition {
     #[staticmethod]
     fn from_waveform(name: String, definition: Waveform) -> Self {
         Self::new(name, definition)
+    }
+
+    #[getter]
+    /// Get the entries of the waveform definition.
+    fn entries(&self) -> Vec<Expression> {
+        self.definition.matrix.clone()
     }
 }
 
@@ -5050,8 +5388,10 @@ mod stubs {
 
     // Expose some of these as type aliases. Note that these must be added to the module.
     type_alias!("quil._quil.instructions", LabelTargetParameter = LabelTargetLike<'_>);
-    type_alias!("quil._quil.instructions", MemoryReferenceDesignator = MemoryReferenceLike);
+    type_alias!(
+        "quil._quil.instructions",
+        MemoryReferenceDesignator = MemoryReferenceLike
+    );
     type_alias!("quil._quil.instructions", QubitDesignator = QubitLike);
     type_alias!("quil._quil.instructions", PauliTargetDesignator = PauliArg);
 }
-

@@ -33,14 +33,14 @@ pub struct CircuitDefinition {
     pub instructions: Vec<Instruction>,
 }
 
-pickleable_new! {
-    impl CircuitDefinition {
-        pub fn new(
-            name: String,
-            parameters: Vec<String>,
-            qubit_variables: Vec<String>,
-            instructions: Vec<Instruction>,
-        );
+impl CircuitDefinition {
+    pub fn new(
+        name: String,
+        parameters: Vec<String>,
+        qubit_variables: Vec<String>,
+        instructions: Vec<Instruction>,
+    ) -> Self {
+        Self { name, parameters, qubit_variables, instructions, }
     }
 }
 

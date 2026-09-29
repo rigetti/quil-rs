@@ -43,18 +43,17 @@ pub trait CalibrationSignature {
 )]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct CalibrationDefinition {
-    #[pyo3(name = "identifier")]
     pub identifier: CalibrationIdentifier,
     pub instructions: Vec<Instruction>,
 }
 
-pickleable_new! {
-    impl CalibrationDefinition {
-        /// Builds a new calibration definition.
-        pub fn new(
-            identifier: CalibrationIdentifier,
-            instructions: Vec<Instruction>,
-        );
+impl CalibrationDefinition {
+    /// Builds a new calibration definition.
+    pub fn new(
+        identifier: CalibrationIdentifier,
+        instructions: Vec<Instruction>,
+    ) -> Self {
+        Self { identifier, instructions, }
     }
 }
 
@@ -247,9 +246,9 @@ pub struct MeasureCalibrationDefinition {
     pub instructions: Vec<Instruction>,
 }
 
-pickleable_new! {
-    impl MeasureCalibrationDefinition {
-        pub fn new(identifier: MeasureCalibrationIdentifier, instructions: Vec<Instruction>);
+impl MeasureCalibrationDefinition {
+    pub fn new(identifier: MeasureCalibrationIdentifier, instructions: Vec<Instruction>) -> Self { 
+        Self { identifier, instructions }
     }
 }
 

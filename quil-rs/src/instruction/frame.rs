@@ -545,9 +545,9 @@ pub struct SwapPhases {
     pub frame_2: FrameIdentifier,
 }
 
-pickleable_new! {
-    impl SwapPhases {
-        pub fn new(frame_1: FrameIdentifier, frame_2: FrameIdentifier);
+impl SwapPhases {
+    pub fn new(frame_1: FrameIdentifier, frame_2: FrameIdentifier) -> Self {
+        Self { frame_1, frame_2 }
     }
 }
 
