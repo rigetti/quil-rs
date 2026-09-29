@@ -8,14 +8,9 @@ use indexmap::IndexMap;
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
 use pyo3::{
-    exceptions::{
-        PyDeprecationWarning, PyIndexError, PyNotImplementedError, PyTypeError, PyUserWarning,
-        PyValueError,
-    },
-    prelude::*,
-    sync::PyOnceLock,
-    types::{IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyString, PyTuple},
-    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit,
+    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit, exceptions::{
+        PyDeprecationWarning, PyIndexError, PyKeyError, PyNotImplementedError, PyTypeError, PyUserWarning, PyValueError,
+    }, prelude::*, sync::PyOnceLock, types::{IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyString, PyTuple},
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -679,6 +674,9 @@ impl From<AnyInstruction> for Instruction {
 
 pub(crate) struct ArithmeticOperandLike(ArithmeticOperand);
 pub(crate) struct BinaryOperandLike(BinaryOperand);
+// Generally we don't want to return this as a Python type,
+// but the stub generator needs this when constructing default values in signatures.
+#[cfg_attr(feature = "stubs", derive(IntoPyObject))]
 pub(crate) struct MemoryReferenceLike(MemoryReference);
 
 impl From<ArithmeticOperandLike> for ArithmeticOperand {
@@ -1046,6 +1044,7 @@ impl ComparisonOperand {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Comparison {
+    #[expect(clippy::too_many_arguments)]
     #[pyo3(signature = (operator, destination, lhs, rhs, *, target = None, left = None, right = None))]
     #[new]
     fn __new__<'py>(
@@ -1094,11 +1093,6 @@ impl Comparison {
         self.rhs.clone()
     }
 }
-
-
-// TODO(copilot):
-// Finish migrating the DefFrame class to the FrameDefinition form, 
-// making the old and new constructors compatible.
 
 #[cfg(feature = "stubs")]
 submit! {
@@ -1309,6 +1303,7 @@ impl CircuitDefinition {
         Ok(Self::new(name, parameters, qubit_variables, instructions))
     }
 
+    #[expect(clippy::type_complexity)]
     fn __getnewargs__(&self) -> PyResult<(String, Vec<String>, Vec<String>, Vec<Instruction>)> {
         Ok((
             self.name.clone(),
@@ -1684,7 +1679,7 @@ impl DeclarationAt {
     /// assert isinstance(n, UnaryLogic)
     /// assert n.to_quil() == "NOT x[2]"  # x[2] := ~x[2]
     /// ```
-    fn not<'py>(&self, py: Python<'py>) -> UnaryLogic {
+    fn not_<'py>(&self, py: Python<'py>) -> UnaryLogic {
         UnaryLogic::new(UnaryOperator::Not, self.memref(py))
     }
 
@@ -1693,7 +1688,7 @@ impl DeclarationAt {
     }
 
     #[pyo3(signature = (other, /))]
-    fn and<'py>(&self, py: Python<'py>, other: BinaryOperandLike) -> BinaryLogic {
+    fn and_<'py>(&self, py: Python<'py>, other: BinaryOperandLike) -> BinaryLogic {
         BinaryLogic::new(BinaryOperator::And, self.memref(py), other.into())
     }
 
@@ -2446,8 +2441,12 @@ impl MeasureCalibrationDefinition {
         Ok(Self::new(ident, instructions))
     }
 
-    fn __getnewargs__(&self) -> (Qubit, Option<String>, Vec<Instruction>) { 
-        (self.identifier.qubit.clone(), self.identifier.target.clone(), self.instructions.clone())
+    fn __getnewargs__(&self) -> (Qubit, Option<String>, Vec<Instruction>) {
+        (
+            self.identifier.qubit.clone(),
+            self.identifier.target.clone(),
+            self.instructions.clone(),
+        )
     }
 
     #[staticmethod]
@@ -2479,7 +2478,10 @@ impl MeasureCalibrationDefinition {
 
     #[getter]
     fn memory_reference(&self) -> Option<MemoryReference> {
-        self.identifier.target.as_ref().map(|t| MemoryReference::new(t.clone(), 0))
+        self.identifier
+            .target
+            .as_ref()
+            .map(|t| MemoryReference::new(t.clone(), 0))
     }
 
     #[pyo3(warn(message = "use `instructions` instead", category = PyDeprecationWarning))]
@@ -3175,43 +3177,6 @@ impl SetScale {
     }
 }
 
-/// A frame name, or a `FrameIdentifier` (in which case just its name is used).
-///
-/// Accepting `FrameIdentifier`s directly is deprecated: it issues a ``DeprecationWarning``.
-#[derive(Debug, Clone)]
-enum FrameNameLike {
-    Name(String),
-    Frame(FrameIdentifier),
-}
-
-impl<'a, 'py> FromPyObject<'a, 'py> for FrameNameLike {
-    type Error = PyErr;
-
-    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-        if let Ok(value) = obj.cast::<PyString>() {
-            Ok(Self::Name(value.extract()?))
-        } else if let Ok(value) = obj.cast::<FrameIdentifier>() {
-            let py = obj.py();
-            py_deprecated!(
-                py,
-                c"giving a `Frame` here is deprecated; give its name (a `str`) instead"
-            )?;
-            Ok(Self::Frame(value.get().clone()))
-        } else {
-            Err(PyTypeError::new_err("expected a str or Frame"))
-        }
-    }
-}
-
-impl From<FrameNameLike> for String {
-    fn from(value: FrameNameLike) -> Self {
-        match value {
-            FrameNameLike::Name(name) => name,
-            FrameNameLike::Frame(frame) => frame.name,
-        }
-    }
-}
-
 // TODO(migration-guide): The v4 constructor looked roughly like
 // `Delay(frames: list[FrameIdentifier], qubits: list[QubitDesignator], duration: float)`
 // while the old `quil` form looked roughly like
@@ -3309,6 +3274,112 @@ pickleable_new! {
         ) -> Fence {
             Self::new(qubits)
         }
+    }
+}
+
+/// A type that can be used as an [`AttributeValue`] in a [`FrameDefinition`].
+///
+/// This keeps `str` instances as strings, but otherwise allows arbitrary [`Expression`]s
+/// (or things we can convert into them, via [`ExpressionLike`]) to be used as attribute values.
+#[derive(Debug, Clone, FromPyObject)]
+pub(crate) enum FrameAttributeValueLike {
+    AttributeValue(AttributeValue),
+    String(String),
+    Expression(ExpressionLike),
+}
+
+impl From<FrameAttributeValueLike> for AttributeValue {
+    fn from(value: FrameAttributeValueLike) -> Self {
+        match value {
+            FrameAttributeValueLike::AttributeValue(attr) => attr,
+            FrameAttributeValueLike::String(s) => AttributeValue::String(s),
+            FrameAttributeValueLike::Expression(expr) => AttributeValue::Expression(expr.into()),
+        }
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl FrameDefinition {
+    // TODO(migration-guide): This constructor differs from both PyQuil v4 and `quil` versions. 
+    // Now, the initial `identifier` argument is required, and must be given positionally.
+    // Users can provide an optional `attributes` dictionary, with values taken mostly as-is,
+    // and optionally can provide additional/overriding attribute values as keyword arguments.
+    // The original PyQuil v4 signature took `frame: FrameIdentifier` and a specific list of args,
+    // all of which were optional, but potentially could be given as positional arguments.
+    // Since such usage would be (at the very least) really hard to read,
+    // this signature forces more explicit usage.
+    /// Construct a new `FrameDefinition` with the given `identifier` and optional attributes.
+    ///
+    /// You can provide an optional `attributes` dictionary with pre-set values,
+    /// and you can additionally provide keyword arguments for additional attributes.
+    /// If given both, the keyword arguments will override any initial values in `attributes`.
+    ///
+    /// Note that Quil defines attribute values as either strings or expressions,
+    /// so given a bare `str` value, it'll be interpreted as an `AttributeValue.String`.
+    /// To set explicit `Expression.Variable` values, you must wrap them in `Expression` yourself.
+    #[new]
+    #[pyo3(signature = (identifier, attributes = None, /, *, **more_attributes))]
+    fn __new__(
+        identifier: FrameIdentifier,
+        attributes: Option<HashMap<String, FrameAttributeValueLike>>,
+        more_attributes: Option<HashMap<String, FrameAttributeValueLike>>,
+    ) -> PyResult<Self> {
+        let mut attributes: FrameAttributes = attributes
+            .map(|attrs| attrs.into_iter().map(|(k, v)| (k, v.into())).collect())
+            .unwrap_or_default();
+        if let Some(more_attributes) = more_attributes {
+            attributes.extend(more_attributes.into_iter().map(|(k, v)| (k, v.into())));
+        }
+        Ok(Self::new(identifier, attributes))
+    }
+
+    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        let positional: Bound<'py, PyTuple> = (self.identifier.clone(),).into_pyobject(py)?;
+        let keyword: Bound<'py, PyDict> = self.attributes.clone().into_py_dict(py)?;
+        (positional, keyword).into_pyobject(py)
+    }
+
+    // TODO(migration-guide): PyQuil v4 only took/returned `str | float | None`,
+    // not arbitrary `Expression`s as Quil allows these to be.
+    // Users should deconstruct the resulting `AttributeValue`, likely with a match statement, 
+    // and handle the result appropriately.
+    fn get_attribute(&self, name: &str) -> Option<AttributeValue> {
+        self.attributes.get(name).cloned()
+    }
+
+    fn set_attribute(&mut self, name: &str, value: FrameAttributeValueLike) {
+        let _ = self.attributes.insert(name.to_string(), value.into());
+    }
+
+    // TODO(migration-guide): PyQuil v4 raised `AttributeError` here instead of `KeyError`.
+    // Also, like `get_attribute`, it only returned `str | float | None`, not `AttributeValue`s.
+    fn __getitem__(&self, name: &str) -> PyResult<AttributeValue> {
+        self.attributes
+            .get(name)
+            .cloned()
+            .ok_or_else(|| PyKeyError::new_err(format!("attribute {name} not found")))
+    }
+
+    // TODO(migration-guide): PyQuil v4 raised `AttributeError` here instead of `KeyError`.
+    // Also, like `get_attribute`, it only returned `str | float | None`, not `AttributeValue`s.
+    fn __setitem__(&mut self, name: &str, value: FrameAttributeValueLike) {
+        self.set_attribute(name, value);
+    }
+
+    // TODO(migration-guide): PyQuil v4 allowed you to modify the `identifier` frame.
+    // That really seems like a bad idea, so that setter is removed.
+    // Additionally, you could set the `attributes` dictionary wholesale,
+    // but likewise, that seems like a bad idea compared to creating a new instance
+    // (as is the case with all our other `frozen` instruction types).
+    // Although for now we allow modifying the underlying dictionary,
+    // we may remove that in the future, and force it to be read-only as with other classes. 
+
+    /// Get the [`FrameIdentifier`] for this frame definition.
+    #[getter]
+    fn frame(&self) -> FrameIdentifier {
+        self.identifier.clone()
     }
 }
 
@@ -5376,8 +5447,8 @@ mod stubs {
     impl_stub_type!(ArithmeticOperandLike = ArithmeticOperand | i64 | f64 | MemoryReferenceLike);
     impl_stub_type!(BinaryOperandLike = BinaryOperand | i64 | MemoryReferenceLike);
     impl_stub_type!(ComparisonOperandLike<'_> = ComparisonOperand | i64 | f64 | MemoryReferenceLike);
-    impl_stub_type!(FrameNameLike = String | FrameIdentifier);
     impl_stub_type!(GateModifierDesignator = GateModifier | String);
+    impl_stub_type!(FrameAttributeValueLike = AttributeValue | ExpressionLike);
     impl_stub_type!(LabelTargetLike<'_> = String | Label | Target);
     impl_stub_type!(
         MemoryReferenceLike = MemoryReference | DeclarationAt | Declaration | (String, u64)

@@ -281,6 +281,8 @@ class CalibrationDefinition(Instruction):
     @identifier.setter
     def identifier(self, value: CalibrationIdentifier) -> None: ...
     @property
+    def instrs(self) -> builtins.list[Instruction]: ...
+    @property
     def instructions(self) -> builtins.list[Instruction]: ...
     @instructions.setter
     def instructions(self, value: typing.Sequence[Instruction]) -> None: ...
@@ -306,15 +308,19 @@ class CalibrationDefinition(Instruction):
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[CalibrationIdentifier, builtins.list[Instruction]]: ...
-    def __new__(cls, identifier: CalibrationIdentifier, instructions: typing.Sequence[Instruction]) -> CalibrationDefinition:
-        r"""
-        Builds a new calibration definition.
-        """
+    @typing.overload
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex], qubits: typing.Sequence[Qubit], instrs: typing.Sequence[Instruction], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> CalibrationDefinition: ...
+    @typing.overload
+    def __new__(cls, identifier: typing.Sequence[CalibrationIdentifier], instructions: typing.Sequence[Instruction]) -> CalibrationDefinition: ...
+    @typing.overload
+    def __new__(cls, identifier: typing.Optional[CalibrationIdentifier  |  builtins.str] = None, instructions: typing.Optional[builtins.list[Instruction]  |  builtins.list[expression.Expression]] = None, qubits: typing.Optional[typing.Sequence[Qubit]] = None, instrs: typing.Optional[typing.Sequence[Instruction]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier]] = None, *, name: typing.Optional[builtins.str] = None, parameters: typing.Optional[typing.Sequence[expression.Expression]] = None) -> CalibrationDefinition: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    @staticmethod
+    def from_parts(name: builtins.str, parameters: typing.Sequence[expression.Expression], qubits: typing.Sequence[Qubit], instructions: typing.Sequence[Instruction], modifiers: typing.Optional[typing.Sequence[GateModifier]]) -> CalibrationDefinition: ...
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
@@ -550,7 +556,7 @@ class CircuitDefinition(Instruction):
     def qubit_variables(self, value: typing.Sequence[builtins.str]) -> None: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[builtins.str, builtins.list[builtins.str], builtins.list[builtins.str], builtins.list[Instruction]]: ...
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[builtins.str], qubit_variables: typing.Sequence[builtins.str], instructions: typing.Sequence[Instruction]) -> CircuitDefinition: ...
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[builtins.str], qubit_variables: typing.Sequence[builtins.str], instructions: typing.Sequence[Instruction], *, qubits: typing.Optional[typing.Sequence[builtins.str]] = None) -> CircuitDefinition: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -582,9 +588,8 @@ class Comparison(Instruction):
     @property
     def target(self) -> MemoryReference: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[ComparisonOperator, MemoryReference, MemoryReference, ComparisonOperand]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, operator: ComparisonOperator, destination: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], lhs: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], rhs: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> Comparison: ...
+    def __new__(cls, operator: ComparisonOperator, destination: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], lhs: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], rhs: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], *, target: typing.Optional[MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]] = None, left: typing.Optional[MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]] = None, right: typing.Optional[ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]] = None) -> Comparison: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -663,7 +668,22 @@ class Convert(Instruction):
 
 class Declaration(Instruction):
     @property
+    def memory_size(self) -> builtins.int:
+        r"""
+        Get the number of elements being declared.
+        """
+    @property
+    def memory_type(self) -> builtins.str:
+        r"""
+        Get a string representation of the type of memory being declared.
+        """
+    @property
     def name(self) -> builtins.str: ...
+    @property
+    def shared_region(self) -> typing.Optional[builtins.str]:
+        r"""
+        Get the memory region name this declaration is sharing with, if any.
+        """
     @property
     def sharing(self) -> typing.Optional[Sharing]: ...
     @property
@@ -686,10 +706,18 @@ class Declaration(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def asdict(self) -> builtins.dict[str, builtins.list[builtins.tuple[builtins.int, builtins.str]] | builtins.str | builtins.int | None]:
+        r"""
+        Get the DECLARE directive as a dictionary.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def offsets(self) -> builtins.list[tuple[builtins.int, builtins.str]]:
+        r"""
+        Get the offsets for this declaration.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -733,7 +761,7 @@ class DeclarationAt:
         assert arith.to_quil() == "ADD x[2] 5"
         ```
         """
-    def and(self, other: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> BinaryLogic: ...
+    def and_(self, other: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> BinaryLogic: ...
     def convert(self, source: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Convert:
         r"""
         Return a new `Convert` instruction representing `self = (T)source`.
@@ -807,7 +835,7 @@ class DeclarationAt:
         """
     def mul(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Arithmetic: ...
     def neg(self) -> UnaryLogic: ...
-    def not(self) -> UnaryLogic:
+    def not_(self) -> UnaryLogic:
         r"""
         Return a new instruction representing a logical `NOT` of this memory reference.
         
@@ -1105,25 +1133,41 @@ class Fence(Instruction):
 class FrameDefinition(Instruction):
     @property
     def attributes(self) -> builtins.dict[builtins.str, AttributeValue]: ...
-    @attributes.setter
-    def attributes(self, value: typing.Mapping[builtins.str, AttributeValue]) -> None: ...
+    @property
+    def frame(self) -> FrameIdentifier:
+        r"""
+        Get the [`FrameIdentifier`] for this frame definition.
+        """
     @property
     def identifier(self) -> FrameIdentifier: ...
-    @identifier.setter
-    def identifier(self, value: FrameIdentifier) -> None: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[FrameIdentifier, builtins.dict[builtins.str, AttributeValue]]: ...
-    def __new__(cls, identifier: FrameIdentifier, attributes: typing.Mapping[builtins.str, AttributeValue]) -> FrameDefinition: ...
+    def __getitem__(self, name: builtins.str) -> AttributeValue: ...
+    def __getnewargs_ex__(self) -> tuple: ...
+    def __new__(cls, identifier: FrameIdentifier, attributes: typing.Optional[typing.Mapping[builtins.str, AttributeValue  |  _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]] = None, /, **more_attributes: typing.Any) -> FrameDefinition:
+        r"""
+        Construct a new `FrameDefinition` with the given `identifier` and optional attributes.
+        
+        You can provide an optional `attributes` dictionary with pre-set values,
+        and you can additionally provide keyword arguments for additional attributes.
+        If given both, the keyword arguments will override any initial values in `attributes`.
+        
+        Note that Quil defines attribute values as either strings or expressions,
+        so given a bare `str` value, it'll be interpreted as an `AttributeValue.String`.
+        To set explicit `Expression.Variable` values, you must wrap them in `Expression` yourself.
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __setitem__(self, name: builtins.str, value: AttributeValue  |  _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> None: ...
+    def get_attribute(self, name: builtins.str) -> typing.Optional[AttributeValue]: ...
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
         """
+    def set_attribute(self, name: builtins.str, value: AttributeValue  |  _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> None: ...
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
@@ -1635,9 +1679,13 @@ class MeasureCalibrationDefinition(Instruction):
     @identifier.setter
     def identifier(self, value: MeasureCalibrationIdentifier) -> None: ...
     @property
+    def instrs(self) -> builtins.list[Instruction]: ...
+    @property
     def instructions(self) -> builtins.list[Instruction]: ...
     @instructions.setter
     def instructions(self, value: typing.Sequence[Instruction]) -> None: ...
+    @property
+    def memory_reference(self) -> typing.Optional[MemoryReference]: ...
     @property
     def name(self) -> typing.Optional[builtins.str]:
         r"""
@@ -1655,13 +1703,15 @@ class MeasureCalibrationDefinition(Instruction):
         result to, if this is a measurement for record.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[MeasureCalibrationIdentifier, builtins.list[Instruction]]: ...
-    def __new__(cls, identifier: MeasureCalibrationIdentifier, instructions: typing.Sequence[Instruction]) -> MeasureCalibrationDefinition: ...
+    def __getnewargs__(self) -> tuple[Qubit, typing.Optional[builtins.str], builtins.list[Instruction]]: ...
+    def __new__(cls, qubit: Qubit  |  builtins.int  |  builtins.str  |  QubitPlaceholder, memory_reference: typing.Optional[MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]], instructions: typing.Sequence[Instruction], *, instrs: typing.Optional[typing.Sequence[Instruction]] = None) -> MeasureCalibrationDefinition: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    @staticmethod
+    def from_calibration(identifier: MeasureCalibrationIdentifier, instructions: typing.Sequence[Instruction]) -> MeasureCalibrationDefinition: ...
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
@@ -2725,17 +2775,27 @@ class Store(Instruction):
 
 class SwapPhases(Instruction):
     @property
+    def frameA(self) -> FrameIdentifier: ...
+    @property
+    def frameB(self) -> FrameIdentifier: ...
+    @property
     def frame_1(self) -> FrameIdentifier: ...
     @property
     def frame_2(self) -> FrameIdentifier: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[FrameIdentifier, FrameIdentifier]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, frame_1: FrameIdentifier, frame_2: FrameIdentifier) -> SwapPhases: ...
+    def __new__(cls, frame_1: FrameIdentifier, frame_2: FrameIdentifier, *, frameA: typing.Optional[FrameIdentifier] = None, frameB: typing.Optional[FrameIdentifier] = None) -> SwapPhases: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def get_qubit_indices(self) -> builtins.set[builtins.int]:
+        r"""
+        Return the fixed qubit indices used by this instruction's `frame`.
+        
+        Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
         """
     @staticmethod
     def is_quil_t() -> builtins.bool:
@@ -2904,6 +2964,11 @@ class Waveform:
 class WaveformDefinition(Instruction):
     @property
     def definition(self) -> Waveform: ...
+    @property
+    def entries(self) -> builtins.list[expression.Expression]:
+        r"""
+        Get the entries of the waveform definition.
+        """
     @property
     def name(self) -> builtins.str: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
