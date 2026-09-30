@@ -3080,6 +3080,15 @@ impl From<FrameAttributeValueLike> for AttributeValue {
     }
 }
 
+// TODO(migration-guide): The `FrameIdentifier` corresponds to PyQuil's `quilatom.Frame`.
+pickleable_new! {
+    impl FrameIdentifier {
+        fn __new__(qubits: Vec<Qubit> as Seq<QubitLike, Qubit>, name: String) -> FrameIdentifier {
+            Self::new(name, qubits.into())
+        }
+    }
+}
+
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]

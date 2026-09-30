@@ -221,168 +221,11 @@ impl pyo3_stub_gen::PyStubType for NonZeroU64 {
     }
 }
 
-/// Convert a Python sequence to a Rust `Vec`, converting each item to type `T` and then to `U`.
-///
-/// Use this when you want to use a `Vec<U>` on the Rust side
-/// but want to accept `Iterable[T]` on the Python side.
-/// This is particularly useful when using `pickleable_new!` when a field is a `Vec<U>`,
-/// as `pickleable_new!` expects the parameter types of `__new__` to match the fields types.
-///
-/// Note that `T` must implement `FromPyObject`, and `U` must implement `From<T>`.
-///
-/// # Example
-///
-/// As a motivating example, suppose you have a complex enum `T` you wish to expose to Python,
-/// but you'd like to let Python users call methods both with an instance of the class,
-/// or any of the subclass variants directly, without having to wrap them in the enum themselves.
-/// You can define another enum `U` for the parameter type without exposing it to Python,
-/// with the same variants as the original, plus a variant for `T` itself,
-/// and then derive or implement `FromPyObject`.
-/// Now you can use `U` as the parameter type for your methods,
-/// and Python users can call those methods with any of the variants of `U`.
-/// By adding a `From<U> for T` implementation, you can easily expose Python functions like this:
-///
-/// ```ignore
-/// #[pymethods]
-/// impl T {
-///     #[pyo3(name = "foo")]
-///     fn py_foo(&self, item: U) -> S {
-///         self.foo(item.into())
-///     }
-/// }
-/// ```
-///
-/// That's great, but it means writing explicit wrapper methods for each method you expose.
-/// If you want to share implementations with existing Rust methods
-/// or otherwise have functions that take `T` rather than `U`,
-/// you'll need to tell PyO3 how to make the conversion,
-/// which you can do with the `#[pyo3(from_py_with = ...)]` attribute on the parameter.
-/// For a single instance of `T`, you can simply use `T::from`
-///
-/// ```ignore
-/// use pyo3::{prelude::*, py_run, types::PyTuple};
-/// use rigetti_pyo3::fix_complex_enums;
-/// use quil_rs::{pickleable_new, quilpy::from_sequence};
-///
-/// #[derive(Clone, PartialEq, Eq)]
-/// #[pyclass(module = "my_module")]
-/// enum Item {
-///     Int(i64),
-///     Str(String),
-/// }
-///
-/// #[pymethods]
-/// impl Item {
-///     // For `pickle` support.
-///     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-///         match self {
-///             Item::Int(value) => (value,).into_pyobject(py),
-///             Item::Str(value) => (value.clone(),).into_pyobject(py),
-///         }
-///     }
-/// }
-///
-/// /// Parameter type for functions that take an `Item` or something that can be converted to one.
-/// #[derive(Clone, pyo3::FromPyObject)]
-/// enum ItemLike {
-///     Item(Item),
-///     Int(i64),
-///     Str(String),
-/// }
-///
-/// impl From<ItemLike> for Item {
-///     fn from(item_like: ItemLike) -> Self {
-///         match item_like {
-///             ItemLike::Item(item) => item,
-///             ItemLike::Int(value) => Item::Int(value),
-///             ItemLike::Str(value) => Item::Str(value),
-///         }
-///     }
-/// }
-///
-/// /// Return `True` if the `item` is equal to 42 or "42".
-/// #[pyfunction]
-/// fn is_42ish(item: ItemLike) -> bool {
-///     match item.into() {
-///         Item::Int(value) => value == 42,
-///         Item::Str(ref value) => value == "42",
-///     }
-/// }
-///
-/// #[pyclass(module = "my_module")]
-/// struct MyClass {
-///     name: String,
-///     items: Vec<Item>,
-/// }
-///
-/// pickleable_new! {
-///     impl MyClass {
-///         fn __new__(
-///             name: String,
-///             #[pyo3(from_py_with = from_sequence::<ItemLike, _>)]
-///             items: Vec<Item>,
-///         ) -> MyClass {
-///             Self { name, items }
-///         }
-///     }
-/// }
-///
-/// #[pymethods]
-/// impl MyClass {
-///     fn has_item(&self, item: ItemLike) -> bool {
-///         self.items.contains(&Item::from(item))
-///     }
-/// }
-///
-/// #[pymodule]
-/// fn my_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
-///     m.add_class::<Item>()?;
-///     m.add_class::<MyClass>()?;
-///     m.add_function(pyo3::wrap_pyfunction!(is_42ish, m)?)?;
-///     fix_complex_enums!(m.py(), Item);
-///     Ok(())
-/// }
-///
-/// pyo3::append_to_inittab!(my_module);
-/// Python::initialize();
-///
-/// Python::attach(|py| {
-///    let my_module = PyModule::import(py, "my_module").unwrap();
-///    py_run!(py, my_module, r#"
-///        from my_module import Item, MyClass, is_42ish
-///        import pickle
-///
-///        item1 = Item.Int(42)
-///        item2 = Item.Str("42")
-///        assert is_42ish(item1)
-///        assert is_42ish(item2)
-///        assert not is_42ish(Item.Int(43))
-///
-///        my_class = MyClass("example", [item1, item2])
-///        assert my_class.has_item(item1)
-///        assert my_class.has_item(item2)
-///
-///        pickled = pickle.dumps(my_class)
-///        unpickled = pickle.loads(pickled)
-///        assert unpickled.has_item(item1)
-///        assert unpickled.has_item(item2)
-///    "#);
-/// });
-/// ```
-pub(crate) fn from_sequence<'it, 'py, T, U>(sequence: &'it Bound<'py, PyAny>) -> PyResult<Vec<U>>
-where
-    for<'a> T: FromPyObject<'a, 'py> + Into<U>,
-    U: PyClass + PyTypeCheck + ToOwned<Owned = U>,
-{
-    Seq::<T, U>::extract(sequence.as_borrowed()).map(|seq| seq.0)
-}
-
 /// Wrapper for `Vec<U>` that extracts items using `T` as [`FromPyObject`] and `From<T> for U`.
 ///
 /// # Motivation
 ///
-/// This can be used in places that `#[pyo3(from_py_with = from_sequence::<T, U>)]` is used,
-/// but its main use is with [`pickleable_new!`] and syntax `field: Vec<U> as Seq<T, U>`.
+/// Its main use is with [`pickleable_new!`] and syntax `field: Vec<U> as Seq<T, U>`.
 /// Doing so will allow Python users to pass a sequence of things that extract into `T`,
 /// _and_ will generate type stubs for `Vec<T>` rather than for `Vec<U>`.
 ///
@@ -397,8 +240,9 @@ where
 /// 2. We can't use it with `pickleable_new!`, since the parameter is actually `Vec<Expression>`.
 ///
 /// We can work around both these issues by typing the field `Vec<Expression>`
-/// and annotating it with `#[pyo3(from_py_with = from_sequence::<ExpressionLike, _>)]`.
-/// However, because the parameter type is `Vec<Expression>`, the stubs will be wrong.
+/// and annotating it with `#[pyo3(from_py_with = from_sequence::<ExpressionLike, _>)]`
+/// for some function `from_sequence` that does this conversion for us;
+/// however, because the parameter type is `Vec<Expression>`, the stubs will be wrong.
 ///
 /// We can't work around that in `pickleable_new!` using `as Vec<ExpressionLike>`
 /// because it would require a `From<Vec<ExpressionLike>> for Vec<Expression>` implementation,
@@ -407,7 +251,7 @@ where
 /// We _could_ use `#[gen_stub(override_type(type_repr = "typing.Sequence[...]", imports=("typing")))],
 /// but that's verbose and error-prone (since the `...` must be a string literal).
 ///
-/// This type solves it by extracting into `Vec<T>` using `from_sequence`,
+/// This type solves it by extracting (with possible conversions) into `Vec<U>`,
 /// provides a `PyStubType` implementation matching `Vec<U>`,
 /// and provides an `From<Seq<T, U>> for Vec<T>` implementation:
 /// you can use it with `pickleable_new!` by writing `field: Vec<T> as Seq<U, T>`,
