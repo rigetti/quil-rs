@@ -52,6 +52,27 @@ impl PyModuleSingletonExt for Bound<'_, PyModule> {
 }
 
 /// Implement [`PySingleton`] for a `#[pyclass]`.
+///
+/// # Usage
+///
+/// ```rust,ignore
+/// /// The type of the single `MySingleton` instance.
+/// #[derive(Copy, Clone, Debug, Default, Hash, PartialEq, Eq)]
+/// #[pyclass(frozen, eq, hash, from_py_object)]
+/// struct MySingletonType;
+///
+/// py_singleton!(MySingletonType, "MySingleton", |py| MySingletonType);
+/// ```
+///
+/// The arguments are the type, the Python name for the singleton instance,
+/// and a "closure" that takes a [`Python<'py>`] token and creates the singleton value.
+/// The value is likely the type name again, if the type is just an empty struct,
+/// but it can be more complex if, for example, the type is a subclass of another type
+/// and so needs to use [`PyClassInitializer`] during construction.
+/// Implementation-wise, that code is executed within a [`PyOnceLock`]
+/// to ensure that the singleton instance is only created once.
+/// To actually create that instance and add it to the module,
+/// use [`PyModuleSingletonExt::add_singleton`] during module initialization. 
 macro_rules! py_singleton {
     ($T:ty, $name:expr, |$py:ident| $value:expr $(,)?) => {
         impl $crate::quilpy::singleton::PySingleton for $T {
