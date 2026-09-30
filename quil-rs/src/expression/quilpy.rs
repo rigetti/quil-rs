@@ -688,8 +688,11 @@ impl InfixOperator {
     gen_stub_pyfunction(module = "quil._quil.expression")
 )]
 #[pyfunction]
-pub(crate) fn quil_sin(expression: ExpressionLike) -> FunctionCallExpression {
-    FunctionCallExpression::new(ExpressionFunction::Sine, ArcIntern::new(expression.into()))
+pub(crate) fn quil_sin(expression: ExpressionLike) -> Expression {
+    Expression::FunctionCall(FunctionCallExpression::new(
+        ExpressionFunction::Sine,
+        ArcIntern::new(expression.into()),
+    ))
 }
 
 #[cfg_attr(
@@ -697,11 +700,11 @@ pub(crate) fn quil_sin(expression: ExpressionLike) -> FunctionCallExpression {
     gen_stub_pyfunction(module = "quil._quil.expression")
 )]
 #[pyfunction]
-pub(crate) fn quil_cos(expression: ExpressionLike) -> FunctionCallExpression {
-    FunctionCallExpression::new(
+pub(crate) fn quil_cos(expression: ExpressionLike) -> Expression {
+    Expression::FunctionCall(FunctionCallExpression::new(
         ExpressionFunction::Cosine,
         ArcIntern::new(expression.into()),
-    )
+    ))
 }
 
 #[cfg_attr(
@@ -709,8 +712,11 @@ pub(crate) fn quil_cos(expression: ExpressionLike) -> FunctionCallExpression {
     gen_stub_pyfunction(module = "quil._quil.expression")
 )]
 #[pyfunction]
-pub(crate) fn quil_cis(expression: ExpressionLike) -> FunctionCallExpression {
-    FunctionCallExpression::new(ExpressionFunction::Cis, ArcIntern::new(expression.into()))
+pub(crate) fn quil_cis(expression: ExpressionLike) -> Expression {
+    Expression::FunctionCall(FunctionCallExpression::new(
+        ExpressionFunction::Cis,
+        ArcIntern::new(expression.into()),
+    ))
 }
 
 #[cfg_attr(
@@ -718,11 +724,11 @@ pub(crate) fn quil_cis(expression: ExpressionLike) -> FunctionCallExpression {
     gen_stub_pyfunction(module = "quil._quil.expression")
 )]
 #[pyfunction]
-pub(crate) fn quil_exp(expression: ExpressionLike) -> FunctionCallExpression {
-    FunctionCallExpression::new(
+pub(crate) fn quil_exp(expression: ExpressionLike) -> Expression {
+    Expression::FunctionCall(FunctionCallExpression::new(
         ExpressionFunction::Exponent,
         ArcIntern::new(expression.into()),
-    )
+    ))
 }
 
 #[cfg_attr(
@@ -730,9 +736,9 @@ pub(crate) fn quil_exp(expression: ExpressionLike) -> FunctionCallExpression {
     gen_stub_pyfunction(module = "quil._quil.expression")
 )]
 #[pyfunction]
-pub(crate) fn quil_sqrt(expression: ExpressionLike) -> FunctionCallExpression {
-    FunctionCallExpression::new(
+pub(crate) fn quil_sqrt(expression: ExpressionLike) -> Expression {
+    Expression::FunctionCall(FunctionCallExpression::new(
         ExpressionFunction::SquareRoot,
         ArcIntern::new(expression.into()),
-    )
+    ))
 }
