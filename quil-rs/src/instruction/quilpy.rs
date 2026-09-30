@@ -2531,8 +2531,8 @@ impl Measurement {
     // `__getnewargs_ex__` is consistent with `__new__`!
     #[pyo3(signature = (qubit, target, *, name = None))]
     #[new]
-    fn __new__(qubit: Qubit, target: Option<MemoryReferenceLike>, name: Option<String>) -> Self {
-        Self::new(name, qubit, target.map(|t| t.into()))
+    fn __new__(qubit: QubitLike, target: Option<MemoryReferenceLike>, name: Option<String>) -> Self {
+        Self::new(name, qubit.into(), target.map(|t| t.into()))
     }
 
     #[gen_stub(override_return_type(
@@ -3857,9 +3857,7 @@ impl PauliTerm {
         };
 
         // (-1)^k = exp(i * pi * k)
-        let exp_i_pi_k = Expression::FunctionCall(quil_exp(
-            (IMAGINARY_UNIT * Expression::PiConstant() * expr.clone()).into(),
-        ));
+        let exp_i_pi_k = quil_exp((IMAGINARY_UNIT * Expression::PiConstant() * expr.clone()).into());
 
         let a = (ONE + exp_i_pi_k.clone()) / Expression::Number(Complex64::from(2.0));
         let b = (ONE - exp_i_pi_k) / Expression::Number(Complex64::from(2.0));
