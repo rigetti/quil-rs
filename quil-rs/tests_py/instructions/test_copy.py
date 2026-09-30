@@ -31,7 +31,7 @@ def _calibration(qubit: Qubit) -> CalibrationDefinition:
     )
 
 def _pulse(qubit: Qubit) -> Pulse:
-    return Pulse(blocking=False, frame=FrameIdentifier("frame", [qubit]), waveform=WaveformInvocation("wf", {}))
+    return Pulse(blocking=False, frame=FrameIdentifier([qubit], "frame"), waveform=WaveformInvocation("wf", {}))
 
 
 @pytest.fixture(params=(_calibration, _pulse))

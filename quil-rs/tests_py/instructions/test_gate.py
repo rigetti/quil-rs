@@ -32,7 +32,7 @@ def test_calibration_getters():
 def test_measure_calibration_getters():
     placeholder = Qubit.Placeholder(QubitPlaceholder())
 
-    calibration = MeasureCalibrationDefinition(
+    calibration = MeasureCalibrationDefinition.from_calibration(
         MeasureCalibrationIdentifier(placeholder, "addr"),
         [],
     )
@@ -45,7 +45,7 @@ def test_measure_calibration_getters():
 def test_named_measure_calibration_getters():
     placeholder = Qubit.Placeholder(QubitPlaceholder())
 
-    calibration = MeasureCalibrationDefinition(
+    calibration = MeasureCalibrationDefinition.from_calibration(
         MeasureCalibrationIdentifier(placeholder, "addr", name = "midcircuit"),
         [],
     )
