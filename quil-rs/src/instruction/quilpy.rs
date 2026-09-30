@@ -1938,7 +1938,17 @@ submit! {
                 cls,
                 name: builtins.str,
                 parameters: pyo3_stub_gen.RustType["Vec<ExpressionLike>"],
+                qubits: pyo3_stub_gen.RustType["Option<Vec<Qubit>>"] = None,
+                modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
+            ) -> Gate: ...
+
+            @typing.overload
+            def __new__(
+                cls,
+                name: builtins.str,
+                *,
                 qubits: pyo3_stub_gen.RustType["Vec<Qubit>"],
+                parameters: pyo3_stub_gen.RustType["Option<Vec<ExpressionLike>>"] = None,
                 modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
             ) -> Gate: ...
 
@@ -1947,11 +1957,10 @@ submit! {
             def __new__(
                 cls,
                 name: builtins.str,
-                parameters: pyo3_stub_gen.RustType["Vec<ExpressionLike>"],
-                qubits: pyo3_stub_gen.RustType["Vec<Qubit>"],
-                modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
                 *,
                 params: pyo3_stub_gen.RustType["Option<Vec<ExpressionLike>>"],
+                qubits: pyo3_stub_gen.RustType["Option<Vec<Qubit>>"] = None,
+                modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
             ) -> typing_extensions.NoReturn: ...
         "#
     }
@@ -1962,21 +1971,26 @@ submit! {
 #[pymethods]
 impl Gate {
     // TODO(migration-guide): `params` was renamed `parameters`.
+    
+    // Developer Note: `parameters` and `qubits` have defaults
+    // so that if un-migrated users used the `params` as a keyword-only argument,
+    // we can still accept it despite not having `parameters`.
     #[new]
-    #[gen_stub(skip)]
-    #[pyo3(signature = (name, parameters, qubits, modifiers = None, *, params = None))]
+    #[pyo3(signature = (name, parameters=None, qubits=None, modifiers=None, *, params = None))]
     fn __new__(
         py: Python<'_>,
         name: String,
-        parameters: Seq<ExpressionLike, Expression>,
-        qubits: Seq<QubitLike, Qubit>,
+        parameters: Option<Seq<ExpressionLike, Expression>>,
+        qubits: Option<Seq<QubitLike, Qubit>>,
         modifiers: Option<Seq<GateModifierDesignator, GateModifier>>,
         // `params` is for backwards compatibility and will raise a deprecation warning if used.
         params: Option<Seq<ExpressionLike, Expression>>,
     ) -> PyResult<Gate> {
-        let parameters = deprecated_or_new!(py, new = parameters, old = params)?;
-        let modifiers = modifiers.map(Into::into).unwrap_or_default();
-        Ok(Self::new(&name, parameters.into(), qubits.into(), modifiers)?)
+        let parameters = parameters.unwrap_or_default();
+        let parameters = deprecated_or_new!(py, new = parameters, old = params)?.into();
+        let qubits = qubits.unwrap_or_default().into();
+        let modifiers = modifiers.unwrap_or_default().into();
+        Ok(Self::new(&name, parameters, qubits, modifiers)?)
     }
 
     fn __getnewargs__(&self) -> (String, Vec<Expression>, Vec<Qubit>, Vec<GateModifier>) {
