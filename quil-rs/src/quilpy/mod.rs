@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use pyo3::types::{PyList, PyType};
+use pyo3::types::PyType;
 use pyo3::{prelude::*, pyclass::boolean_struct::True, types::PyTuple, PyClass, PyTypeCheck};
 use rigetti_pyo3::create_init_submodule;
 
@@ -272,6 +272,7 @@ impl pyo3_stub_gen::PyStubType for NonZeroU64 {
 ///     }
 /// }
 /// ```
+#[derive(Debug)]
 pub(crate) struct Seq<T, U>(Vec<U>, PhantomData<T>);
 
 impl<'py, T, U> FromPyObject<'_, 'py> for Seq<T, U>
@@ -302,6 +303,12 @@ where
 impl<T, U> Seq<T, U> {
     pub const fn new() -> Self {
         Self(Vec::new(), PhantomData)
+    }
+}
+
+impl<T, U> Default for Seq<T, U> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
