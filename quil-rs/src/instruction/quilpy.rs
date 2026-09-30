@@ -690,6 +690,16 @@ impl From<ArithmeticOperandLike> for ArithmeticOperand {
     }
 }
 
+impl From<ArithmeticOperandLike> for Expression {
+    fn from(value: ArithmeticOperandLike) -> Self {
+        match ArithmeticOperand::from(value) {
+            ArithmeticOperand::LiteralInteger(i) => Expression::Number(Complex64::new(i as f64, 0.0)),
+            ArithmeticOperand::LiteralReal(f) => Expression::Number(Complex64::new(f, 0.0)),
+            ArithmeticOperand::MemoryReference(mem_ref) => Expression::Address(mem_ref),
+        }
+    }
+}
+
 impl From<BinaryOperandLike> for BinaryOperand {
     fn from(value: BinaryOperandLike) -> Self {
         value.0
@@ -1971,7 +1981,7 @@ submit! {
 #[pymethods]
 impl Gate {
     // TODO(migration-guide): `params` was renamed `parameters`.
-    
+
     // Developer Note: `parameters` and `qubits` have defaults
     // so that if un-migrated users used the `params` as a keyword-only argument,
     // we can still accept it despite not having `parameters`.
@@ -2057,6 +2067,12 @@ impl Gate {
         py: Python<'py>,
     ) -> PyResult<Bound<'py, PyArray2<Complex64>>> {
         Ok(self.clone().to_unitary(n_qubits)?.to_pyarray(py))
+    }
+
+    #[pyo3(warn(message = "use `parameters` instead", category = PyDeprecationWarning))]
+    #[getter]
+    fn params(&self) -> Vec<Expression> {
+        self.parameters.clone()
     }
 }
 
@@ -2655,49 +2671,59 @@ impl MemoryReference {
         })
     }
 
-    /// Return a new `Arithmetic` instruction
-    /// representing the addition of this `MemoryReference` to the given operand.
-    ///
-    /// # Example
-    ///
-    /// ```python
-    /// from quil.instructions import MemoryReference, Arithmetic
-    ///
-    /// mem_ref = MemoryReference("counter", 0)
-    /// arith = mem_ref + 5
-    /// assert isinstance(arith, Arithmetic)
-    /// assert arith.to_quil() == "ADD counter[0] 5"
-    /// ```
-    fn __add__(&self, other: ArithmeticOperand) -> Arithmetic {
-        Arithmetic {
-            operator: ArithmeticOperator::Add,
-            destination: self.clone(),
-            source: other,
-        }
+    fn __add__(&self, other: ExpressionLike) -> Expression {
+        Expression::Address(self.clone()) + Expression::from(other)
     }
 
-    fn __sub__(&self, other: ArithmeticOperand) -> Arithmetic {
-        Arithmetic {
-            operator: ArithmeticOperator::Subtract,
-            destination: self.clone(),
-            source: other,
-        }
+    fn __radd__(&self, other: ExpressionLike) -> Expression {
+        Expression::from(other) + Expression::Address(self.clone())
     }
 
-    fn __truediv__(&self, other: ArithmeticOperand) -> Arithmetic {
-        Arithmetic {
-            operator: ArithmeticOperator::Divide,
-            destination: self.clone(),
-            source: other,
-        }
+    fn __sub__(&self, other: ExpressionLike) -> Expression {
+        Expression::Address(self.clone()) - Expression::from(other)
     }
 
-    fn __mul__(&self, other: ArithmeticOperand) -> Arithmetic {
-        Arithmetic {
-            operator: ArithmeticOperator::Multiply,
-            destination: self.clone(),
-            source: other,
+    fn __rsub__(&self, other: ExpressionLike) -> Expression {
+        Expression::from(other) - Expression::Address(self.clone())
+    }
+
+    fn __truediv__(&self, other: ExpressionLike) -> Expression {
+        Expression::Address(self.clone()) / Expression::from(other)
+    }
+
+    fn __rtruediv__(&self, other: ExpressionLike) -> Expression {
+        Expression::from(other) / Expression::Address(self.clone())
+    }
+
+    fn __mul__(&self, other: ExpressionLike) -> Expression {
+        Expression::Address(self.clone()) * Expression::from(other)
+    }
+
+    fn __rmul__(&self, other: ExpressionLike) -> Expression {
+        Expression::from(other) * Expression::Address(self.clone())
+    }
+
+    fn __pow__<'py>(&self, exponent: ExpressionLike, modulo: Option<Bound<'py, PyAny>>) -> PyResult<Expression> {
+        if modulo.is_some() {
+            return Err(PyNotImplementedError::new_err(
+                "`modulo` is not supported for `MemoryReference.__pow__`",
+            ));
         }
+        Ok(Expression::Address(self.clone()) ^ (Expression::from(exponent)))
+    }
+
+    fn __rpow__<'py>(&self, base: ExpressionLike, modulo: Option<Bound<'py, PyAny>>) -> PyResult<Expression> {
+        if modulo.is_some() {
+            return Err(PyNotImplementedError::new_err(
+                "`modulo` is not supported for `MemoryReference.__rpow__`",
+            ));
+        }
+
+        Ok(Expression::from(base) ^ Expression::Address(self.clone()))
+    }
+
+    fn __neg__(&self) -> Expression {
+        -Expression::Address(self.clone())
     }
 
     // -------------------------------------------------------------------------------------
