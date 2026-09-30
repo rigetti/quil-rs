@@ -8,9 +8,14 @@ use indexmap::IndexMap;
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
 use pyo3::{
-    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit, exceptions::{
-        PyDeprecationWarning, PyIndexError, PyKeyError, PyNotImplementedError, PyTypeError, PyUserWarning, PyValueError,
-    }, prelude::*, sync::PyOnceLock, types::{IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyString, PyTuple},
+    exceptions::{
+        PyDeprecationWarning, PyIndexError, PyKeyError, PyNotImplementedError, PyTypeError,
+        PyUserWarning, PyValueError,
+    },
+    prelude::*,
+    sync::PyOnceLock,
+    types::{IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyString, PyTuple},
+    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit,
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -33,8 +38,8 @@ use crate::{
     quilpy::{
         deprecated_or_new, deprecated_param,
         errors::{self, PickleError},
-        from_sequence, impl_newargs, impl_to_quil, py_deprecated, singleton, IntoNewArgs, Migrate,
-        NewArgs, NonZeroU64,
+        impl_newargs, impl_to_quil, py_deprecated, singleton, IntoNewArgs, Migrate,
+        NewArgs, NonZeroU64, Seq,
     },
     validation::identifier::IdentifierValidationError,
 };
@@ -1145,14 +1150,14 @@ impl CalibrationDefinition {
     #[new]
     fn __new__(
         identifier: Option<Migrate<CalibrationIdentifier, String>>,
-        instructions: Option<Migrate<Vec<Instruction>, Vec<Expression>>>,
+        instructions: Option<Migrate<Vec<Instruction>, Seq<ExpressionLike, Expression>>>,
 
-        qubits: Option<Vec<Qubit>>,
+        qubits: Option<Seq<QubitLike, Qubit>>,
         instrs: Option<Vec<Instruction>>,
         modifiers: Option<Vec<GateModifier>>,
 
         name: Option<String>,
-        parameters: Option<Vec<Expression>>,
+        parameters: Option<Seq<ExpressionLike, Expression>>,
     ) -> PyResult<Self> {
         match (
             identifier,
@@ -1211,16 +1216,23 @@ impl CalibrationDefinition {
         Ok((self.identifier.clone(), self.instructions.clone()))
     }
 
+    /// Construct a new instance from its constituent parts.
+    ///
+    /// This builds up the `CalibrationIdentifier` instance for you.
     #[staticmethod]
     fn from_parts(
         name: String,
-        #[pyo3(from_py_with = from_sequence::<ExpressionLike, _>)] parameters: Vec<Expression>,
-        #[pyo3(from_py_with = from_sequence::<QubitLike, _>)] qubits: Vec<Qubit>,
+        parameters: Seq<ExpressionLike, Expression>,
+        qubits: Seq<QubitLike, Qubit>,
         instructions: Vec<Instruction>,
         modifiers: Option<Vec<GateModifier>>,
     ) -> PyResult<Self> {
-        let identifier =
-            CalibrationIdentifier::new(name, modifiers.unwrap_or_default(), parameters, qubits)?;
+        let identifier = CalibrationIdentifier::new(
+            name,
+            modifiers.unwrap_or_default(),
+            parameters.into(),
+            qubits.into(),
+        )?;
         Ok(Self::new(identifier, instructions))
     }
 
@@ -1260,17 +1272,16 @@ pickleable_new! {
         /// Builds a new calibration identifier.
         ///
         /// Raises an error if the given name isn't a valid Quil identifier.
-        #[pyo3(signature = (name, parameters = Vec::new(), qubits = Vec::new(), modifiers = Vec::new()))]
+        #[pyo3(signature = (name, parameters = Seq::new(), qubits = Seq::new(), modifiers = Vec::new()))]
         #[pyo3(text_signature = "(name, parameters = [], qubits = [], modifiers = [])")]
         fn __new__(
             name: String,
-            #[pyo3(from_py_with = from_sequence::<ExpressionLike, _>)]
-            parameters: Vec<Expression>,
-            qubits: Vec<Qubit>,
+            parameters: Vec<Expression> as Seq<ExpressionLike, Expression>,
+            qubits: Vec<Qubit> as Seq<QubitLike, Qubit>,
             modifiers: Vec<GateModifier>,
         ) -> Result<CalibrationIdentifier, IdentifierValidationError> {
             // Note that  the parameter order is different for the Python version :(
-            Self::new(name, modifiers, parameters, qubits)
+            Self::new(name, modifiers, parameters.into(), qubits.into())
         }
     }
 }
@@ -1894,7 +1905,7 @@ impl ExternParameterType {
 /// A designator for a gate modifier, which can be either a string or an actual `GateModifier`.
 ///
 /// Used to allow functions exposed via Python bindings to accept either type.
-#[derive(FromPyObject)]
+#[derive(Debug, Clone, FromPyObject)]
 enum GateModifierDesignator {
     String(String),
     GateModifier(GateModifier),
@@ -1957,24 +1968,15 @@ impl Gate {
     fn __new__(
         py: Python<'_>,
         name: String,
-        parameters: Vec<ExpressionLike>,
-        #[pyo3(from_py_with = from_sequence::<Qubit, _>)] qubits: Vec<Qubit>,
-        modifiers: Option<Vec<GateModifierDesignator>>,
+        parameters: Seq<ExpressionLike, Expression>,
+        qubits: Seq<QubitLike, Qubit>,
+        modifiers: Option<Seq<GateModifierDesignator, GateModifier>>,
         // `params` is for backwards compatibility and will raise a deprecation warning if used.
-        params: Option<Vec<ExpressionLike>>,
+        params: Option<Seq<ExpressionLike, Expression>>,
     ) -> PyResult<Gate> {
-        let parameters = deprecated_or_new!(py, new = parameters, old = params)?
-            .into_iter()
-            .map(|p| p.into())
-            .collect();
-
-        let modifiers = modifiers
-            .unwrap_or_default()
-            .into_iter()
-            .map(TryInto::<GateModifier>::try_into)
-            .collect::<Result<Vec<GateModifier>, PyErr>>()?;
-
-        Ok(Self::new(&name, parameters, qubits, modifiers)?)
+        let parameters = deprecated_or_new!(py, new = parameters, old = params)?;
+        let modifiers = modifiers.map(Into::into).unwrap_or_default();
+        Ok(Self::new(&name, parameters.into(), qubits.into(), modifiers)?)
     }
 
     fn __getnewargs__(&self) -> (String, Vec<Expression>, Vec<Qubit>, Vec<GateModifier>) {
@@ -2008,9 +2010,9 @@ impl Gate {
     fn py_forked(
         &self,
         fork_qubit: QubitLike,
-        #[pyo3(from_py_with = from_sequence::<ExpressionLike, _>)] alt_params: Vec<Expression>,
+        alt_params: Seq<ExpressionLike, Expression>,
     ) -> Result<Self, GateError> {
-        self.clone().forked(fork_qubit.into(), alt_params)
+        self.clone().forked(fork_qubit.into(), alt_params.into())
     }
 
     /// Get the matrix resulting from lifting this ``Gate``
@@ -3009,16 +3011,9 @@ pickleable_new! {
         #[pyo3(signature = (duration, qubits, frame_names = Vec::new()))]
         fn __new__(
             duration: Expression as ExpressionLike,
-            #[gen_stub(override_type(
-                type_repr = "typing.Sequence[QubitDesignator]",
-                imports = ("typing",)
-            ))]
-            #[pyo3(from_py_with = from_sequence::<QubitLike, _>)]
-            qubits: Vec<Qubit>,
+            qubits: Vec<Qubit> as Seq<QubitLike, Qubit>,
             frame_names: Vec<String>,
-        ) -> Delay {
-            Self::new(duration.into(), frame_names, qubits)
-        }
+        );
     }
 }
 
@@ -3060,12 +3055,7 @@ impl Delay {
 
 pickleable_new! {
     impl Fence {
-        fn __new__(
-            #[pyo3(from_py_with = from_sequence::<Qubit, _>)]
-            qubits: Vec<Qubit>,
-        ) -> Fence {
-            Self::new(qubits)
-        }
+        fn __new__(qubits: Vec<Qubit> as Seq<QubitLike, Qubit>);
     }
 }
 
@@ -3094,7 +3084,7 @@ impl From<FrameAttributeValueLike> for AttributeValue {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl FrameDefinition {
-    // TODO(migration-guide): This constructor differs from both PyQuil v4 and `quil` versions. 
+    // TODO(migration-guide): This constructor differs from both PyQuil v4 and `quil` versions.
     // Now, the initial `identifier` argument is required, and must be given positionally.
     // Users can provide an optional `attributes` dictionary, with values taken mostly as-is,
     // and optionally can provide additional/overriding attribute values as keyword arguments.
@@ -3135,7 +3125,7 @@ impl FrameDefinition {
 
     // TODO(migration-guide): PyQuil v4 only took/returned `str | float | None`,
     // not arbitrary `Expression`s as Quil allows these to be.
-    // Users should deconstruct the resulting `AttributeValue`, likely with a match statement, 
+    // Users should deconstruct the resulting `AttributeValue`, likely with a match statement,
     // and handle the result appropriately.
     fn get_attribute(&self, name: &str) -> Option<AttributeValue> {
         self.attributes.get(name).cloned()
@@ -3166,7 +3156,7 @@ impl FrameDefinition {
     // but likewise, that seems like a bad idea compared to creating a new instance
     // (as is the case with all our other `frozen` instruction types).
     // Although for now we allow modifying the underlying dictionary,
-    // we may remove that in the future, and force it to be read-only as with other classes. 
+    // we may remove that in the future, and force it to be read-only as with other classes.
 
     /// Get the [`FrameIdentifier`] for this frame definition.
     #[getter]
@@ -4877,7 +4867,7 @@ impl Pragma {
 }
 
 #[derive(Debug, Clone, FromPyObject)]
-enum QubitLike {
+pub(crate) enum QubitLike {
     Qubit(Qubit),
     Placeholder(QubitPlaceholder),
     Int(u64),
@@ -5384,21 +5374,23 @@ impl UnresolvedCallArgument {
 
 // TODO(migration-guide): PyQuil v4's `DefWaveform` took `parameters` (a list of `Parameter`s,
 // here just their names) and `entries` directly, building the `quil_rs.Waveform` internally.
-//
-// This is implemented manually (rather than with `pickleable_new!`)
-// because `parameters` and `entries` aren't fields on the underlying struct;
-// use `WaveformDefinition.quil` to construct one directly from a `name` and a `definition`.
+// Now, `WaveformDefinition.from_waveform` constructs one from a `name` and a `definition`.
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl WaveformDefinition {
+    // This is implemented manually (rather than with `pickleable_new!`)
+    // because `parameters` and `entries` aren't fields on the underlying struct;
+    /// Construct a new `WaveformDefinition` from a name, list of parameters, and list of entries.
+    ///
+    /// See `WaveformDefinition.from_waveform` to construct one directly from a `Waveform` object.
     #[new]
     fn __new__(
         name: String,
         parameters: Vec<String>,
-        #[pyo3(from_py_with = from_sequence::<ExpressionLike, _>)] entries: Vec<Expression>,
+        entries: Seq<ExpressionLike, Expression>,
     ) -> Self {
-        Self::new(name, Waveform::new(entries, parameters))
+        Self::new(name, Waveform::new(entries.into(), parameters))
     }
 
     fn __getnewargs__(&self) -> (String, Vec<String>, Vec<Expression>) {
