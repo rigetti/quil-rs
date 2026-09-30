@@ -47,6 +47,8 @@ pub mod units;
 pub mod validation;
 pub mod waveform;
 
+use std::marker::PhantomData;
+
 pub use program::Program;
 
 #[cfg(feature = "python")]
@@ -221,8 +223,5 @@ macro_rules! pickleable_new {
     (@extract $field:ident: $field_type:ty as $other_type:ty) => { $field.into() };
     (@extract $field:ident: $field_type:ty) => { $field };
 }
-
-// pyif!($some_expr if $thing_is_defined else $other_expr)
-// e.g. pyif!($field.into() if $other_type else $field)
 
 pub(crate) use pickleable_new;

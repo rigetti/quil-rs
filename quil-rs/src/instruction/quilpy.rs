@@ -2565,7 +2565,9 @@ pickleable_new! {
     impl Reset {
         /// Initialize a new reset instruction, optionally targeting a specific qubit.
         #[pyo3(signature = (qubit = None))]
-        fn __new__(qubit: Option<Qubit>);
+        fn __new__(qubit: Option<Qubit> as Option<QubitLike>) -> Reset {
+            Self { qubit: qubit.map(Into::into) }
+        }
     }
 }
 
