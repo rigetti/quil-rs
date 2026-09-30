@@ -432,8 +432,9 @@ pub(crate) struct Seq<T, U>(Vec<U>, PhantomData<T>);
 
 impl<'py, T, U> FromPyObject<'_, 'py> for Seq<T, U>
 where
-    for<'a> T: FromPyObject<'a, 'py> + Into<U>,
+    for<'a> T: FromPyObject<'a, 'py> + TryInto<U>,
     U: PyClass + PyTypeCheck + ToOwned<Owned = U>,
+    for<'a> <T as TryInto<U>>::Error: Into<PyErr>,
 {
     type Error = PyErr;
 
@@ -444,7 +445,7 @@ where
             let item = if let Ok(item) = item.cast::<U>() {
                 item.borrow().to_owned()
             } else {
-                item.extract::<T>().map(Into::into).map_err(Into::into)?
+                item.extract::<T>().map_err(Into::into)?.try_into().map_err(Into::into)?
             };
             res.push(item);
         }
@@ -452,6 +453,7 @@ where
         Ok(Self(res, PhantomData))
     }
 }
+
 
 impl<T, U> Seq<T, U> {
     pub const fn new() -> Self {
