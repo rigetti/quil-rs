@@ -299,7 +299,7 @@ def test_parsed() -> None:
         assert isinstance(instruction, Pulse)
         pulse = instruction
         assert pulse.blocking
-        assert pulse.frame == FrameIdentifier("tx", [Qubit.Fixed(0)])
+        assert pulse.frame == FrameIdentifier([Qubit.Fixed(0)], "tx")
         syntactic = Waveform.from_quil(pulse.waveform)
         concrete = syntactic.evaluate(evaluate_to_real, Expression.evaluate)
         program_syntactic_pulses.append(syntactic)

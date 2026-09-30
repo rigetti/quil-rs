@@ -2421,9 +2421,6 @@ impl MeasureCalibrationDefinition {
     // TODO(migration-guide): This has been modified to match the PyQuil v4 signature,
     // except that the `instrs` parameter has been renamed `instructions`.
     // Direct `quil` users can migrate using the new `from_calibration` constructor.
-    //
-    // TODO(copilot): Take this approach with CalibrationDefinition as well,
-    // rather than its `from_parts` constructor.
     #[new]
     #[pyo3(signature = (qubit, memory_reference, instructions, *, instrs=None))]
     fn __new__(
@@ -2434,11 +2431,7 @@ impl MeasureCalibrationDefinition {
         instrs: Option<Vec<Instruction>>,
     ) -> PyResult<Self> {
         let instructions = deprecated_or_new!(py, new = instructions, old = instrs)?;
-        let target = match memory_reference {
-            Some(memref) => Some(MemoryReference::from(memref).to_quil()?),
-            None => None,
-        };
-
+        let target = memory_reference.map(|memref| MemoryReference::from(memref).name.clone());
         let ident = MeasureCalibrationIdentifier::new(None, qubit.into(), target);
         Ok(Self::new(ident, instructions))
     }
