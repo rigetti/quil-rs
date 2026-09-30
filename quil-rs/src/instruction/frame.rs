@@ -4,17 +4,13 @@ use indexmap::IndexMap;
 use nom_locate::LocatedSpan;
 
 #[cfg(feature = "python")]
-use crate::{instruction::quilpy::PyInstruction, quilpy::from_sequence};
+use crate::{instruction::quilpy::{PyInstruction, QubitLike}};
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum};
 
 use super::{MemoryReference, Qubit, QuotedString, WaveformInvocation};
 use crate::{
-    expression::Expression,
-    parser::{common::parse_frame_identifier, lex, ParseError},
-    pickleable_new,
-    program::{disallow_leftover, SyntaxError},
-    quil::{Quil, INDENT},
+    expression::Expression, parser::{ParseError, common::parse_frame_identifier, lex}, pickleable_new, program::{SyntaxError, disallow_leftover}, quil::{INDENT, Quil}, quilpy::Seq,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, strum::EnumTryAs)]
@@ -120,11 +116,7 @@ pub struct FrameIdentifier {
 // The parameter order here is swapped around relative PyQuil's `quilatom.Frame`.
 pickleable_new! {
     impl FrameIdentifier {
-        pub fn new(
-            name: String,
-            #[pyo3(from_py_with = from_sequence::<Qubit, _>)]
-            qubits: Vec<Qubit>
-        );
+        pub fn new(name: String, qubits: Vec<Qubit> as Seq<QubitLike, Qubit>);
     }
 }
 
