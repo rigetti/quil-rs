@@ -4,13 +4,13 @@ use indexmap::IndexMap;
 use nom_locate::LocatedSpan;
 
 #[cfg(feature = "python")]
-use crate::{instruction::quilpy::{PyInstruction, QubitLike}};
+use crate::instruction::quilpy::PyInstruction;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum};
 
 use super::{MemoryReference, Qubit, QuotedString, WaveformInvocation};
 use crate::{
-    expression::Expression, parser::{ParseError, common::parse_frame_identifier, lex}, pickleable_new, program::{SyntaxError, disallow_leftover}, quil::{INDENT, Quil}, quilpy::Seq,
+    expression::Expression, parser::{ParseError, common::parse_frame_identifier, lex}, program::{SyntaxError, disallow_leftover}, quil::{INDENT, Quil},
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, strum::EnumTryAs)]
@@ -112,11 +112,9 @@ pub struct FrameIdentifier {
     pub qubits: Vec<Qubit>,
 }
 
-// TODO(migration-guide): The `FrameIdentifier` corresponds to PyQuil's `quilatom.Frame`.
-// The parameter order here is swapped around relative PyQuil's `quilatom.Frame`.
-pickleable_new! {
-    impl FrameIdentifier {
-        pub fn new(name: String, qubits: Vec<Qubit> as Seq<QubitLike, Qubit>);
+impl FrameIdentifier {
+    pub fn new(name: String, qubits: Vec<Qubit>) -> Self {
+        Self { name, qubits }
     }
 }
 
