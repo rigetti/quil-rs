@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use pyo3::types::PyType;
+use pyo3::types::{PyList, PyType};
 use pyo3::{prelude::*, pyclass::boolean_struct::True, types::PyTuple, PyClass, PyTypeCheck};
 use rigetti_pyo3::create_init_submodule;
 
@@ -371,32 +371,123 @@ impl pyo3_stub_gen::PyStubType for NonZeroU64 {
 /// ```
 pub(crate) fn from_sequence<'it, 'py, T, U>(sequence: &'it Bound<'py, PyAny>) -> PyResult<Vec<U>>
 where
-    U: PyClass + PyTypeCheck + From<T> + ToOwned<Owned = U>,
-    for<'a> T: FromPyObject<'a, 'py>,
-    for<'a> PyErr: From<<T as FromPyObject<'a, 'py>>::Error>,
+    for<'a> T: FromPyObject<'a, 'py> + Into<U>,
+    U: PyClass + PyTypeCheck + ToOwned<Owned = U>,
 {
-    let capacity = sequence.len()?;
-    let mut res = Vec::with_capacity(capacity);
-    for item in sequence.try_iter()? {
-        res.push(from_like(&item?)?);
-    }
-    Ok(res)
+    Seq::<T, U>::extract(sequence.as_borrowed()).map(|seq| seq.0)
 }
 
-/// Extract a Python object as a [`PyClass`] `U`, or if that fails,
-/// route through [`Bound::extract`] and `U`.
+/// Wrapper for `Vec<U>` that extracts items using `T` as [`FromPyObject`] and `From<T> for U`.
 ///
-/// In either case, the value is a cloned instance of the Python object.
-pub(crate) fn from_like<'a, 'py, T, U>(obj: &'a Bound<'py, PyAny>) -> PyResult<U>
+/// # Motivation
+///
+/// This can be used in places that `#[pyo3(from_py_with = from_sequence::<T, U>)]` is used,
+/// but its main use is with [`pickleable_new!`] and syntax `field: Vec<U> as Seq<T, U>`.
+/// Doing so will allow Python users to pass a sequence of things that extract into `T`,
+/// _and_ will generate type stubs for `Vec<T>` rather than for `Vec<U>`.
+///
+/// By way of example, suppose we have a struct with a field typed as `Vec<Expression>`,
+/// but we want to let Python users pass in a list containing `Expressions`
+/// or anything we know how to convert into an `Expression` (such as `MemoryReference` or `int`s).
+/// We have an `ExpressionLike` enum that handles the extraction for us,
+/// so we could type the parameter just as `Vec<ExpressionLike>`.
+/// That has two downsides, though:
+///
+/// 1. We'll build up an entire `Vec<ExpressionLike>` just to convert it to a `Vec<Expression>`.
+/// 2. We can't use it with `pickleable_new!`, since the parameter is actually `Vec<Expression>`.
+///
+/// We can work around both these issues by typing the field `Vec<Expression>`
+/// and annotating it with `#[pyo3(from_py_with = from_sequence::<ExpressionLike, _>)]`.
+/// However, because the parameter type is `Vec<Expression>`, the stubs will be wrong.
+///
+/// We can't work around that in `pickleable_new!` using `as Vec<ExpressionLike>`
+/// because it would require a `From<Vec<ExpressionLike>> for Vec<Expression>` implementation,
+/// and even if that implementation existed, we'd be back with downside 1 from above.
+///
+/// We _could_ use `#[gen_stub(override_type(type_repr = "typing.Sequence[...]", imports=("typing")))],
+/// but that's verbose and error-prone (since the `...` must be a string literal).
+///
+/// This type solves it by extracting into `Vec<T>` using `from_sequence`,
+/// provides a `PyStubType` implementation matching `Vec<U>`,
+/// and provides an `From<Seq<T, U>> for Vec<T>` implementation:
+/// you can use it with `pickleable_new!` by writing `field: Vec<T> as Seq<U, T>`,
+/// and you'll get a reasonably efficient extraction with the correct type stubs.
+///
+/// # Usage
+///
+/// For real use-cases, look for instances that accept `Vec<ExpressionLike>` or `Vec<QubitLike>`
+/// within the [`crate::instructions::quilpy`] module.
+///
+/// This is most useful with `pickleable_new!` for a field with type `Vec<U>`
+/// that should be extracted using the [`FromPyObject`] implementation of `T`:
+///
+/// ```rust,ignore
+/// pickleable_new! {
+///     impl MyStruct {
+///         fn __new__(foos: Vec<Foo> as Seq<FooLike>);
+///     }
+/// }
+/// ```
+pub(crate) struct Seq<T, U>(Vec<U>, PhantomData<T>);
+
+impl<'py, T, U> FromPyObject<'_, 'py> for Seq<T, U>
 where
-    T: FromPyObject<'a, 'py>,
-    U: PyClass + PyTypeCheck + From<T> + ToOwned<Owned = U>,
-    PyErr: From<<T as FromPyObject<'a, 'py>>::Error>,
+    for<'a> T: FromPyObject<'a, 'py> + Into<U>,
+    U: PyClass + PyTypeCheck + ToOwned<Owned = U>,
 {
-    if let Ok(obj) = obj.cast::<U>() {
-        Ok(obj.borrow().to_owned())
-    } else {
-        obj.extract::<T>().map(U::from).map_err(Into::into)
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
+        let mut res = Vec::with_capacity(obj.len().unwrap_or(0));
+        for item in obj.try_iter()? {
+            let item = item?;
+            let item = if let Ok(item) = item.cast::<U>() {
+                item.borrow().to_owned()
+            } else {
+                item.extract::<T>().map(Into::into).map_err(Into::into)?
+            };
+            res.push(item);
+        }
+
+        Ok(Self(res, PhantomData))
+    }
+}
+
+impl<T, U> Seq<T, U> {
+    pub const fn new() -> Self {
+        Self(Vec::new(), PhantomData)
+    }
+}
+
+// It's unlikely to be useful to return this type,
+// but this implementation is occassionally necessary for the stub generator to work right.
+impl <'py, T, U> IntoPyObject<'py> for Seq<T, U>
+where
+    U: IntoPyObject<'py>,
+{
+    type Target = PyAny;
+    type Output = Bound<'py, Self::Target>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        self.0.into_pyobject(py)
+    }
+}
+
+impl<T, U> From<Seq<T, U>> for Vec<U> {
+    fn from(val: Seq<T, U>) -> Self {
+        val.0
+    }
+}
+
+#[cfg(feature = "stubs")]
+impl <T: PyStubType, U> pyo3_stub_gen::PyStubType for Seq<T, U> {
+    fn type_input() -> pyo3_stub_gen::TypeInfo {
+        <Vec<T> as PyStubType>::type_input()
+    }
+
+    fn type_output() -> pyo3_stub_gen::TypeInfo {
+        <Vec<T> as PyStubType>::type_output()
     }
 }
 
@@ -592,7 +683,7 @@ impl<'a, 'py, T> Like<'a, 'py, T> {
     {
         match self {
             Self::Borrowed(bound) => Some(bound.to_owned()),
-            Self::Extracted(_) => None, 
+            Self::Extracted(_) => None,
         }
     }
 }
@@ -699,7 +790,7 @@ where
 }
 
 /// Make a Rust enum more friendly for Python users.
-/// 
+///
 /// # Usage
 ///
 /// ```rust,ignore
