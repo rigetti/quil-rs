@@ -26,20 +26,18 @@ use pyo3_stub_gen::{
 };
 
 use super::*;
-#[cfg(feature = "stubs")]
-use crate::expression::quilpy::stubs::QualifiedExpression;
 use crate::{
     expression::{
         consts::{IMAGINARY_UNIT, ONE, ZERO},
-        quilpy::{quil_exp, ExpressionArgs, ExpressionLike},
+        quilpy::{quil_exp, ExpressionArgs, ExpressionLike, QualifiedExpression},
     },
     instruction::gate::GateSignature,
     pickleable_new,
     quilpy::{
         aliased, deprecated_or_new, deprecated_param,
         errors::{self, PickleError},
-        impl_newargs, impl_to_quil, py_deprecated, singleton, Either, IntoNewArgs, Migrate,
-        NewArgs, NonZeroU64, Seq,
+        impl_newargs, impl_to_quil, py_deprecated, singleton, IntoNewArgs, Migrate, NewArgs,
+        NonZeroU64, Seq,
     },
     validation::identifier::IdentifierValidationError,
 };
@@ -1169,8 +1167,8 @@ impl CalibrationDefinition {
             ))]
     #[new]
     fn __new__(
-        identifier: Option<Either<CalibrationIdentifier, String>>,
-        instructions: Option<Either<Vec<Instruction>, Seq<ExpressionLike, Expression>>>,
+        identifier: Option<Migrate<CalibrationIdentifier, String>>,
+        instructions: Option<Migrate<Vec<Instruction>, Seq<ExpressionLike, Expression>>>,
 
         qubits: Option<Seq<QubitLike, Qubit>>,
         instrs: Option<Vec<Instruction>>,
@@ -2477,7 +2475,6 @@ impl MeasureCalibrationDefinition {
     //   but permits (and warns about) the older usage,
     //   and marks mixed-usage as NoReturn.
 
-
     // TODO(testing): Add tests to confirm the aliases work as expected.
     #[new]
     #[pyo3(signature = (qubit, memory_reference, instructions=None, *, instrs=None))]
@@ -2488,8 +2485,7 @@ impl MeasureCalibrationDefinition {
         instrs: Option<Vec<Instruction>>,
     ) -> PyResult<Self> {
         let instructions = aliased!(instructions, instrs)?;
-        let target = memory_reference
-            .map(|memref| MemoryReference::from(memref).name.clone());
+        let target = memory_reference.map(|memref| MemoryReference::from(memref).name.clone());
         let ident = MeasureCalibrationIdentifier::new(None, qubit.into(), target);
         Ok(Self::new(ident, instructions))
     }
@@ -2592,6 +2588,8 @@ impl Measurement {
     // Developer Note: the Python argument order is not the same as the Rust argument order,
     // and that this function requires keywords on the Python side!
     // Make sure `__getnewargs_ex__` is consistent with `__new__`!
+
+    // TODO(testing): add tests to confirm alias/args work as expected.
     #[pyo3(signature = (qubit, target = None, *, name = None, classical_reg = None))]
     #[new]
     fn __new__(
@@ -3647,8 +3645,8 @@ impl PauliTerm {
         ]",
         imports = ("quil._quil.expression", "builtins")
     ))]
-    fn __getnewargs__(&self) -> (Vec<(PauliGate, String)>, Expression) {
-        (self.arguments.clone(), self.expression.clone())
+    fn __getnewargs__(&self) -> (Vec<(PauliGate, String)>, QualifiedExpression) {
+        (self.arguments.clone(), self.expression.clone().into())
     }
 
     /// Construct a new `PauliTerm` from a list of operators and an optional coefficient.
