@@ -19,8 +19,8 @@ use crate::{
     instruction::{
         quilpy::OwnedGateSignature, CalibrationDefinition, Declaration, DefaultHandler,
         ExternPragmaMap, FrameAttributes, FrameIdentifier, Gate, Instruction,
-        MeasureCalibrationDefinition, Measurement, MemoryReference, Qubit, QubitPlaceholder,
-        Target, TargetPlaceholder, Waveform,
+        MeasureCalibrationDefinition, Measurement, MemoryReference, Qubit, QubitPlaceholder, Reset,
+        ResetCalibrationDefinition, Target, TargetPlaceholder, Waveform,
     },
     quil::Quil,
     quilpy::{errors, impl_to_quil},
@@ -692,10 +692,12 @@ impl Calibrations {
     fn new(
         calibrations: Vec<CalibrationDefinition>,
         measure_calibrations: Vec<MeasureCalibrationDefinition>,
+        reset_calibrations: Vec<ResetCalibrationDefinition>,
     ) -> Self {
         Self {
             calibrations: calibrations.into(),
             measure_calibrations: measure_calibrations.into(),
+            reset_calibrations: reset_calibrations.into(),
         }
     }
 
@@ -711,6 +713,12 @@ impl Calibrations {
         self.iter_measure_calibrations().cloned().collect()
     }
 
+    /// Return a list of all [`ResetCalibrationDefinition`]s in the set.
+    #[getter(reset_calibrations)]
+    fn py_reset_calibrations(&self) -> Vec<ResetCalibrationDefinition> {
+        self.iter_reset_calibrations().cloned().collect()
+    }
+
     /// Given an instruction, return the instructions to which it is expanded if there is a match.
     /// Recursively calibrate instructions, returning an error if a calibration directly or indirectly
     /// expands into itself.
@@ -722,11 +730,12 @@ impl Calibrations {
         &self,
         instruction: &Instruction,
         previous_calibrations: Vec<Instruction>,
+        qubits_available: HashSet<Qubit>,
     ) -> Result<Option<Vec<Instruction>>> {
-        self.expand(instruction, &previous_calibrations)
+        self.expand(instruction, &previous_calibrations, &qubits_available)
     }
 
-    /// Returns the last-specified ``MeasureCalibrationDefinition`` that matches the target
+    /// Returns the last-specified [`MeasureCalibrationDefinition`] that matches the target
     /// qubit (if any), or otherwise the last-specified one that specified no qubit.
     ///
     /// If multiple calibrations match the measurement, the precedence is as follows:
@@ -742,6 +751,20 @@ impl Calibrations {
         measurement: &Measurement,
     ) -> Option<MeasureCalibrationDefinition> {
         self.get_match_for_measurement(measurement).cloned()
+    }
+
+    /// Returns the last-specified [`ResetCalibrationDefinition`] that matches the target
+    /// qubit (if any), or otherwise the last-specified one that specified no qubit.
+    ///
+    /// If multiple calibrations match the measurement, the precedence is as follows:
+    ///
+    ///   1. Match fixed qubit.
+    ///   2. Match variable qubit.
+    ///
+    /// In the case of multiple calibrations with equal precedence, the last one wins.
+    #[pyo3(name = "get_match_for_reset")]
+    fn py_get_match_for_reset(&self, reset: &Reset) -> Option<ResetCalibrationDefinition> {
+        self.get_match_for_reset(reset).cloned()
     }
 
     /// Return the final calibration which matches the gate per the `QuilT` specification:
@@ -820,6 +843,7 @@ impl CalibrationSource {
         match self {
             Self::Calibration(value) => (value.clone(),).into_pyobject(py),
             Self::MeasureCalibration(value) => (value.clone(),).into_pyobject(py),
+            Self::ResetCalibration(value) => (value.clone(),).into_pyobject(py),
         }
     }
 }

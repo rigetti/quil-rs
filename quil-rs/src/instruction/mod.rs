@@ -179,8 +179,8 @@ pub enum Instruction {
     Pragma(Pragma),
     Pulse(Pulse),
     RawCapture(RawCapture),
-    ResetCalibrationDefinition(ResetCalibrationDefinition),
     Reset(Reset),
+    ResetCalibrationDefinition(ResetCalibrationDefinition),
     SetFrequency(SetFrequency),
     SetPhase(SetPhase),
     SetScale(SetScale),
@@ -207,8 +207,8 @@ impl Instruction {
             | Instruction::MeasureCalibrationDefinition(_)
             | Instruction::Pulse(_)
             | Instruction::RawCapture(_)
-            | Instruction::ResetCalibrationDefinition(_)
             | Instruction::Reset(_)
+            | Instruction::ResetCalibrationDefinition(_)
             | Instruction::SetFrequency(_)
             | Instruction::SetPhase(_)
             | Instruction::SetScale(_)
@@ -414,10 +414,10 @@ impl Quil for Instruction {
             Instruction::Pulse(pulse) => pulse.write(f, fall_back_to_debug),
             Instruction::Pragma(pragma) => pragma.write(f, fall_back_to_debug),
             Instruction::RawCapture(raw_capture) => raw_capture.write(f, fall_back_to_debug),
+            Instruction::Reset(reset) => reset.write(f, fall_back_to_debug),
             Instruction::ResetCalibrationDefinition(reset_calibration) => {
                 reset_calibration.write(f, fall_back_to_debug)
             }
-            Instruction::Reset(reset) => reset.write(f, fall_back_to_debug),
             Instruction::SetFrequency(set_frequency) => set_frequency.write(f, fall_back_to_debug),
             Instruction::SetPhase(set_phase) => set_phase.write(f, fall_back_to_debug),
             Instruction::SetScale(set_scale) => set_scale.write(f, fall_back_to_debug),
@@ -718,6 +718,10 @@ impl Instruction {
                     .collect()
             }
             Instruction::Measurement(measurement) => vec![&measurement.qubit],
+            Instruction::Reset(reset) => match &reset.qubit {
+                Some(qubit) => vec![qubit],
+                None => vec![],
+            },
             Instruction::ResetCalibrationDefinition(reset_calibration) => reset_calibration
                 .identifier
                 .qubit
@@ -729,10 +733,6 @@ impl Instruction {
                         .flat_map(|inst| inst.get_qubits()),
                 )
                 .collect(),
-            Instruction::Reset(reset) => match &reset.qubit {
-                Some(qubit) => vec![qubit],
-                None => vec![],
-            },
             Instruction::Delay(delay) => delay.qubits.iter().collect(),
             Instruction::Fence(fence) => fence.qubits.iter().collect(),
             Instruction::Capture(capture) => capture.frame.qubits.iter().collect(),
@@ -768,6 +768,10 @@ impl Instruction {
                     .collect()
             }
             Instruction::Measurement(measurement) => vec![&mut measurement.qubit],
+            Instruction::Reset(reset) => match &mut reset.qubit {
+                Some(qubit) => vec![qubit],
+                None => vec![],
+            },
             Instruction::ResetCalibrationDefinition(reset_calibration) => reset_calibration
                 .identifier
                 .qubit
@@ -779,10 +783,6 @@ impl Instruction {
                         .flat_map(|inst| inst.get_qubits_mut()),
                 )
                 .collect(),
-            Instruction::Reset(reset) => match &mut reset.qubit {
-                Some(qubit) => vec![qubit],
-                None => vec![],
-            },
             Instruction::Delay(delay) => delay.qubits.iter_mut().collect(),
             Instruction::Fence(fence) => fence.qubits.iter_mut().collect(),
             Instruction::Capture(capture) => capture.frame.qubits.iter_mut().collect(),
