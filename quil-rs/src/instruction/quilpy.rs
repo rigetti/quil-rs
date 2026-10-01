@@ -36,10 +36,10 @@ use crate::{
     instruction::gate::GateSignature,
     pickleable_new,
     quilpy::{
-        deprecated_or_new, deprecated_param,
+        aliased, deprecated_or_new, deprecated_param,
         errors::{self, PickleError},
-        impl_newargs, impl_to_quil, py_deprecated, singleton, IntoNewArgs, Migrate, NewArgs,
-        NonZeroU64, Seq,
+        impl_newargs, impl_to_quil, py_deprecated, singleton, Either, IntoNewArgs, Migrate,
+        NewArgs, NonZeroU64, Seq,
     },
     validation::identifier::IdentifierValidationError,
 };
@@ -1130,7 +1130,13 @@ submit! {
                 qubits: pyo3_stub_gen.RustType["Vec<Qubit>"],
                 instrs: pyo3_stub_gen.RustType["Vec<Instruction>"],
                 modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
-            ) -> CalibrationDefinition: ...
+            ) -> CalibrationDefinition:
+                """Create a CalibrationDefinition from its constituent parts.
+
+                .. deprecated:: 5.0.0
+                    Use `CalibrationDefinition.from_parts` instead.
+                """
+
 
             @typing.overload
             def __new__(
@@ -1147,8 +1153,10 @@ submit! {
 impl CalibrationDefinition {
     // TODO(migration-guide):
     // PyQuil v4's constructor was `(name, parameters, qubits, instrs, modifiers)`.
-    // We handle the old form for compatibility,
-    // but issue deprecation warnings which suggests using `from_parts`.
+    // Because the old constructor will be deprecated (in favor of `from_parts`),
+    // we don't treat the old names simply as aliases, but rather as separate arguments.
+    // Since users may have passed them as kwargs, we need to make the new names optional;
+    // to improve type checking, we provide `overload` stubs for valid argument combinations.
     #[pyo3(signature = (
             identifier = None,
             instructions = None,
@@ -1161,8 +1169,8 @@ impl CalibrationDefinition {
             ))]
     #[new]
     fn __new__(
-        identifier: Option<Migrate<CalibrationIdentifier, String>>,
-        instructions: Option<Migrate<Vec<Instruction>, Seq<ExpressionLike, Expression>>>,
+        identifier: Option<Either<CalibrationIdentifier, String>>,
+        instructions: Option<Either<Vec<Instruction>, Seq<ExpressionLike, Expression>>>,
 
         qubits: Option<Seq<QubitLike, Qubit>>,
         instrs: Option<Vec<Instruction>>,
@@ -1981,6 +1989,10 @@ submit! {
 impl Gate {
     // TODO(migration-guide): The constructor now permits the alias `params` for `parameters`.
 
+    // TODO(testing): Add tests the giving both `parameters` and `params` raises an error,
+    // but that giving one or the other works as expected.
+    // If possible, add a test that confirms `mypy` will catch the error statically.
+
     /// Construct a new `Gate` instance.
     ///
     /// This constructor accepts `params` as an alias for `parameters`;
@@ -1994,20 +2006,14 @@ impl Gate {
         modifiers: Option<Seq<GateModifierDesignator, GateModifier>>,
         params: Option<Seq<ExpressionLike, Expression>>,
     ) -> PyResult<Gate> {
-        let parameters = match (parameters, params) {
-            (Some(_), Some(_)) => {
-                return Err(errors::ValueError::new_err(
-                    "`parameters` and `params` are mutually exclusive",
-                ));
-            }
-            (Some(p), None) => p.into(),
-            (None, Some(p)) => p.into(),
-            (None, None) => Vec::new(),
-        };
+        let parameters = aliased!(parameters, params)?.into();
         let qubits = qubits.unwrap_or_default().into();
         let modifiers = modifiers.unwrap_or_default().into();
         Ok(Self::new(&name, parameters, qubits, modifiers)?)
     }
+
+    // TODO(testing): Add pickle tests for this and other classes that manually implement
+    // `__getnewargs__` or `__getnewargs_ex__` (or for _all_ classes, just to be safe).
 
     fn __getnewargs__(&self) -> (String, Vec<Expression>, Vec<Qubit>, Vec<GateModifier>) {
         (
@@ -2453,27 +2459,37 @@ impl Label {
     }
 }
 
-// TODO: Add a `sumbit!` here with overrides for `MeasureCalibrationDefinition` constructor
-// to handle the `instrs` parameter as an alias for `instructions`.
-
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl MeasureCalibrationDefinition {
-    // TODO(migration-guide): This has been modified to match the PyQuil v4 signature,
-    // except that the `instrs` parameter has been renamed `instructions`
-    // though the latter can still be used as a keyword alias.
-    // Direct `quil` users can migrate using the new `from_calibration` constructor.
+    // TODO(migration-guide): This has been modified to allow the PyQuil v4 signature,
+    // but indicates that that usage is deprecated and users should use `from_parts` instead.
+    //
+    // In addition, this now allows `instrs` as an alias for `instructions`
+
+    // TODO:
+    // - Add a `from_parts` constructor that makes the PyQuil v4 signature
+    // (except allow `instrs` as an alias for `instructions`).
+    // - Make this constructor accept either form,
+    //   raising deprecation warnings for the PyQuil v4 signature,
+    //   telling users to use `from_parts` instead.
+    // - `sumbit!` appropriate `@overloads` so users are directed to the newer usage,
+    //   but permits (and warns about) the older usage,
+    //   and marks mixed-usage as NoReturn.
+
+
+    // TODO(testing): Add tests to confirm the aliases work as expected.
     #[new]
-    #[pyo3(signature = (qubit, memory_reference, instructions, *, instrs=None))]
+    #[pyo3(signature = (qubit, memory_reference, instructions=None, *, instrs=None))]
     fn __new__(
-        py: Python<'_>,
         qubit: QubitLike,
         memory_reference: Option<MemoryReferenceLike>,
-        instructions: Vec<Instruction>,
+        instructions: Option<Vec<Instruction>>,
         instrs: Option<Vec<Instruction>>,
     ) -> PyResult<Self> {
-        let instructions = deprecated_or_new!(py, new = instructions, old = instrs)?;
-        let target = memory_reference.map(|memref| MemoryReference::from(memref).name.clone());
+        let instructions = aliased!(instructions, instrs)?;
+        let target = memory_reference
+            .map(|memref| MemoryReference::from(memref).name.clone());
         let ident = MeasureCalibrationIdentifier::new(None, qubit.into(), target);
         Ok(Self::new(ident, instructions))
     }
@@ -2562,23 +2578,39 @@ impl MeasureCalibrationIdentifier {
     }
 }
 
-// We don't use [`pickleable_new!`] here because we're separating Rust's [`Measurement::new`] and
-// Python's `Measurement.new`.
+// TODO: Add a `sumbit!` here with overrides for `Measurement` constructor
+// to handle the `classical_reg` parameter as an alias for `target`.
+
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Measurement {
-    // Note that the Python argument order is not the same as the Rust argument order for
-    // [`Self::new`], and that this function requires keywords on the Python side!  Make sure
-    // `__getnewargs_ex__` is consistent with `__new__`!
-    #[pyo3(signature = (qubit, target, *, name = None))]
+    // TODO(migration-guide): The PyQuil v4 signature was `(qubit, classical_reg)`;
+    // we now accept `classical_reg` as an alias for `target`,
+    // and so `target` is now optional to support older code that used `classical_reg` as a kwarg.
+
+    // Developer Note: the Python argument order is not the same as the Rust argument order,
+    // and that this function requires keywords on the Python side!
+    // Make sure `__getnewargs_ex__` is consistent with `__new__`!
+    #[pyo3(signature = (qubit, target = None, *, name = None, classical_reg = None))]
     #[new]
     fn __new__(
         qubit: QubitLike,
         target: Option<MemoryReferenceLike>,
         name: Option<String>,
-    ) -> Self {
-        Self::new(name, qubit.into(), target.map(|t| t.into()))
+        classical_reg: Option<MemoryReferenceLike>,
+    ) -> PyResult<Self> {
+        let target = match (target, classical_reg) {
+            (Some(_), Some(_)) => {
+                return Err(errors::ValueError::new_err(
+                    "`target` and `classical_reg` are mutually exclusive",
+                ));
+            }
+            (Some(t), None) => Some(MemoryReference::from(t)),
+            (None, Some(t)) => Some(MemoryReference::from(t)),
+            (None, None) => None,
+        };
+        Ok(Self::new(name, qubit.into(), target))
     }
 
     #[gen_stub(override_return_type(
