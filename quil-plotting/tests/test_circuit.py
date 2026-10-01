@@ -298,3 +298,18 @@ def test_a_call_that_cannot_be_inlined_faithfully_refuses(quil: str, match: str)
 def test_inlining_still_rejects_a_non_program():
     with pytest.raises(TypeError, match="Expected quil.Program"):
         PlottableProgramCircuit("RX(pi) 0", inline_defcircuits=True)
+
+
+QUIL_T_PROGRAM = 'RX(pi) 0\nSET-PHASE 0 "drive" 0\nSHIFT-PHASE 1 "drive" 1\nCZ 0 1\n'
+
+
+def test_a_quil_t_instruction_raises_unless_allowed():
+    with pytest.raises(ValueError, match=r"SET-PHASE.*allow_quil_t=True"):
+        PlottableProgramCircuit(Program.parse(QUIL_T_PROGRAM))
+
+
+def test_allowed_quil_t_is_left_out_of_the_diagram():
+    circuit = PlottableProgramCircuit(Program.parse(QUIL_T_PROGRAM), allow_quil_t=True)
+    (block,) = circuit._blocks
+    assert [event.gate for event in block.events] == ["RX", "CZ"]
+    circuit.draw()

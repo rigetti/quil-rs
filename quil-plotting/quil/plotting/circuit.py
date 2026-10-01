@@ -133,8 +133,8 @@ class PlottableCircuitEvent:
         # Only these are colored by gate name: the shared heuristic matches on
         # a prefix, so asking it about `SUB` would get back a one-qubit gate's
         # color (it starts with `S`). Pulse instructions are absent because a
-        # circuit never holds one - `_build` rejects a Quil-T program outright,
-        # and points at the pulse-schedule view instead.
+        # circuit never holds one - `_build` rejects a Quil-T program, or drops
+        # its Quil-T instructions under `allow_quil_t`.
         return isinstance(
             self.instruction,
             (Instruction.Gate, Instruction.Measurement, Instruction.Reset),
@@ -263,11 +263,13 @@ class PlottableBlockCircuit(PlottableBlock[PlottableCircuitEvent]):
     }
     """The fields a circuit can group by - `"Gate"` and `"Qubit"`."""
 
-    def __init__(self, block: BasicBlock) -> None:
+    def __init__(self, block: BasicBlock, allow_quil_t: bool) -> None:
         """Turn `block`'s instructions into events and pack them into columns.
 
         Args:
             block: One basic block of the program.
+            allow_quil_t: Whether to leave out Quil-T instructions rather than
+                raise on them.
         """
         super().__init__(block)
 
@@ -303,7 +305,7 @@ class PlottableBlockCircuit(PlottableBlock[PlottableCircuitEvent]):
         # Membership only - `tracks` orders on access, since `y_axis_order` is
         # set by a builder call that necessarily lands after construction.
         self._tracks: list[Track] = []
-        self._build(block.instructions)
+        self._build(block.instructions, allow_quil_t)
 
     @property
     def tracks(self) -> list[Track]:
@@ -312,8 +314,18 @@ class PlottableBlockCircuit(PlottableBlock[PlottableCircuitEvent]):
 
     # -- Construction ----------------------------------------------------------
 
-    def _build(self, instructions: list[Instruction]) -> None:
-        """Turn instructions into events, then pack them into columns."""
+    def _build(self, instructions: list[Instruction], allow_quil_t: bool) -> None:
+        """Turn instructions into events, then pack them into columns.
+
+        Args:
+            instructions: The block's instructions, in program order.
+            allow_quil_t: Whether to leave out Quil-T instructions rather than
+                raise on them.
+
+        Raises:
+            ValueError: If a Quil-T instruction appears and `allow_quil_t` is
+                off.
+        """
         qubit_tracks: dict[str, Track] = {}
         register_tracks: dict[str, Track] = {}
 
@@ -367,9 +379,14 @@ class PlottableBlockCircuit(PlottableBlock[PlottableCircuitEvent]):
                     Instruction.SwapPhases,
                 ),
             ):
+                if allow_quil_t:
+                    continue
                 raise ValueError(
-                    "Cannot draw a circuit for a program with a Quil-T instruction. It may be "
-                    "better to use `PlottableProgramPulseSchedule`."
+                    "Cannot draw a circuit for a program with a Quil-T instruction, "
+                    f"{instruction.to_quil_or_debug()!r}. It may be better to use "
+                    "`PlottableProgramPulseSchedule`. To draw the circuit anyway, build it "
+                    "with `PlottableProgramCircuit(program, allow_quil_t=True)`, which leaves "
+                    "every Quil-T instruction out of the diagram."
                 )
 
             if isinstance(instruction, Instruction.Gate):
@@ -853,6 +870,10 @@ class PlottableProgramCircuit(PlottableProgram[PlottableBlockCircuit]):
     recursively. This is experimental, and raises rather than draw a call it
     cannot reproduce faithfully.
 
+    A program with Quil-T instructions, such as a top-level `SET-PHASE`, raises
+    an error, since a circuit has no place to draw them. Build with
+    `allow_quil_t=True` to draw the rest of the program without them.
+
     Configuring a diagram is a chain of `with_*` methods, each returning `self`;
     {py:obj}`draw` ends the chain.
 
@@ -1089,6 +1110,7 @@ class PlottableProgramCircuit(PlottableProgram[PlottableBlockCircuit]):
         self,
         program: Program,
         inline_defcircuits: bool = False,
+        allow_quil_t: bool = False,
     ) -> list[PlottableBlockCircuit]:
         """Lay `program` out as a circuit, block by block.
 
@@ -1099,13 +1121,18 @@ class PlottableProgramCircuit(PlottableProgram[PlottableBlockCircuit]):
                 the instructions it stands for, recursively, so the diagram
                 shows `RX(pi/2) 23` rather than the macro that contains it.
                 Experimental!
+            allow_quil_t: A circuit has no place to draw a pulse or frame
+                update, so a program with one normally raises an error. Set this
+                to draw the rest of the program, leaving every Quil-T
+                instruction out of the diagram.
 
         Returns:
             One block per basic block, in program order.
 
         Raises:
             ValueError: If `inline_defcircuits` is set and a call cannot be
-                inlined faithfully.
+                inlined faithfully, or the program has a Quil-T instruction and
+                `allow_quil_t` is off.
         """
         if inline_defcircuits:
             program = self._inline_defcircuits(program)
@@ -1113,7 +1140,8 @@ class PlottableProgramCircuit(PlottableProgram[PlottableBlockCircuit]):
         # the whole difference from the pulse view, which has to expand before
         # it has anything to draw.
         return [
-            PlottableBlockCircuit(block) for block in program.control_flow_graph().basic_blocks()
+            PlottableBlockCircuit(block, allow_quil_t)
+            for block in program.control_flow_graph().basic_blocks()
         ]
 
     @override
