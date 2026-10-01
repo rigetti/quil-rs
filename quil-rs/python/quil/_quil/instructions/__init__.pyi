@@ -1214,6 +1214,13 @@ class Gate(Instruction):
     @property
     def parameters(self) -> builtins.list[expression.Expression]: ...
     @property
+    def params(self) -> builtins.list[expression.Expression]:
+        r"""
+        Get the parameters of this ``Gate``.
+        
+        This is an alias for `parameters`, the canonical name of this property.
+        """
+    @property
     def qubits(self) -> builtins.list[Qubit]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[builtins.str, builtins.list[expression.Expression], builtins.list[Qubit], builtins.list[GateModifier]]: ...
@@ -1223,9 +1230,15 @@ class Gate(Instruction):
     @typing.overload
     def __new__(cls, name: builtins.str, *, qubits: typing.Sequence[Qubit], parameters: typing.Optional[typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> Gate: ...
     @typing.overload
-    def __new__(cls, name: builtins.str, *, params: typing.Optional[typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]], qubits: typing.Optional[typing.Sequence[Qubit]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> typing_extensions.NoReturn: ...
+    def __new__(cls, name: builtins.str, *, params: typing.Optional[typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]], qubits: typing.Optional[typing.Sequence[Qubit]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> Gate: ...
     @typing.overload
-    def __new__(cls, name: builtins.str, parameters: typing.Optional[typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]] = None, qubits: typing.Optional[typing.Sequence[Qubit  |  builtins.int  |  builtins.str  |  QubitPlaceholder]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None, *, params: typing.Optional[typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]] = None) -> Gate: ...
+    def __new__(cls, name: builtins.str, parameters: typing.Optional[typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]] = None, qubits: typing.Optional[typing.Sequence[Qubit  |  builtins.int  |  builtins.str  |  QubitPlaceholder]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None, *, params: typing.Optional[typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]] = None) -> Gate:
+        r"""
+        Construct a new `Gate` instance.
+        
+        This constructor accepts `params` as an alias for `parameters`;
+        if you provide both, it will raise an error.
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1828,22 +1841,7 @@ class MemoryReference:
         """
     @property
     def offset(self) -> builtins.int: ...
-    def __add__(self, other: ArithmeticOperand) -> Arithmetic:
-        r"""
-        Return a new `Arithmetic` instruction
-        representing the addition of this `MemoryReference` to the given operand.
-        
-        # Example
-        
-        ```python
-        from quil.instructions import MemoryReference, Arithmetic
-        
-        mem_ref = MemoryReference("counter", 0)
-        arith = mem_ref + 5
-        assert isinstance(arith, Arithmetic)
-        assert arith.to_quil() == "ADD counter[0] 5"
-        ```
-        """
+    def __add__(self, other: _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> expression.Expression: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getitem__(self, index: builtins.int) -> MemoryReference:
         r"""
@@ -1853,7 +1851,8 @@ class MemoryReference:
         """
     def __getnewargs__(self) -> tuple[str, int]: ...
     def __hash__(self) -> builtins.int: ...
-    def __mul__(self, other: ArithmeticOperand) -> Arithmetic: ...
+    def __mul__(self, other: _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> expression.Expression: ...
+    def __neg__(self) -> expression.Expression: ...
     def __new__(cls, name: builtins.str, index: builtins.int = 0, declared_size: typing.Optional[builtins.int] = None, *, offset: typing.Optional[builtins.int] = None) -> MemoryReference:
         r"""
         Construct a new `MemoryReference`.
@@ -1868,17 +1867,23 @@ class MemoryReference:
         New code should use `index`, but using `offset` as a keyword argument is still accepted;
         if it is not `None`, it'll be used instead of `index`, regardless of how `index` is passed.
         """
+    def __pow__(self, exponent: _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, modulo: typing.Optional[typing.Any] = None) -> expression.Expression: ...
+    def __radd__(self, other: _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> expression.Expression: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __rmul__(self, other: _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> expression.Expression: ...
+    def __rpow__(self, base: _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, modulo: typing.Optional[typing.Any] = None) -> expression.Expression: ...
+    def __rsub__(self, other: _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> expression.Expression: ...
+    def __rtruediv__(self, other: _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> expression.Expression: ...
     def __str__(self) -> builtins.str:
         r"""
         Get a Quil-like representation as a string.
         """
-    def __sub__(self, other: ArithmeticOperand) -> Arithmetic: ...
-    def __truediv__(self, other: ArithmeticOperand) -> Arithmetic: ...
+    def __sub__(self, other: _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> expression.Expression: ...
+    def __truediv__(self, other: _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> expression.Expression: ...
     @staticmethod
     def _from_parameter_str(memory_reference_str: builtins.str) -> MemoryReference: ...
     def out(self) -> builtins.str:
