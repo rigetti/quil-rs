@@ -166,6 +166,9 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
         self.zoom_y: bool = True
         """Whether scrolling zooms the lane axis as well as the time axis."""
 
+        self.frame_scales: bool = False
+        """Whether each frame's scale multiplies into drawn pulse heights."""
+
         block_instructions = block.instructions
         scheduled = block.as_schedule_seconds(program)
         self.duration: float = scheduled.duration
@@ -181,7 +184,17 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
         # `program.frames` clones the whole frame set on every access, so it is
         # read once here rather than per pulse.
         frames = program.frames
-        for event in scheduled.items:
+
+        # Each frame's current scale, recorded on the pulses that follow it.
+        frame_scales_by_frame: dict[FrameIdentifier, float] = {}
+
+        # Sorting by start time orders them in time, and breaking ties on
+        # instruction index, enables a deterministic workflow and enables
+        # correct tracking of frame scales. Importantly, the tie-breaking
+        # keeps a zero-length `SET-SCALE` ahead of pulses with the same
+        # starting time.
+        events = sorted(scheduled.items, key=lambda e: (e.time_span.start, e.instruction_index))
+        for event in events:
             instruction = block_instructions[event.instruction_index]
 
             # A pulse emits a waveform; a capture demodulates the incoming
@@ -210,6 +223,7 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
                         qubit=qubit_str_map[pulse.frame],
                         waveform_id=waveform_id,
                         scale=scale,
+                        frame_scale=frame_scales_by_frame.get(pulse.frame, 1.0),
                         memory_reference=memory_reference,
                         duration=event.time_span.duration,
                         hidden=False,
@@ -286,6 +300,9 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
             # per-type special-casing.
             elif isinstance(instruction, _FRAME_UPDATE_INSTRUCTIONS):
                 payload = instruction._0
+                if isinstance(instruction, Instruction.SetScale):
+                    set_scale = instruction._0
+                    frame_scales_by_frame[set_scale.frame] = _evaluate_real(set_scale.scale)
                 self.events.append(
                     PlottableFrameUpdate(
                         instruction=instruction,
@@ -443,7 +460,7 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
         for pulse in self.pulses:
             if pulse.hidden:
                 continue
-            peak = pulse.scale * self.waveforms.table[pulse.waveform_id].peak
+            peak = pulse.amplitude(self.frame_scales) * self.waveforms.table[pulse.waveform_id].peak
             group = field(pulse)
             peaks[group] = max(peaks.get(group, 0.0), peak)
 
@@ -514,6 +531,7 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
                 label=self._color_key_of(pulse),
                 normalization=normalization_of(pulse),
                 lane_fraction=self.lane_fraction,
+                frame_scaled=self.frame_scales,
             )
             for index, pulse in enumerate(self.pulses)
             if not pulse.hidden and (lane := lane_of(pulse)) is not None
@@ -609,6 +627,7 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
             alt.Tooltip("frame:N", title="Frame"),
             alt.Tooltip("channel:N", title="Channel Type"),
             alt.Tooltip("memory:N", title="Memory"),
+            alt.Tooltip("frame_scale:Q", title="Frame Scale"),
             alt.Tooltip("t0:Q", title="Start (s)", format=".3e"),
             alt.Tooltip("t1:Q", title="End (s)", format=".3e"),
             alt.Tooltip("t:Q", title="Time (s)", format=".3e"),
@@ -1246,6 +1265,8 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
         See Also:
             {py:obj}`quil.plotting.pulse.PlottablePulse.scale`: the amplitude being
                 normalized.
+            {py:obj}`PlottableProgramPulseSchedule.with_frame_scales`: fold each
+                frame's scale into that amplitude.
         """
         if field is not None:
             # rejects an unknown field
@@ -1314,6 +1335,36 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
         for block in self._blocks:
             for event in block.events:
                 event.qubit = labels.get(event.frame, event.qubit)
+        return self
+
+    def with_frame_scales(self, on: bool = True) -> Self:
+        """Multiply each pulse's height by its frame's scale, or ignore it.
+
+        This is off by default as there is no way for a static plotter to track
+        a frame's scale across block boundaries. As a result, even with this on,
+        a frame's scale is always reset to 1.0 at the beginning of each block.
+        This can lead to inaccurate plots, and as a result, is off by default.
+        This cannot lead to inaccurate plots in a single block schedule,
+        however, so feel free to turn it on then.
+
+        When off, pulses are drawn only with their waveform scale applied. The
+        `SET-SCALE` instruction only marks where the change happens. The frame
+        scale is shown in each pulse's tooltip either way, but the scale value
+        in the tooltip reflects what's used during plotting.
+
+        Frame scale is tracked within one basic block and starts at 1.0 in each.
+        Real frame state carries along the execution path, which a static plot
+        cannot know, so a `SET-SCALE` before a jump or label is not applied to
+        pulses in later blocks.
+
+        Args:
+            on: If true, a frame's scale multiplies the pulse's scale.
+
+        Returns:
+            `self`, so calls chain.
+        """
+        for block in self._blocks:
+            block.frame_scales = on
         return self
 
     def with_pan_y(self, on: bool = True) -> Self:

@@ -69,13 +69,31 @@ class PlottablePulse(PlottablePulseEvent):
     """Index of this pulse's shape in its block's `waveforms` cache."""
 
     scale: float
-    """The scale applied to that shape's unit-scale samples."""
+    """The waveform's own scale, applied to that shape's unit-scale samples."""
+
+    frame_scale: float = 1.0
+    """The frame's scale in effect when this pulse plays.
+
+    Applied only under
+    {py:obj}`quil.plotting.PlottableProgramPulseSchedule.with_frame_scales`.
+    """
 
     duration: float
     """How long the pulse occupies its frame, in seconds."""
 
     memory_reference: str = ""
     """Where a `CAPTURE` writes its result, or empty for a plain `PULSE`."""
+
+    def amplitude(self, frame_scaled: bool) -> float:
+        """The pulse's scale, with or without its frame's scale.
+
+        Args:
+            frame_scaled: Whether to multiply in {py:obj}`frame_scale`.
+
+        Returns:
+            The scale drawn heights are measured by.
+        """
+        return self.scale * (self.frame_scale if frame_scaled else 1.0)
 
     def build_record(
         self,
@@ -84,6 +102,7 @@ class PlottablePulse(PlottablePulseEvent):
         label: str,
         normalization: float,
         lane_fraction: float,
+        frame_scaled: bool = False,
     ) -> dict[str, Any]:
         """One chart row for this pulse.
 
@@ -95,6 +114,8 @@ class PlottablePulse(PlottablePulseEvent):
             normalization: Divisor for {py:obj}`scale`, so the loudest pulse of
                 a group fills its lane and quieter ones stay in proportion.
             lane_fraction: The fraction of a lane a full-scale pulse spans.
+            frame_scaled: Whether the drawn height includes
+                {py:obj}`frame_scale`.
 
         Returns:
             The necessary data for Altair to plot this pulse.
@@ -105,12 +126,13 @@ class PlottablePulse(PlottablePulseEvent):
             "t0": short(self.start_time),
             "t1": short(self.start_time + self.duration),
             "b": lane,
-            "kr": short(lane_fraction * self.scale / normalization),
+            "kr": short(lane_fraction * self.amplitude(frame_scaled) / normalization),
             "label": label,
             "operation": self.logical_instruction_name,
             "frame": self.frame.name,
             "channel": self.channel_type,
             "memory": self.memory_reference,
+            "frame_scale": self.frame_scale,
         }
 
 

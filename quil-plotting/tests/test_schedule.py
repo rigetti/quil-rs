@@ -312,3 +312,65 @@ def test_pan_and_zoom_bind_to_each_axis_independently(pan_y, zoom_y, expected_y)
     # The time axis always pans and zooms; only the lane axis is configurable.
     assert gestures.pop("x") == ("default", "default")
     assert gestures.get("y") == expected_y
+
+
+def _frame_scale_program(body: str) -> PlottableProgramPulseSchedule:
+    frames = "\n".join(
+        f'DEFFRAME {q} "rf":\n'
+        f"    SAMPLE-RATE: 1e9\n"
+        f'    HARDWARE-OBJECT: "{{\\"channel_type\\": \\"charge\\"}}"'
+        for q in (0, 1)
+    )
+    return PlottableProgramPulseSchedule(Program.parse(f"{frames}\n{body}"))
+
+
+def test_set_scale_scales_later_pulses_on_its_frame():
+    schedule = _frame_scale_program(
+        'PULSE 0 "rf" flat(duration: 1e-8, iq: 1)\n'
+        'SET-SCALE 0 "rf" 0.5\n'
+        'PULSE 0 "rf" flat(duration: 1e-8, iq: 1)\n'
+        'PULSE 1 "rf" flat(duration: 1e-8, iq: 1)\n'
+    ).with_normalize_by(None)
+    block = schedule._blocks[0]
+    pulses = sorted(block.pulses, key=lambda p: (p.frame.qubits[0].to_quil(), p.start_time))
+    fraction = block.lane_fraction
+
+    def heights() -> list[float]:
+        return [p.build_record(0, 0, "", 1.0, fraction, block.frame_scales)["kr"] for p in pulses]
+
+    assert [p.scale for p in pulses] == [1.0, 1.0, 1.0]
+    assert [p.frame_scale for p in pulses] == [1.0, 0.5, 1.0]
+    assert pulses[0].waveform_id == pulses[1].waveform_id
+
+    assert heights() == pytest.approx([fraction] * 3), "off by default"
+    schedule.with_frame_scales()
+    assert heights() == pytest.approx([fraction, fraction * 0.5, fraction])
+
+    # Events are sorted by time on creation, so frame state follows them.
+    events = PlottableProgramPulseSchedule(load("multiple_offset_gates_with_measures"))
+    starts = [event.start_time for event in events._blocks[0].events]
+    assert starts == sorted(starts)
+
+
+def test_frame_scale_multiplies_the_pulses_own_scale():
+    schedule = _frame_scale_program(
+        'PULSE 0 "rf" flat(duration: 1e-8, iq: 1, scale: 0.8)\n'
+        'SET-SCALE 0 "rf" 0.5\n'
+        'PULSE 0 "rf" flat(duration: 1e-8, iq: 1, scale: 0.6)\n'
+    ).with_frame_scales()
+    block = schedule._blocks[0]
+    first, second = sorted(block.pulses, key=lambda p: p.start_time)
+
+    assert (first.scale, second.scale) == pytest.approx((0.8, 0.6))
+    assert (first.frame_scale, second.frame_scale) == (1.0, 0.5)
+    assert (first.amplitude(True), second.amplitude(True)) == pytest.approx((0.8, 0.3))
+    assert (first.amplitude(False), second.amplitude(False)) == pytest.approx((0.8, 0.6))
+
+    # Normalized by frame, the loudest scaled pulse fills the lane.
+    normalization_of = block.resolve_normalization()
+    first_kr, second_kr = (
+        p.build_record(0, 0, "", normalization_of(p), block.lane_fraction, True)["kr"]
+        for p in (first, second)
+    )
+    assert first_kr == pytest.approx(block.lane_fraction)
+    assert second_kr == pytest.approx(block.lane_fraction * 0.3 / 0.8)
