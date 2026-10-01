@@ -72,6 +72,8 @@ __all__ = [
     "QubitPlaceholder",
     "RawCapture",
     "Reset",
+    "ResetCalibrationDefinition",
+    "ResetCalibrationIdentifier",
     "ScalarType",
     "SetFrequency",
     "SetPhase",
@@ -1073,7 +1075,7 @@ class Instruction:
             # note the `()` -- these aren't like Python's enumerations!
     ```
     """
-    def __getnewargs__(self) -> builtins.tuple[()] | builtins.tuple[Arithmetic | BinaryLogic | Call | Capture | CalibrationDefinition | CircuitDefinition | Comparison | Convert | Declaration | Delay | Exchange | Fence | FrameDefinition | Gate | GateDefinition | Include | Jump | JumpUnless | JumpWhen | Label | Load | MeasureCalibrationDefinition | Measurement | Move | Pragma | Pulse | RawCapture | Reset | SetFrequency | SetPhase | SetScale | ShiftFrequency | ShiftPhase | Store | SwapPhases | UnaryLogic | WaveformDefinition]: ...
+    def __getnewargs__(self) -> builtins.tuple[()] | builtins.tuple[Arithmetic | BinaryLogic | Call | Capture | CalibrationDefinition | CircuitDefinition | Comparison | Convert | Declaration | Delay | Exchange | Fence | FrameDefinition | Gate | GateDefinition | Include | Jump | JumpUnless | JumpWhen | Label | Load | MeasureCalibrationDefinition | Measurement | Move | Pragma | Pulse | RawCapture | Reset | ResetCalibrationDefinition | SetFrequency | SetPhase | SetScale | ShiftFrequency | ShiftPhase | Store | SwapPhases | UnaryLogic | WaveformDefinition]: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1352,6 +1354,15 @@ class Instruction:
         def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
         def __len__(self) -> builtins.int: ...
         def __new__(cls, _0: Reset) -> Instruction.Reset: ...
+    
+    @typing.final
+    class ResetCalibrationDefinition(Instruction):
+        __match_args__ = ("_0",)
+        @property
+        def _0(self) -> ResetCalibrationDefinition: ...
+        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
+        def __len__(self) -> builtins.int: ...
+        def __new__(cls, _0: ResetCalibrationDefinition) -> Instruction.ResetCalibrationDefinition: ...
     
     @typing.final
     class SetFrequency(Instruction):
@@ -1901,11 +1912,81 @@ class RawCapture:
 
 class Reset:
     @property
+    def name(self) -> typing.Optional[builtins.str]: ...
+    @property
     def qubit(self) -> typing.Optional[Qubit]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[typing.Optional[Qubit]]: ...
+    def __getnewargs__(self) -> tuple[typing.Optional[builtins.str], typing.Optional[Qubit]]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, qubit: typing.Optional[Qubit]) -> Reset: ...
+    def __new__(cls, name: typing.Optional[builtins.str], qubit: typing.Optional[Qubit]) -> Reset: ...
+    def __repr__(self) -> builtins.str:
+        r"""
+        Implements `__repr__` for Python in terms of the Rust
+        [`Debug`](std::fmt::Debug) implementation.
+        """
+    def to_quil(self) -> builtins.str: ...
+    def to_quil_or_debug(self) -> builtins.str: ...
+
+class ResetCalibrationDefinition:
+    @property
+    def identifier(self) -> ResetCalibrationIdentifier: ...
+    @identifier.setter
+    def identifier(self, value: ResetCalibrationIdentifier) -> None: ...
+    @property
+    def instructions(self) -> builtins.list[Instruction]: ...
+    @instructions.setter
+    def instructions(self, value: typing.Sequence[Instruction]) -> None: ...
+    @property
+    def name(self) -> typing.Optional[builtins.str]:
+        r"""
+        The Quil-T name of the reset that this reset calibration definition is for, if any.
+        """
+    @property
+    def qubit(self) -> typing.Optional[Qubit]:
+        r"""
+        The qubit that this reset calibration definition is for, if any.
+        """
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __getnewargs__(self) -> tuple[ResetCalibrationIdentifier, builtins.list[Instruction]]: ...
+    def __new__(cls, identifier: ResetCalibrationIdentifier, instructions: typing.Sequence[Instruction]) -> ResetCalibrationDefinition: ...
+    def __repr__(self) -> builtins.str:
+        r"""
+        Implements `__repr__` for Python in terms of the Rust
+        [`Debug`](std::fmt::Debug) implementation.
+        """
+    def to_quil(self) -> builtins.str: ...
+    def to_quil_or_debug(self) -> builtins.str: ...
+
+class ResetCalibrationIdentifier:
+    r"""
+    A unique identifier for a reset calibration definition within a program
+    """
+    @property
+    def name(self) -> typing.Optional[builtins.str]:
+        r"""
+        The Quil-T name of the reset, if any.
+        """
+    @name.setter
+    def name(self, value: typing.Optional[builtins.str]) -> None:
+        r"""
+        The Quil-T name of the reset, if any.
+        """
+    @property
+    def qubit(self) -> typing.Optional[Qubit]:
+        r"""
+        The qubit which is being reset, if specified.
+        """
+    @qubit.setter
+    def qubit(self, value: typing.Optional[Qubit]) -> None:
+        r"""
+        The qubit which is being reset, if specified.
+        """
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __getnewargs_ex__(self) -> builtins.tuple[
+            Qubit,
+            builtins.dict[builtins.str, typing.Optional[builtins.str]]
+        ]: ...
+    def __new__(cls, qubit: typing.Optional[Qubit], *, name: typing.Optional[builtins.str] = None) -> ResetCalibrationIdentifier: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
