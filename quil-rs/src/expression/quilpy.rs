@@ -145,6 +145,40 @@ enum Evaluated {
     Partial(Expression),
 }
 
+/// Wrapper for `Expression` that forces type stubs to use the fully-qualified name.
+///
+/// Used to force `from quil import _quil.expression` and `_quil.expression.Expression`
+/// in places that would otherwise be `expression.Expression`;
+/// since there are several struct fields named `expression`,
+/// the latter would otherwise cause `mypy` and other type checkers to reject the stubs
+/// because of the name collision.
+#[derive(Debug, Clone, Hash, Eq, PartialEq, FromPyObject, IntoPyObject)]
+pub(crate) struct QualifiedExpression(Expression);
+
+impl From<QualifiedExpression> for Expression {
+    fn from(value: QualifiedExpression) -> Self {
+        value.0
+    }
+}
+
+impl From<Expression> for QualifiedExpression {
+    fn from(value: Expression) -> Self {
+        Self(value)
+    }
+}
+
+impl std::borrow::Borrow<Expression> for QualifiedExpression {
+    fn borrow(&self) -> &Expression {
+        &self.0
+    }
+}
+
+impl std::borrow::BorrowMut<Expression> for QualifiedExpression {
+    fn borrow_mut(&mut self) -> &mut Expression {
+        &mut self.0
+    }
+}
+
 #[cfg(feature = "stubs")]
 pub(crate) mod stubs {
     use pyo3_stub_gen::{
@@ -154,15 +188,6 @@ pub(crate) mod stubs {
 
     #[allow(clippy::wildcard_imports)]
     use super::*;
-
-    /// Type stub alias for `Expression` that forces the fully-qualified name.
-    ///
-    /// Used to force `from quil import _quil.expression` and `_quil.expression.Expression`
-    /// in places that would otherwise be `expression.Expression`;
-    /// since there are several struct fields named `expression`,
-    /// the latter would otherwise cause `mypy` and other type checkers to reject the stubs
-    /// because of the name collision.
-    pub(crate) struct QualifiedExpression;
 
     impl PyStubType for QualifiedExpression {
         fn type_output() -> TypeInfo {
