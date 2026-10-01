@@ -16,8 +16,6 @@ __all__ = [
     "BinaryLogic",
     "BinaryOperand",
     "BinaryOperator",
-    "CalibrationDefinition",
-    "CalibrationIdentifier",
     "Call",
     "CallArgument",
     "CallError",
@@ -40,6 +38,8 @@ __all__ = [
     "FrameDefinition",
     "FrameIdentifier",
     "Gate",
+    "GateCalibrationDefinition",
+    "GateCalibrationIdentifier",
     "GateDefinition",
     "GateError",
     "GateModifier",
@@ -223,109 +223,6 @@ class BinaryOperand:
         def __len__(self) -> builtins.int: ...
         def __new__(cls, _0: MemoryReference) -> BinaryOperand.MemoryReference: ...
     
-
-class CalibrationDefinition:
-    @property
-    def identifier(self) -> CalibrationIdentifier: ...
-    @identifier.setter
-    def identifier(self, value: CalibrationIdentifier) -> None: ...
-    @property
-    def instructions(self) -> builtins.list[Instruction]: ...
-    @instructions.setter
-    def instructions(self, value: typing.Sequence[Instruction]) -> None: ...
-    @property
-    def modifiers(self) -> builtins.list[GateModifier]:
-        r"""
-        The list of [`GateModifier`]s that this calibration definition is for.
-        """
-    @property
-    def name(self) -> builtins.str:
-        r"""
-        The gate name that this calibration definition is for.
-        """
-    @property
-    def parameters(self) -> builtins.list[expression.Expression]:
-        r"""
-        The list of parameters that this calibration definition is for.
-        """
-    @property
-    def qubits(self) -> builtins.list[Qubit]:
-        r"""
-        The list of [`Qubit`]s that this calibration definition is for.
-        """
-    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[CalibrationIdentifier, builtins.list[Instruction]]: ...
-    def __new__(cls, identifier: CalibrationIdentifier, instructions: typing.Sequence[Instruction]) -> CalibrationDefinition:
-        r"""
-        Builds a new calibration definition.
-        """
-    def __repr__(self) -> builtins.str:
-        r"""
-        Implements `__repr__` for Python in terms of the Rust
-        [`Debug`](std::fmt::Debug) implementation.
-        """
-    def to_quil(self) -> builtins.str: ...
-    def to_quil_or_debug(self) -> builtins.str: ...
-
-class CalibrationIdentifier:
-    r"""
-    Unique identifier for a calibration definition within a program
-    """
-    @property
-    def modifiers(self) -> builtins.list[GateModifier]:
-        r"""
-        The modifiers applied to the gate
-        """
-    @modifiers.setter
-    def modifiers(self, value: typing.Sequence[GateModifier]) -> None:
-        r"""
-        The modifiers applied to the gate
-        """
-    @property
-    def name(self) -> builtins.str:
-        r"""
-        The name of the gate
-        """
-    @name.setter
-    def name(self, value: builtins.str) -> None:
-        r"""
-        The name of the gate
-        """
-    @property
-    def parameters(self) -> builtins.list[expression.Expression]:
-        r"""
-        The parameters of the gate - these are the variables in the calibration definition
-        """
-    @parameters.setter
-    def parameters(self, value: typing.Sequence[expression.Expression]) -> None:
-        r"""
-        The parameters of the gate - these are the variables in the calibration definition
-        """
-    @property
-    def qubits(self) -> builtins.list[Qubit]:
-        r"""
-        The qubits on which the gate is applied
-        """
-    @qubits.setter
-    def qubits(self, value: typing.Sequence[Qubit]) -> None:
-        r"""
-        The qubits on which the gate is applied
-        """
-    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[builtins.str, builtins.list[expression.Expression], builtins.list[Qubit], builtins.list[GateModifier]]: ...
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression], qubits: typing.Sequence[Qubit], modifiers: typing.Sequence[GateModifier]) -> CalibrationIdentifier:
-        r"""
-        Builds a new calibration identifier.
-        
-        Raises an error if the given name isn't a valid Quil identifier.
-        """
-    def __repr__(self) -> builtins.str:
-        r"""
-        Implements `__repr__` for Python in terms of the Rust
-        [`Debug`](std::fmt::Debug) implementation.
-        """
-    def to_quil(self) -> builtins.str: ...
-    def to_quil_or_debug(self) -> builtins.str: ...
 
 class Call:
     r"""
@@ -896,6 +793,109 @@ class Gate:
         other invalid input parameters may silently return an invalid result.
         """
 
+class GateCalibrationDefinition:
+    @property
+    def identifier(self) -> GateCalibrationIdentifier: ...
+    @identifier.setter
+    def identifier(self, value: GateCalibrationIdentifier) -> None: ...
+    @property
+    def instructions(self) -> builtins.list[Instruction]: ...
+    @instructions.setter
+    def instructions(self, value: typing.Sequence[Instruction]) -> None: ...
+    @property
+    def modifiers(self) -> builtins.list[GateModifier]:
+        r"""
+        The list of [`GateModifier`]s that this calibration definition is for.
+        """
+    @property
+    def name(self) -> builtins.str:
+        r"""
+        The gate name that this calibration definition is for.
+        """
+    @property
+    def parameters(self) -> builtins.list[expression.Expression]:
+        r"""
+        The list of parameters that this calibration definition is for.
+        """
+    @property
+    def qubits(self) -> builtins.list[Qubit]:
+        r"""
+        The list of [`Qubit`]s that this calibration definition is for.
+        """
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __getnewargs__(self) -> tuple[GateCalibrationIdentifier, builtins.list[Instruction]]: ...
+    def __new__(cls, identifier: GateCalibrationIdentifier, instructions: typing.Sequence[Instruction]) -> GateCalibrationDefinition:
+        r"""
+        Builds a new calibration definition.
+        """
+    def __repr__(self) -> builtins.str:
+        r"""
+        Implements `__repr__` for Python in terms of the Rust
+        [`Debug`](std::fmt::Debug) implementation.
+        """
+    def to_quil(self) -> builtins.str: ...
+    def to_quil_or_debug(self) -> builtins.str: ...
+
+class GateCalibrationIdentifier:
+    r"""
+    Unique identifier for a gate calibration definition within a program
+    """
+    @property
+    def modifiers(self) -> builtins.list[GateModifier]:
+        r"""
+        The modifiers applied to the gate
+        """
+    @modifiers.setter
+    def modifiers(self, value: typing.Sequence[GateModifier]) -> None:
+        r"""
+        The modifiers applied to the gate
+        """
+    @property
+    def name(self) -> builtins.str:
+        r"""
+        The name of the gate
+        """
+    @name.setter
+    def name(self, value: builtins.str) -> None:
+        r"""
+        The name of the gate
+        """
+    @property
+    def parameters(self) -> builtins.list[expression.Expression]:
+        r"""
+        The parameters of the gate - these are the variables in the calibration definition
+        """
+    @parameters.setter
+    def parameters(self, value: typing.Sequence[expression.Expression]) -> None:
+        r"""
+        The parameters of the gate - these are the variables in the calibration definition
+        """
+    @property
+    def qubits(self) -> builtins.list[Qubit]:
+        r"""
+        The qubits on which the gate is applied
+        """
+    @qubits.setter
+    def qubits(self, value: typing.Sequence[Qubit]) -> None:
+        r"""
+        The qubits on which the gate is applied
+        """
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __getnewargs__(self) -> tuple[builtins.str, builtins.list[expression.Expression], builtins.list[Qubit], builtins.list[GateModifier]]: ...
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression], qubits: typing.Sequence[Qubit], modifiers: typing.Sequence[GateModifier]) -> GateCalibrationIdentifier:
+        r"""
+        Builds a new calibration identifier.
+        
+        Raises an error if the given name isn't a valid Quil identifier.
+        """
+    def __repr__(self) -> builtins.str:
+        r"""
+        Implements `__repr__` for Python in terms of the Rust
+        [`Debug`](std::fmt::Debug) implementation.
+        """
+    def to_quil(self) -> builtins.str: ...
+    def to_quil_or_debug(self) -> builtins.str: ...
+
 class GateDefinition:
     r"""
     A struct encapsulating a quil Gate Definition
@@ -1075,7 +1075,7 @@ class Instruction:
             # note the `()` -- these aren't like Python's enumerations!
     ```
     """
-    def __getnewargs__(self) -> builtins.tuple[()] | builtins.tuple[Arithmetic | BinaryLogic | Call | Capture | CalibrationDefinition | CircuitDefinition | Comparison | Convert | Declaration | Delay | Exchange | Fence | FrameDefinition | Gate | GateDefinition | Include | Jump | JumpUnless | JumpWhen | Label | Load | MeasureCalibrationDefinition | Measurement | Move | Pragma | Pulse | RawCapture | Reset | ResetCalibrationDefinition | SetFrequency | SetPhase | SetScale | ShiftFrequency | ShiftPhase | Store | SwapPhases | UnaryLogic | WaveformDefinition]: ...
+    def __getnewargs__(self) -> builtins.tuple[()] | builtins.tuple[Arithmetic | BinaryLogic | Call | Capture | CircuitDefinition | Comparison | Convert | Declaration | Delay | Exchange | Fence | FrameDefinition | Gate | GateCalibrationDefinition | GateDefinition | Include | Jump | JumpUnless | JumpWhen | Label | Load | MeasureCalibrationDefinition | Measurement | Move | Pragma | Pulse | RawCapture | Reset | ResetCalibrationDefinition | SetFrequency | SetPhase | SetScale | ShiftFrequency | ShiftPhase | Store | SwapPhases | UnaryLogic | WaveformDefinition]: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1106,15 +1106,6 @@ class Instruction:
         def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
         def __len__(self) -> builtins.int: ...
         def __new__(cls, _0: BinaryLogic) -> Instruction.BinaryLogic: ...
-    
-    @typing.final
-    class CalibrationDefinition(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> CalibrationDefinition: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: CalibrationDefinition) -> Instruction.CalibrationDefinition: ...
     
     @typing.final
     class Call(Instruction):
@@ -1214,6 +1205,15 @@ class Instruction:
         def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
         def __len__(self) -> builtins.int: ...
         def __new__(cls, _0: Gate) -> Instruction.Gate: ...
+    
+    @typing.final
+    class GateCalibrationDefinition(Instruction):
+        __match_args__ = ("_0",)
+        @property
+        def _0(self) -> GateCalibrationDefinition: ...
+        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
+        def __len__(self) -> builtins.int: ...
+        def __new__(cls, _0: GateCalibrationDefinition) -> Instruction.GateCalibrationDefinition: ...
     
     @typing.final
     class GateDefinition(Instruction):

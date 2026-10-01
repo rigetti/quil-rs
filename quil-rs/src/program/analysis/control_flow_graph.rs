@@ -529,10 +529,10 @@ impl<'p> From<&'p Program> for ControlFlowGraph<'p> {
                 | Instruction::UnaryLogic(_)
                 | Instruction::Wait() => current_block_instructions.push(instruction),
 
-                Instruction::CalibrationDefinition(_)
-                | Instruction::CircuitDefinition(_)
+                Instruction::CircuitDefinition(_)
                 | Instruction::Declaration(_)
                 | Instruction::FrameDefinition(_)
+                | Instruction::GateCalibrationDefinition(_)
                 | Instruction::GateDefinition(_)
                 | Instruction::Include(_)
                 | Instruction::MeasureCalibrationDefinition(_)

@@ -43,7 +43,7 @@ use crate::program::defgate_sequence_expansion::{
 use crate::quil::Quil;
 
 pub use self::calibration::{
-    CalibrationExpansion, CalibrationExpansionOutput, CalibrationSource, Calibrations,
+    CalibrationExpansion, CalibrationExpansionOutput, CalibrationIdentifier, Calibrations,
 };
 pub use self::calibration_set::CalibrationSet;
 pub use self::defgate_sequence_expansion::DefGateSequenceExpansion;
@@ -242,9 +242,6 @@ impl Program {
             .extend(instruction.get_qubits().into_iter().cloned());
 
         match instruction {
-            Instruction::CalibrationDefinition(calibration) => {
-                self.calibrations.insert_calibration(calibration);
-            }
             Instruction::CircuitDefinition(circuit) => {
                 self.circuits.insert(circuit.name.clone(), circuit);
             }
@@ -261,6 +258,9 @@ impl Program {
             }) => {
                 self.memory_regions
                     .insert(name, MemoryRegion { size, sharing });
+            }
+            Instruction::GateCalibrationDefinition(gate_calibration) => {
+                self.calibrations.insert_calibration(gate_calibration);
             }
             Instruction::GateDefinition(gate_definition) => {
                 self.gate_definitions
@@ -1207,14 +1207,14 @@ mod tests {
         },
         imag,
         instruction::{
-            CalibrationIdentifier, Call, Declaration, DefGateSequence, DefaultHandler,
-            ExternSignatureMap, Gate, GateDefinition, GateSpecification, Instruction,
+            Call, Declaration, DefGateSequence, DefaultHandler, ExternSignatureMap, Gate,
+            GateCalibrationIdentifier, GateDefinition, GateSpecification, Instruction,
             InstructionHandler, Jump, JumpUnless, JumpWhen, Label, Matrix, MemoryReference, Qubit,
             QubitPlaceholder, ResetCalibrationIdentifier, ScalarType, Target, TargetPlaceholder,
             UnresolvedCallArgument, Vector, RESERVED_PRAGMA_EXTERN,
         },
         program::{
-            calibration::{CalibrationExpansion, CalibrationSource},
+            calibration::{CalibrationExpansion, CalibrationIdentifier},
             source_map::{ExpansionResult, SourceMap, SourceMapEntry},
             InstructionIndex, MemoryAccesses,
         },
@@ -1415,7 +1415,7 @@ NOP
                 SourceMapEntry {
                     source_location: InstructionIndex(0),
                     target_location: ExpansionResult::Rewritten(CalibrationExpansion {
-                        calibration_used: CalibrationSource::ResetCalibration(
+                        calibration_used: CalibrationIdentifier::ResetCalibration(
                             ResetCalibrationIdentifier {
                                 name: Some("foo".to_string()),
                                 qubit: Some(Qubit::Fixed(0)),
@@ -1433,7 +1433,7 @@ NOP
                 SourceMapEntry {
                     source_location: InstructionIndex(1),
                     target_location: ExpansionResult::Rewritten(CalibrationExpansion {
-                        calibration_used: CalibrationIdentifier {
+                        calibration_used: GateCalibrationIdentifier {
                             name: "I".to_string(),
                             qubits: vec![Qubit::Fixed(0)],
                             modifiers: vec![],
@@ -1447,8 +1447,8 @@ NOP
                                     source_location: InstructionIndex(0),
                                     target_location: ExpansionResult::Rewritten(
                                         CalibrationExpansion {
-                                            calibration_used: CalibrationSource::Calibration(
-                                                CalibrationIdentifier {
+                                            calibration_used: CalibrationIdentifier::Calibration(
+                                                GateCalibrationIdentifier {
                                                     modifiers: vec![],
                                                     name: "DECLAREMEM".to_string(),
                                                     parameters: vec![],
@@ -1500,7 +1500,7 @@ NOP
                 SourceMapEntry {
                     source_location: InstructionIndex(3),
                     target_location: ExpansionResult::Rewritten(CalibrationExpansion {
-                        calibration_used: CalibrationIdentifier {
+                        calibration_used: GateCalibrationIdentifier {
                             name: "I".to_string(),
                             qubits: vec![Qubit::Fixed(0)],
                             modifiers: vec![],
@@ -1514,8 +1514,8 @@ NOP
                                     source_location: InstructionIndex(0),
                                     target_location: ExpansionResult::Rewritten(
                                         CalibrationExpansion {
-                                            calibration_used: CalibrationSource::Calibration(
-                                                CalibrationIdentifier {
+                                            calibration_used: CalibrationIdentifier::Calibration(
+                                                GateCalibrationIdentifier {
                                                     modifiers: vec![],
                                                     name: "DECLAREMEM".to_string(),
                                                     parameters: vec![],

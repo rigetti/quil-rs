@@ -38,24 +38,24 @@ pub trait CalibrationSignature {
     )
 )]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
-pub struct CalibrationDefinition {
+pub struct GateCalibrationDefinition {
     #[pyo3(name = "identifier")]
-    pub identifier: CalibrationIdentifier,
+    pub identifier: GateCalibrationIdentifier,
     pub instructions: Vec<Instruction>,
 }
 
 pickleable_new! {
-    impl CalibrationDefinition {
+    impl GateCalibrationDefinition {
         /// Builds a new calibration definition.
         pub fn new(
-            identifier: CalibrationIdentifier,
+            identifier: GateCalibrationIdentifier,
             instructions: Vec<Instruction>,
         );
     }
 }
 
-impl CalibrationSignature for CalibrationDefinition {
-    type Signature<'a> = <CalibrationIdentifier as CalibrationSignature>::Signature<'a>;
+impl CalibrationSignature for GateCalibrationDefinition {
+    type Signature<'a> = <GateCalibrationIdentifier as CalibrationSignature>::Signature<'a>;
 
     fn signature(&self) -> Self::Signature<'_> {
         self.identifier.signature()
@@ -66,7 +66,7 @@ impl CalibrationSignature for CalibrationDefinition {
     }
 }
 
-impl Quil for CalibrationDefinition {
+impl Quil for GateCalibrationDefinition {
     fn write(
         &self,
         f: &mut impl std::fmt::Write,
@@ -81,7 +81,7 @@ impl Quil for CalibrationDefinition {
     }
 }
 
-/// Unique identifier for a calibration definition within a program
+/// Unique identifier for a gate calibration definition within a program
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
@@ -95,7 +95,7 @@ impl Quil for CalibrationDefinition {
         from_py_object
     )
 )]
-pub struct CalibrationIdentifier {
+pub struct GateCalibrationIdentifier {
     /// The modifiers applied to the gate
     pub modifiers: Vec<GateModifier>,
 
@@ -109,7 +109,7 @@ pub struct CalibrationIdentifier {
     pub qubits: Vec<Qubit>,
 }
 
-impl CalibrationIdentifier {
+impl GateCalibrationIdentifier {
     /// Builds a new calibration identifier.
     ///
     /// # Errors
@@ -131,7 +131,7 @@ impl CalibrationIdentifier {
     }
 }
 
-impl CalibrationIdentifier {
+impl GateCalibrationIdentifier {
     pub fn matches(&self, gate: &Gate) -> bool {
         // Filter out non-matching calibrations: check rules 1-4
         if self.name != gate.name
@@ -187,7 +187,7 @@ impl CalibrationIdentifier {
     }
 }
 
-impl CalibrationSignature for CalibrationIdentifier {
+impl CalibrationSignature for GateCalibrationIdentifier {
     type Signature<'a> = (&'a [GateModifier], &'a str, &'a [Expression], &'a [Qubit]);
 
     fn signature(&self) -> Self::Signature<'_> {
@@ -210,7 +210,7 @@ impl CalibrationSignature for CalibrationIdentifier {
     }
 }
 
-impl Quil for CalibrationIdentifier {
+impl Quil for GateCalibrationIdentifier {
     fn write(
         &self,
         f: &mut impl std::fmt::Write,

@@ -28,8 +28,6 @@ create_init_submodule! {
         AttributeValue,
         BinaryLogic,
         BinaryOperator,
-        CalibrationDefinition,
-        CalibrationIdentifier,
         Call,
         Capture,
         CircuitDefinition,
@@ -46,6 +44,8 @@ create_init_submodule! {
         FrameDefinition,
         FrameIdentifier,
         Gate,
+        GateCalibrationDefinition,
+        GateCalibrationIdentifier,
         GateDefinition,
         GateModifier,
         GateType,
@@ -198,8 +198,6 @@ impl_instruction!([
     BinaryLogic,
     BinaryOperand,
     BinaryOperator,
-    CalibrationDefinition,
-    CalibrationIdentifier,
     Call,
     Capture,
     CircuitDefinition,
@@ -218,6 +216,8 @@ impl_instruction!([
     FrameDefinition,
     FrameIdentifier,
     Gate,
+    GateCalibrationDefinition,
+    GateCalibrationIdentifier,
     GateDefinition,
     GateModifier,
     GateSpecification,
@@ -323,7 +323,6 @@ instruction_getnewargs!(
     BinaryLogic,
     Call,
     Capture,
-    CalibrationDefinition,
     CircuitDefinition,
     Comparison,
     Convert,
@@ -333,6 +332,7 @@ instruction_getnewargs!(
     Fence,
     FrameDefinition,
     Gate,
+    GateCalibrationDefinition,
     GateDefinition,
     Include,
     Jump,
@@ -422,7 +422,7 @@ impl ComparisonOperand {
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
-impl CalibrationDefinition {
+impl GateCalibrationDefinition {
     /// The gate name that this calibration definition is for.
     #[getter]
     fn name(&self) -> &str {
@@ -449,7 +449,7 @@ impl CalibrationDefinition {
 }
 
 pickleable_new! {
-    impl CalibrationIdentifier {
+    impl GateCalibrationIdentifier {
         /// Builds a new calibration identifier.
         ///
         /// Raises an error if the given name isn't a valid Quil identifier.
@@ -458,7 +458,7 @@ pickleable_new! {
             parameters: Vec<Expression>,
             qubits: Vec<Qubit>,
             modifiers: Vec<GateModifier>,
-        ) -> Result<CalibrationIdentifier, IdentifierValidationError> {
+        ) -> Result<GateCalibrationIdentifier, IdentifierValidationError> {
             // Note that  the parameter order is different for the Python version :(
             Self::new(name, modifiers, parameters, qubits)
         }

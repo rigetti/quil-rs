@@ -52,7 +52,7 @@ mod waveform;
 
 pub use self::{
     calibration::{
-        CalibrationDefinition, CalibrationIdentifier, CalibrationSignature,
+        CalibrationSignature, GateCalibrationDefinition, GateCalibrationIdentifier,
         MeasureCalibrationDefinition, MeasureCalibrationIdentifier, ResetCalibrationDefinition,
         ResetCalibrationIdentifier,
     },
@@ -147,7 +147,6 @@ pub enum ValidationError {
 pub enum Instruction {
     Arithmetic(Arithmetic),
     BinaryLogic(BinaryLogic),
-    CalibrationDefinition(CalibrationDefinition),
     Call(Call),
     Capture(Capture),
     CircuitDefinition(CircuitDefinition),
@@ -159,6 +158,7 @@ pub enum Instruction {
     Fence(Fence),
     FrameDefinition(FrameDefinition),
     Gate(Gate),
+    GateCalibrationDefinition(GateCalibrationDefinition),
     GateDefinition(GateDefinition),
     // Developer note: In Rust, this could be just `Halt`,
     // but to be compatible with PyO3's "complex enums",
@@ -200,10 +200,10 @@ impl Instruction {
     pub fn is_quil_t(&self) -> bool {
         match self {
             Instruction::Capture(_)
-            | Instruction::CalibrationDefinition(_)
             | Instruction::Delay(_)
             | Instruction::Fence(_)
             | Instruction::FrameDefinition(_)
+            | Instruction::GateCalibrationDefinition(_)
             | Instruction::MeasureCalibrationDefinition(_)
             | Instruction::Pulse(_)
             | Instruction::RawCapture(_)
@@ -385,9 +385,6 @@ impl Quil for Instruction {
     ) -> Result<(), crate::quil::ToQuilError> {
         match self {
             Instruction::Arithmetic(arithmetic) => arithmetic.write(f, fall_back_to_debug),
-            Instruction::CalibrationDefinition(calibration) => {
-                calibration.write(f, fall_back_to_debug)
-            }
             Instruction::Call(call) => call.write(f, fall_back_to_debug),
             Instruction::Capture(capture) => capture.write(f, fall_back_to_debug),
             Instruction::CircuitDefinition(circuit) => circuit.write(f, fall_back_to_debug),
@@ -399,6 +396,9 @@ impl Quil for Instruction {
                 frame_definition.write(f, fall_back_to_debug)
             }
             Instruction::Gate(gate) => gate.write(f, fall_back_to_debug),
+            Instruction::GateCalibrationDefinition(gate_calibration) => {
+                gate_calibration.write(f, fall_back_to_debug)
+            }
             Instruction::GateDefinition(gate_definition) => {
                 gate_definition.write(f, fall_back_to_debug)
             }
@@ -526,11 +526,11 @@ impl Instruction {
     /// ```
     pub fn apply_to_expressions(&mut self, mut closure: impl FnMut(&mut Expression)) {
         match self {
-            Instruction::CalibrationDefinition(CalibrationDefinition {
-                identifier: CalibrationIdentifier { parameters, .. },
+            Instruction::Gate(Gate { parameters, .. })
+            | Instruction::GateCalibrationDefinition(GateCalibrationDefinition {
+                identifier: GateCalibrationIdentifier { parameters, .. },
                 ..
-            })
-            | Instruction::Gate(Gate { parameters, .. }) => {
+            }) => {
                 parameters.iter_mut().for_each(closure);
             }
             Instruction::Capture(Capture { waveform, .. })
@@ -661,7 +661,6 @@ impl Instruction {
             }
             Instruction::Arithmetic(_)
             | Instruction::BinaryLogic(_)
-            | Instruction::CalibrationDefinition(_)
             | Instruction::Call(_)
             | Instruction::CircuitDefinition(_)
             | Instruction::Comparison(_)
@@ -670,6 +669,7 @@ impl Instruction {
             | Instruction::Exchange(_)
             | Instruction::FrameDefinition(_)
             | Instruction::Gate(_)
+            | Instruction::GateCalibrationDefinition(_)
             | Instruction::GateDefinition(_)
             | Instruction::Halt()
             | Instruction::Include(_)
@@ -696,12 +696,12 @@ impl Instruction {
     pub fn get_qubits(&self) -> Vec<&Qubit> {
         match self {
             Instruction::Gate(gate) => gate.qubits.iter().collect(),
-            Instruction::CalibrationDefinition(calibration) => calibration
+            Instruction::GateCalibrationDefinition(gate_calibration) => gate_calibration
                 .identifier
                 .qubits
                 .iter()
                 .chain(
-                    calibration
+                    gate_calibration
                         .instructions
                         .iter()
                         .flat_map(|inst| inst.get_qubits()),
@@ -746,12 +746,12 @@ impl Instruction {
     pub fn get_qubits_mut(&mut self) -> Vec<&mut Qubit> {
         match self {
             Instruction::Gate(gate) => gate.qubits.iter_mut().collect(),
-            Instruction::CalibrationDefinition(calibration) => calibration
+            Instruction::GateCalibrationDefinition(gate_calibration) => gate_calibration
                 .identifier
                 .qubits
                 .iter_mut()
                 .chain(
-                    calibration
+                    gate_calibration
                         .instructions
                         .iter_mut()
                         .flat_map(|inst| inst.get_qubits_mut()),
@@ -958,11 +958,11 @@ impl InstructionHandler for DefaultHandler {
 
     fn role(&self, instruction: &Instruction) -> InstructionRole {
         match instruction {
-            Instruction::CalibrationDefinition(_)
-            | Instruction::CircuitDefinition(_)
+            Instruction::CircuitDefinition(_)
             | Instruction::Declaration(_)
             | Instruction::FrameDefinition(_)
             | Instruction::Gate(_)
+            | Instruction::GateCalibrationDefinition(_)
             | Instruction::GateDefinition(_)
             | Instruction::Include(_)
             | Instruction::Label(_)
@@ -1230,9 +1230,9 @@ impl InstructionHandler for DefaultHandler {
             Instruction::Call(call) => call.default_memory_accesses(extern_signature_map)?,
 
             // Parameterized definitions whose parameters can also themselves reference memory
-            Instruction::CalibrationDefinition(CalibrationDefinition {
+            Instruction::GateCalibrationDefinition(GateCalibrationDefinition {
                 identifier:
-                    CalibrationIdentifier {
+                    GateCalibrationIdentifier {
                         parameters,
                         modifiers: _,
                         name: _,

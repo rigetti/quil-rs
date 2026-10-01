@@ -17,8 +17,8 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen
 
 use crate::{
     instruction::{
-        quilpy::OwnedGateSignature, CalibrationDefinition, Declaration, DefaultHandler,
-        ExternPragmaMap, FrameAttributes, FrameIdentifier, Gate, Instruction,
+        quilpy::OwnedGateSignature, Declaration, DefaultHandler, ExternPragmaMap, FrameAttributes,
+        FrameIdentifier, Gate, GateCalibrationDefinition, Instruction,
         MeasureCalibrationDefinition, Measurement, MemoryReference, Qubit, QubitPlaceholder, Reset,
         ResetCalibrationDefinition, Target, TargetPlaceholder, Waveform,
     },
@@ -32,7 +32,7 @@ use super::{
         ControlFlowGraph, ControlFlowGraphOwned, QubitGraph, QubitGraphError,
     },
     scheduling::{ComputedScheduleItem, Schedule, Seconds, TimeSpan},
-    CalibrationExpansion, CalibrationSource, Calibrations, DefGateSequenceExpansion,
+    CalibrationExpansion, CalibrationIdentifier, Calibrations, DefGateSequenceExpansion,
     ExpansionResult, FrameSet, InstructionIndex, MemoryRegion, Program, Result, SourceMap,
     SourceMapEntry, SourceMapIndexable,
 };
@@ -41,7 +41,7 @@ create_init_submodule! {
     classes: [
         BasicBlockOwned, // Python name: BasicBlock
         CalibrationExpansion,
-        CalibrationSource,
+        CalibrationIdentifier,
         Calibrations, // Python: CalibrationSet
         ControlFlowGraphOwned, // Python: ControlFlowGraph
         FlatExpansionResult,
@@ -55,7 +55,7 @@ create_init_submodule! {
         ScheduleSecondsItem,
         TimeSpanSeconds
     ],
-    complex_enums: [ CalibrationSource, FlatExpansionResult ],
+    complex_enums: [ CalibrationIdentifier, FlatExpansionResult ],
     errors: [
         errors::ProgramError,
         errors::ComputedScheduleError,
@@ -67,7 +67,7 @@ create_init_submodule! {
 impl_repr!(BasicBlockOwned);
 impl_repr!(CalibrationExpansion);
 impl_repr!(Calibrations);
-impl_repr!(CalibrationSource);
+impl_repr!(CalibrationIdentifier);
 impl_repr!(ControlFlowGraphOwned);
 impl_repr!(FrameSet);
 impl_repr!(FlatExpansionResult);
@@ -690,7 +690,7 @@ where
 impl Calibrations {
     #[new]
     fn new(
-        calibrations: Vec<CalibrationDefinition>,
+        calibrations: Vec<GateCalibrationDefinition>,
         measure_calibrations: Vec<MeasureCalibrationDefinition>,
         reset_calibrations: Vec<ResetCalibrationDefinition>,
     ) -> Self {
@@ -701,9 +701,9 @@ impl Calibrations {
         }
     }
 
-    /// Return a list of all [`CalibrationDefinition`]s in the set.
+    /// Return a list of all [`GateCalibrationDefinition`]s in the set.
     #[getter(calibrations)]
-    fn py_calibrations(&self) -> Vec<CalibrationDefinition> {
+    fn py_calibrations(&self) -> Vec<GateCalibrationDefinition> {
         self.iter_calibrations().cloned().collect()
     }
 
@@ -777,7 +777,7 @@ impl Calibrations {
     /// 5. All fixed qubits in the calibration definition match those in the gate
     /// 6. All specified parameters in the calibration definition match those in the gate
     #[pyo3(name = "get_match_for_gate")]
-    fn py_get_match_for_gate(&self, gate: &Gate) -> Option<CalibrationDefinition> {
+    fn py_get_match_for_gate(&self, gate: &Gate) -> Option<GateCalibrationDefinition> {
         self.get_match_for_gate(gate).cloned()
     }
 }
@@ -834,9 +834,13 @@ impl FrameSet {
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
-impl CalibrationSource {
+impl CalibrationIdentifier {
     #[gen_stub(override_return_type(
-        type_repr = "builtins.tuple[_quil.instructions.CalibrationIdentifier | _quil.instructions.MeasureCalibrationIdentifier]",
+        type_repr = "builtins.tuple[
+            _quil.instructions.GateCalibrationIdentifier 
+            | _quil.instructions.MeasureCalibrationIdentifier 
+            | _quil.instructions.ResetCalibrationIdentifier
+        ]",
         imports = ("quil._quil.instructions", "builtins")
     ))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
@@ -925,7 +929,7 @@ impl InstructionSourceMap {
     /// which is at worst `O(i)` where `i` is the number of source instructions.
     fn list_sources_for_calibration_used(
         &self,
-        calibration_used: CalibrationSource,
+        calibration_used: CalibrationIdentifier,
     ) -> Vec<&InstructionIndex> {
         self.0.list_sources(&calibration_used)
     }
@@ -1143,8 +1147,8 @@ impl SourceMapIndexable<InstructionIndex> for FlatExpansionResult {
     }
 }
 
-impl SourceMapIndexable<CalibrationSource> for FlatExpansionResult {
-    fn contains(&self, other: &CalibrationSource) -> bool {
+impl SourceMapIndexable<CalibrationIdentifier> for FlatExpansionResult {
+    fn contains(&self, other: &CalibrationIdentifier) -> bool {
         if let Self::Calibration(expansion) = self {
             expansion.contains(other)
         } else {

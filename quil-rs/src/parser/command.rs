@@ -5,9 +5,9 @@ use nom::sequence::{delimited, preceded, tuple};
 
 use crate::expression::Expression;
 use crate::instruction::{
-    Arithmetic, ArithmeticOperator, BinaryLogic, BinaryOperator, CalibrationDefinition,
-    CalibrationIdentifier, Call, Capture, CircuitDefinition, Comparison, ComparisonOperator,
-    Convert, Declaration, DefGateSequence, Delay, Exchange, Fence, FrameDefinition, GateDefinition,
+    Arithmetic, ArithmeticOperator, BinaryLogic, BinaryOperator, Call, Capture, CircuitDefinition,
+    Comparison, ComparisonOperator, Convert, Declaration, DefGateSequence, Delay, Exchange, Fence,
+    FrameDefinition, GateCalibrationDefinition, GateCalibrationIdentifier, GateDefinition,
     GateSpecification, GateType, Include, Instruction, Jump, JumpUnless, JumpWhen, Label, Load,
     MeasureCalibrationDefinition, MeasureCalibrationIdentifier, Measurement, Move, PauliSum,
     Pragma, PragmaArgument, Pulse, Qubit, RawCapture, Reset, ResetCalibrationDefinition,
@@ -222,8 +222,8 @@ pub(crate) fn parse_defcal_gate<'a>(
     let (input, instructions) = parse_block(input)?;
     Ok((
         input,
-        Instruction::CalibrationDefinition(CalibrationDefinition {
-            identifier: CalibrationIdentifier {
+        Instruction::GateCalibrationDefinition(GateCalibrationDefinition {
+            identifier: GateCalibrationIdentifier {
                 name,
                 parameters,
                 qubits,
