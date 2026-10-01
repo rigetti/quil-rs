@@ -10,7 +10,7 @@ DEFCAL RESET 0:
     PRAGMA FILTER-NODE q0 "{'module':'standard.filters.io','filter_type':'DataBuffer','source':'q0_classified','publish':true,'params':{},'_type':'FilterNode'}"
     FENCE 0
 
-DEFCAL RESET 10 addr:
+DEFCAL RESET 10:
     FENCE 10
     DECLARE q10_unclassified REAL[2]
     PULSE 10 "rf_f12" gaussian(duration: 7e-08, fwhm: 1.7e-08, t0: 3e-08, scale: 0.5, phase: 0.0, detuning: 0.0)

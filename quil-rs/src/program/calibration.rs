@@ -507,6 +507,7 @@ impl Calibrations {
                             let instructions = qubits_available
                                 .iter()
                                 .cloned()
+                                .sorted()
                                 .map(|qubit| {
                                     Instruction::Reset(Reset {
                                         name: reset.name.clone(),
