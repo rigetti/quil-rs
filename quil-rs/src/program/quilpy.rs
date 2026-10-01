@@ -690,21 +690,21 @@ where
 impl Calibrations {
     #[new]
     fn new(
-        calibrations: Vec<GateCalibrationDefinition>,
+        gate_calibrations: Vec<GateCalibrationDefinition>,
         measure_calibrations: Vec<MeasureCalibrationDefinition>,
         reset_calibrations: Vec<ResetCalibrationDefinition>,
     ) -> Self {
         Self {
-            calibrations: calibrations.into(),
+            gate_calibrations: gate_calibrations.into(),
             measure_calibrations: measure_calibrations.into(),
             reset_calibrations: reset_calibrations.into(),
         }
     }
 
     /// Return a list of all [`GateCalibrationDefinition`]s in the set.
-    #[getter(calibrations)]
-    fn py_calibrations(&self) -> Vec<GateCalibrationDefinition> {
-        self.iter_calibrations().cloned().collect()
+    #[getter(gate_calibrations)]
+    fn py_gate_calibrations(&self) -> Vec<GateCalibrationDefinition> {
+        self.iter_gate_calibrations().cloned().collect()
     }
 
     /// Return a list of all [`MeasureCalibrationDefinition`]s in the set.
@@ -845,7 +845,7 @@ impl CalibrationIdentifier {
     ))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {
-            Self::Calibration(value) => (value.clone(),).into_pyobject(py),
+            Self::GateCalibration(value) => (value.clone(),).into_pyobject(py),
             Self::MeasureCalibration(value) => (value.clone(),).into_pyobject(py),
             Self::ResetCalibration(value) => (value.clone(),).into_pyobject(py),
         }

@@ -119,7 +119,7 @@ class CalibrationIdentifier:
         [`Debug`](std::fmt::Debug) implementation.
         """
     @typing.final
-    class Calibration(CalibrationIdentifier):
+    class GateCalibration(CalibrationIdentifier):
         r"""
         Describes a `DEFCAL` instruction
         """
@@ -128,7 +128,7 @@ class CalibrationIdentifier:
         def _0(self) -> instructions.GateCalibrationIdentifier: ...
         def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
         def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: instructions.GateCalibrationIdentifier) -> CalibrationIdentifier.Calibration: ...
+        def __new__(cls, _0: instructions.GateCalibrationIdentifier) -> CalibrationIdentifier.GateCalibration: ...
     
     @typing.final
     class MeasureCalibration(CalibrationIdentifier):
@@ -163,7 +163,7 @@ class CalibrationSet:
     so see the documentation there for more information.
     """
     @property
-    def calibrations(self) -> builtins.list[instructions.GateCalibrationDefinition]:
+    def gate_calibrations(self) -> builtins.list[instructions.GateCalibrationDefinition]:
         r"""
         Return a list of all [`GateCalibrationDefinition`]s in the set.
         """
@@ -182,7 +182,7 @@ class CalibrationSet:
         r"""
         Return the count of contained calibrations.
         """
-    def __new__(cls, calibrations: typing.Sequence[instructions.GateCalibrationDefinition], measure_calibrations: typing.Sequence[instructions.MeasureCalibrationDefinition], reset_calibrations: typing.Sequence[instructions.ResetCalibrationDefinition]) -> CalibrationSet: ...
+    def __new__(cls, gate_calibrations: typing.Sequence[instructions.GateCalibrationDefinition], measure_calibrations: typing.Sequence[instructions.MeasureCalibrationDefinition], reset_calibrations: typing.Sequence[instructions.ResetCalibrationDefinition]) -> CalibrationSet: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -241,7 +241,7 @@ class CalibrationSet:
         
         In the case of multiple calibrations with equal precedence, the last one wins.
         """
-    def insert_calibration(self, calibration: instructions.GateCalibrationDefinition) -> typing.Optional[instructions.GateCalibrationDefinition]:
+    def insert_gate_calibration(self, calibration: instructions.GateCalibrationDefinition) -> typing.Optional[instructions.GateCalibrationDefinition]:
         r"""
         Insert a [`GateCalibrationDefinition`] into the set.
         

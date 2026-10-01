@@ -260,7 +260,7 @@ impl Program {
                     .insert(name, MemoryRegion { size, sharing });
             }
             Instruction::GateCalibrationDefinition(gate_calibration) => {
-                self.calibrations.insert_calibration(gate_calibration);
+                self.calibrations.insert_gate_calibration(gate_calibration);
             }
             Instruction::GateDefinition(gate_definition) => {
                 self.gate_definitions
@@ -627,7 +627,7 @@ impl Program {
     ///  "#;
     ///
     ///  let program: Program = quil.parse().unwrap();
-    ///  let calibrated_gate_names = program.calibrations.calibrations.iter().fold(HashSet::new(), |mut acc, calibration| {
+    ///  let calibrated_gate_names = program.calibrations.gate_calibrations.iter().fold(HashSet::new(), |mut acc, calibration| {
     ///     acc.insert(calibration.identifier.name.clone());
     ///     acc
     ///  });
@@ -1447,14 +1447,15 @@ NOP
                                     source_location: InstructionIndex(0),
                                     target_location: ExpansionResult::Rewritten(
                                         CalibrationExpansion {
-                                            calibration_used: CalibrationIdentifier::Calibration(
-                                                GateCalibrationIdentifier {
-                                                    modifiers: vec![],
-                                                    name: "DECLAREMEM".to_string(),
-                                                    parameters: vec![],
-                                                    qubits: vec![],
-                                                },
-                                            ),
+                                            calibration_used:
+                                                CalibrationIdentifier::GateCalibration(
+                                                    GateCalibrationIdentifier {
+                                                        modifiers: vec![],
+                                                        name: "DECLAREMEM".to_string(),
+                                                        parameters: vec![],
+                                                        qubits: vec![],
+                                                    },
+                                                ),
                                             range: InstructionIndex(0)..InstructionIndex(1),
                                             expansions: SourceMap {
                                                 entries: vec![
@@ -1514,14 +1515,15 @@ NOP
                                     source_location: InstructionIndex(0),
                                     target_location: ExpansionResult::Rewritten(
                                         CalibrationExpansion {
-                                            calibration_used: CalibrationIdentifier::Calibration(
-                                                GateCalibrationIdentifier {
-                                                    modifiers: vec![],
-                                                    name: "DECLAREMEM".to_string(),
-                                                    parameters: vec![],
-                                                    qubits: vec![],
-                                                },
-                                            ),
+                                            calibration_used:
+                                                CalibrationIdentifier::GateCalibration(
+                                                    GateCalibrationIdentifier {
+                                                        modifiers: vec![],
+                                                        name: "DECLAREMEM".to_string(),
+                                                        parameters: vec![],
+                                                        qubits: vec![],
+                                                    },
+                                                ),
                                             range: InstructionIndex(0)..InstructionIndex(1),
                                             expansions: SourceMap {
                                                 entries: vec![

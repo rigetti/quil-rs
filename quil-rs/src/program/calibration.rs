@@ -59,7 +59,7 @@ use optipy::strip_pyo3;
     )
 )]
 pub struct Calibrations {
-    pub calibrations: CalibrationSet<GateCalibrationDefinition>,
+    pub gate_calibrations: CalibrationSet<GateCalibrationDefinition>,
     pub measure_calibrations: CalibrationSet<MeasureCalibrationDefinition>,
     pub reset_calibrations: CalibrationSet<ResetCalibrationDefinition>,
 }
@@ -71,23 +71,27 @@ impl Calibrations {
     /// Return the count of contained calibrations.
     #[pyo3(name = "__len__")]
     pub fn len(&self) -> usize {
-        self.calibrations.len()
+        self.gate_calibrations.len()
+            + self.measure_calibrations.len()
+            + self.reset_calibrations.len()
     }
 
     /// Return true if this contains no data.
     pub fn is_empty(&self) -> bool {
-        self.calibrations.is_empty()
+        self.gate_calibrations.is_empty()
+            && self.measure_calibrations.is_empty()
+            && self.reset_calibrations.is_empty()
     }
 
     /// Insert a [`GateCalibrationDefinition`] into the set.
     ///
     /// If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
     /// exists in the set, it will be replaced and the old calibration will be returned.
-    pub fn insert_calibration(
+    pub fn insert_gate_calibration(
         &mut self,
         calibration: GateCalibrationDefinition,
     ) -> Option<GateCalibrationDefinition> {
-        self.calibrations.replace(calibration)
+        self.gate_calibrations.replace(calibration)
     }
 
     /// Insert a [`MeasureCalibrationDefinition`] into the set.
@@ -117,14 +121,14 @@ impl Calibrations {
     /// Calibrations with conflicting [signatures][crate::instruction::CalibrationSignature] are
     /// overwritten by the ones in the given set.
     pub fn extend(&mut self, other: Calibrations) {
-        self.calibrations.extend(other.calibrations);
+        self.gate_calibrations.extend(other.gate_calibrations);
         self.measure_calibrations.extend(other.measure_calibrations);
         self.reset_calibrations.extend(other.reset_calibrations);
     }
 
     /// Return the Quil instructions which describe the contained calibrations.
     pub fn to_instructions(&self) -> Vec<Instruction> {
-        self.iter_calibrations()
+        self.iter_gate_calibrations()
             .cloned()
             .map(Instruction::GateCalibrationDefinition)
             .chain(
@@ -267,7 +271,7 @@ impl SourceMapIndexable<CalibrationIdentifier> for CalibrationExpansion {
 )]
 pub enum CalibrationIdentifier {
     /// Describes a `DEFCAL` instruction
-    Calibration(#[from] GateCalibrationIdentifier),
+    GateCalibration(#[from] GateCalibrationIdentifier),
 
     /// Describes a `DEFCAL MEASURE` instruction
     MeasureCalibration(#[from] MeasureCalibrationIdentifier),
@@ -278,10 +282,10 @@ pub enum CalibrationIdentifier {
 
 impl Calibrations {
     /// Iterate over all [`GateCalibrationDefinition`]s in the set
-    pub fn iter_calibrations(
+    pub fn iter_gate_calibrations(
         &self,
     ) -> impl DoubleEndedIterator<Item = &GateCalibrationDefinition> + FusedIterator {
-        self.calibrations.iter()
+        self.gate_calibrations.iter()
     }
 
     /// Iterate over all [`MeasureCalibrationDefinition`]s calibrations in the set
@@ -440,7 +444,7 @@ impl Calibrations {
 
                         Some((
                             instructions,
-                            CalibrationIdentifier::Calibration(calibration.identifier.clone()),
+                            CalibrationIdentifier::GateCalibration(calibration.identifier.clone()),
                         ))
                     }
                     None => None,
@@ -761,7 +765,7 @@ impl Calibrations {
         let mut matched_calibration: Option<MatchedCalibration> = None;
 
         for calibration in self
-            .iter_calibrations()
+            .iter_gate_calibrations()
             .filter(|calibration| calibration.identifier.matches(gate))
         {
             matched_calibration = match matched_calibration {
@@ -782,7 +786,7 @@ impl Calibrations {
 
     /// Return the Quil instructions which describe the contained calibrations, consuming the [`CalibrationSet`]
     pub fn into_instructions(self) -> Vec<Instruction> {
-        self.calibrations
+        self.gate_calibrations
             .into_iter()
             .map(Instruction::GateCalibrationDefinition)
             .chain(
@@ -1068,19 +1072,21 @@ X 0
                 crate::instruction::Instruction::Wait(),
             ],
             detail: CalibrationExpansion {
-                calibration_used: CalibrationIdentifier::Calibration(GateCalibrationIdentifier {
-                    modifiers: vec![],
-                    name: "X".to_string(),
-                    parameters: vec![],
-                    qubits: vec![crate::instruction::Qubit::Fixed(0)],
-                }),
+                calibration_used: CalibrationIdentifier::GateCalibration(
+                    GateCalibrationIdentifier {
+                        modifiers: vec![],
+                        name: "X".to_string(),
+                        parameters: vec![],
+                        qubits: vec![crate::instruction::Qubit::Fixed(0)],
+                    },
+                ),
                 range: InstructionIndex(0)..InstructionIndex(5),
                 expansions: SourceMap {
                     entries: vec![
                         SourceMapEntry {
                             source_location: InstructionIndex(0),
                             target_location: ExpansionResult::Rewritten(CalibrationExpansion {
-                                calibration_used: CalibrationIdentifier::Calibration(
+                                calibration_used: CalibrationIdentifier::GateCalibration(
                                     GateCalibrationIdentifier {
                                         modifiers: vec![],
                                         name: "Y".to_string(),
@@ -1102,7 +1108,7 @@ X 0
                                             target_location: ExpansionResult::Rewritten(
                                                 CalibrationExpansion {
                                                     calibration_used:
-                                                        CalibrationIdentifier::Calibration(
+                                                        CalibrationIdentifier::GateCalibration(
                                                             GateCalibrationIdentifier {
                                                                 modifiers: vec![],
                                                                 name: "Z".to_string(),
@@ -1153,7 +1159,7 @@ X 0
                         SourceMapEntry {
                             source_location: InstructionIndex(2),
                             target_location: ExpansionResult::Rewritten(CalibrationExpansion {
-                                calibration_used: CalibrationIdentifier::Calibration(
+                                calibration_used: CalibrationIdentifier::GateCalibration(
                                     GateCalibrationIdentifier {
                                         modifiers: vec![],
                                         name: "Y".to_string(),
@@ -1175,7 +1181,7 @@ X 0
                                             target_location: ExpansionResult::Rewritten(
                                                 CalibrationExpansion {
                                                     calibration_used:
-                                                        CalibrationIdentifier::Calibration(
+                                                        CalibrationIdentifier::GateCalibration(
                                                             GateCalibrationIdentifier {
                                                                 modifiers: vec![],
                                                                 name: "Z".to_string(),
