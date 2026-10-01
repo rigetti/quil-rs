@@ -1931,8 +1931,6 @@ impl TryFrom<GateModifierDesignator> for GateModifier {
     }
 }
 
-// Override the type signature for `Gate.__new__` to hide the `params` parameter,
-// which is only used for backwards compatibility and is not intended for users.
 #[cfg(feature = "stubs")]
 submit! {
     gen_methods_from_python! {
@@ -1963,7 +1961,6 @@ submit! {
             ) -> Gate: ...
 
             @typing.overload
-            @typing_extensions.deprecated("The `params` parameter is deprecated; use `parameters` instead.")
             def __new__(
                 cls,
                 name: builtins.str,
@@ -1971,7 +1968,7 @@ submit! {
                 params: pyo3_stub_gen.RustType["Option<Vec<ExpressionLike>>"],
                 qubits: pyo3_stub_gen.RustType["Option<Vec<Qubit>>"] = None,
                 modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
-            ) -> typing_extensions.NoReturn: ...
+            ) -> Gate: ...
         "#
     }
 }
@@ -1980,24 +1977,29 @@ submit! {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Gate {
-    // TODO(migration-guide): `params` was renamed `parameters`.
+    // TODO(migration-guide): The constructor now permits the alias `params` for `parameters`.
 
-    // Developer Note: `parameters` and `qubits` have defaults
-    // so that if un-migrated users used the `params` as a keyword-only argument,
-    // we can still accept it despite not having `parameters`.
+    /// Construct a new `Gate` instance.
+    ///
+    /// This constructor accepts `params` as an alias for `parameters`;
+    /// if you provide both, it will raise an error.
     #[new]
-    #[pyo3(signature = (name, parameters=None, qubits=None, modifiers=None, *, params = None))]
+    #[pyo3(signature = (name, parameters=None, qubits=None, modifiers=None, *, params=None))]
     fn __new__(
-        py: Python<'_>,
         name: String,
         parameters: Option<Seq<ExpressionLike, Expression>>,
         qubits: Option<Seq<QubitLike, Qubit>>,
         modifiers: Option<Seq<GateModifierDesignator, GateModifier>>,
-        // `params` is for backwards compatibility and will raise a deprecation warning if used.
         params: Option<Seq<ExpressionLike, Expression>>,
     ) -> PyResult<Gate> {
-        let parameters = parameters.unwrap_or_default();
-        let parameters = deprecated_or_new!(py, new = parameters, old = params)?.into();
+        let parameters = match (parameters, params) {
+            (Some(_), Some(_)) => {
+                return Err(errors::ValueError::new_err("`parameters` and `params` are mutually exclusive"));
+            }
+            (Some(p), None) => p.into(),
+            (None, Some(p)) => p.into(),
+            (None, None) => Vec::new(),
+        };
         let qubits = qubits.unwrap_or_default().into();
         let modifiers = modifiers.unwrap_or_default().into();
         Ok(Self::new(&name, parameters, qubits, modifiers)?)
@@ -2069,7 +2071,9 @@ impl Gate {
         Ok(self.clone().to_unitary(n_qubits)?.to_pyarray(py))
     }
 
-    #[pyo3(warn(message = "use `parameters` instead", category = PyDeprecationWarning))]
+    /// Get the parameters of this ``Gate``.
+    ///
+    /// This is an alias for `parameters`, the canonical name of this property.
     #[getter]
     fn params(&self) -> Vec<Expression> {
         self.parameters.clone()
@@ -2445,11 +2449,15 @@ impl Label {
     }
 }
 
+// TODO: Add a `sumbit!` here with overrides for `MeasureCalibrationDefinition` constructor
+// to handle the `instrs` parameter as an alias for `instructions`.
+
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl MeasureCalibrationDefinition {
     // TODO(migration-guide): This has been modified to match the PyQuil v4 signature,
-    // except that the `instrs` parameter has been renamed `instructions`.
+    // except that the `instrs` parameter has been renamed `instructions`
+    // though the latter can still be used as a keyword alias.
     // Direct `quil` users can migrate using the new `from_calibration` constructor.
     #[new]
     #[pyo3(signature = (qubit, memory_reference, instructions, *, instrs=None))]
