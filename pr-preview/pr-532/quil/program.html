@@ -41,13 +41,13 @@
                                 <a class="function" href="#BasicBlock.gate_depth">gate_depth</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BasicBlock.instructions">instructions</a>
+                                <a class="variable" href="#BasicBlock.terminator">terminator</a>
                         </li>
                         <li>
                                 <a class="variable" href="#BasicBlock.label">label</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BasicBlock.terminator">terminator</a>
+                                <a class="variable" href="#BasicBlock.instructions">instructions</a>
                         </li>
                 </ul>
 
@@ -62,13 +62,13 @@
                     <a class="class" href="#CalibrationExpansion">CalibrationExpansion</a>
                             <ul class="memberlist">
                         <li>
+                                <a class="variable" href="#CalibrationExpansion.expansions">expansions</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#CalibrationExpansion.calibration_used">calibration_used</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CalibrationExpansion.range">range</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#CalibrationExpansion.expansions">expansions</a>
                         </li>
                 </ul>
 
@@ -77,7 +77,7 @@
                     <a class="class" href="#CalibrationIdentifier">CalibrationIdentifier</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="class" href="#CalibrationIdentifier.Calibration">CalibrationIdentifier.Calibration</a>
+                                <a class="class" href="#CalibrationIdentifier.GateCalibration">CalibrationIdentifier.GateCalibration</a>
                                         <ul class="memberlist">
                             </ul>
 
@@ -101,22 +101,10 @@
                     <a class="class" href="#CalibrationSet">CalibrationSet</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#CalibrationSet.expand">expand</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#CalibrationSet.get_match_for_measurement">get_match_for_measurement</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#CalibrationSet.get_match_for_reset">get_match_for_reset</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#CalibrationSet.get_match_for_gate">get_match_for_gate</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#CalibrationSet.is_empty">is_empty</a>
                         </li>
                         <li>
-                                <a class="function" href="#CalibrationSet.insert_calibration">insert_calibration</a>
+                                <a class="function" href="#CalibrationSet.insert_gate_calibration">insert_gate_calibration</a>
                         </li>
                         <li>
                                 <a class="function" href="#CalibrationSet.insert_measurement_calibration">insert_measurement_calibration</a>
@@ -131,13 +119,25 @@
                                 <a class="function" href="#CalibrationSet.to_instructions">to_instructions</a>
                         </li>
                         <li>
+                                <a class="function" href="#CalibrationSet.expand">expand</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#CalibrationSet.get_match_for_measurement">get_match_for_measurement</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#CalibrationSet.get_match_for_reset">get_match_for_reset</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#CalibrationSet.get_match_for_gate">get_match_for_gate</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#CalibrationSet.reset_calibrations">reset_calibrations</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationSet.calibrations">calibrations</a>
+                                <a class="variable" href="#CalibrationSet.measure_calibrations">measure_calibrations</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationSet.measure_calibrations">measure_calibrations</a>
+                                <a class="variable" href="#CalibrationSet.gate_calibrations">gate_calibrations</a>
                         </li>
                 </ul>
 
@@ -266,10 +266,10 @@
                                 <a class="function" href="#OwnedDefGateSequenceExpansion.expansions">expansions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#OwnedDefGateSequenceExpansion.range">range</a>
+                                <a class="variable" href="#OwnedDefGateSequenceExpansion.source_signature">source_signature</a>
                         </li>
                         <li>
-                                <a class="variable" href="#OwnedDefGateSequenceExpansion.source_signature">source_signature</a>
+                                <a class="variable" href="#OwnedDefGateSequenceExpansion.range">range</a>
                         </li>
                 </ul>
 
@@ -338,22 +338,19 @@
                                 <a class="function" href="#Program.to_instructions">to_instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
+                                <a class="variable" href="#Program.declarations">declarations</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.frames">frames</a>
+                                <a class="variable" href="#Program.circuits">circuits</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.instructions">instructions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.used_qubits">used_qubits</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.calibrations">calibrations</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
+                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.pragma_extern_map">pragma_extern_map</a>
@@ -362,13 +359,16 @@
                                 <a class="variable" href="#Program.waveforms">waveforms</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.instructions">instructions</a>
+                                <a class="variable" href="#Program.calibrations">calibrations</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.declarations">declarations</a>
+                                <a class="variable" href="#Program.frames">frames</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.circuits">circuits</a>
+                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
                         </li>
                 </ul>
 
@@ -413,13 +413,13 @@
                     <a class="class" href="#TimeSpanSeconds">TimeSpanSeconds</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
+                                <a class="variable" href="#TimeSpanSeconds.end">end</a>
                         </li>
                         <li>
                                 <a class="variable" href="#TimeSpanSeconds.start">start</a>
                         </li>
                         <li>
-                                <a class="variable" href="#TimeSpanSeconds.end">end</a>
+                                <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
                         </li>
                 </ul>
 
@@ -527,17 +527,17 @@ for it to be counted in the depth.</li>
 
 
                             </div>
-                            <div id="BasicBlock.instructions" class="classattr">
+                            <div id="BasicBlock.terminator" class="classattr">
                                 <div class="attr variable">
-            <span class="name">instructions</span>
+            <span class="name">terminator</span>
 
         
     </div>
-    <a class="headerlink" href="#BasicBlock.instructions"></a>
+    <a class="headerlink" href="#BasicBlock.terminator"></a>
     
-            <div class="docstring"><p>A list of the instructions in the block, in order of definition.</p>
+            <div class="docstring"><p>The control flow terminator instruction of the block, if any.</p>
 
-<p>This does not include the label or terminator instructions.</p>
+<p>If this is <code>None</code>, the implicit behavior is to "continue" to the subsequent block.</p>
 </div>
 
 
@@ -557,17 +557,17 @@ for it to be counted in the depth.</li>
 
 
                             </div>
-                            <div id="BasicBlock.terminator" class="classattr">
+                            <div id="BasicBlock.instructions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">terminator</span>
+            <span class="name">instructions</span>
 
         
     </div>
-    <a class="headerlink" href="#BasicBlock.terminator"></a>
+    <a class="headerlink" href="#BasicBlock.instructions"></a>
     
-            <div class="docstring"><p>The control flow terminator instruction of the block, if any.</p>
+            <div class="docstring"><p>A list of the instructions in the block, in order of definition.</p>
 
-<p>If this is <code>None</code>, the implicit behavior is to "continue" to the subsequent block.</p>
+<p>This does not include the label or terminator instructions.</p>
 </div>
 
 
@@ -615,6 +615,19 @@ for it to be counted in the depth.</li>
 </div>
 
 
+                            <div id="CalibrationExpansion.expansions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">expansions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationExpansion.expansions"></a>
+    
+            <div class="docstring"><p>The source map describing the nested expansions made.</p>
+</div>
+
+
+                            </div>
                             <div id="CalibrationExpansion.calibration_used" class="classattr">
                                 <div class="attr variable">
             <span class="name">calibration_used</span>
@@ -642,19 +655,6 @@ which were generated by this expansion.</p>
 
 
                             </div>
-                            <div id="CalibrationExpansion.expansions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">expansions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationExpansion.expansions"></a>
-    
-            <div class="docstring"><p>The source map describing the nested expansions made.</p>
-</div>
-
-
-                            </div>
                 </section>
                 <section id="CalibrationIdentifier">
                     <div class="attr class">
@@ -672,15 +672,15 @@ which were generated by this expansion.</p>
 
 
                 </section>
-                <section id="CalibrationIdentifier.Calibration">
+                <section id="CalibrationIdentifier.GateCalibration">
                     <div class="attr class">
             
     <span class="def">class</span>
-    <span class="name">CalibrationIdentifier.Calibration</span><wbr>(<span class="base"><a href="#CalibrationIdentifier">quil.program.CalibrationIdentifier</a></span>):
+    <span class="name">CalibrationIdentifier.GateCalibration</span><wbr>(<span class="base"><a href="#CalibrationIdentifier">quil.program.CalibrationIdentifier</a></span>):
 
         
     </div>
-    <a class="headerlink" href="#CalibrationIdentifier.Calibration"></a>
+    <a class="headerlink" href="#CalibrationIdentifier.GateCalibration"></a>
     
             <div class="docstring"><p>Describes a <code>DEFCAL</code> instruction</p>
 </div>
@@ -690,9 +690,9 @@ which were generated by this expansion.</p>
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#CalibrationIdentifier">CalibrationIdentifier</a></dt>
-                                <dd id="CalibrationIdentifier.Calibration.Calibration" class="class"><a href="#CalibrationIdentifier.Calibration">Calibration</a></dd>
-                <dd id="CalibrationIdentifier.Calibration.MeasureCalibration" class="class"><a href="#CalibrationIdentifier.MeasureCalibration">MeasureCalibration</a></dd>
-                <dd id="CalibrationIdentifier.Calibration.ResetCalibration" class="class"><a href="#CalibrationIdentifier.ResetCalibration">ResetCalibration</a></dd>
+                                <dd id="CalibrationIdentifier.GateCalibration.GateCalibration" class="class"><a href="#CalibrationIdentifier.GateCalibration">GateCalibration</a></dd>
+                <dd id="CalibrationIdentifier.GateCalibration.MeasureCalibration" class="class"><a href="#CalibrationIdentifier.MeasureCalibration">MeasureCalibration</a></dd>
+                <dd id="CalibrationIdentifier.GateCalibration.ResetCalibration" class="class"><a href="#CalibrationIdentifier.ResetCalibration">ResetCalibration</a></dd>
 
             </div>
                                 </dl>
@@ -716,7 +716,7 @@ which were generated by this expansion.</p>
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#CalibrationIdentifier">CalibrationIdentifier</a></dt>
-                                <dd id="CalibrationIdentifier.MeasureCalibration.Calibration" class="class"><a href="#CalibrationIdentifier.Calibration">Calibration</a></dd>
+                                <dd id="CalibrationIdentifier.MeasureCalibration.GateCalibration" class="class"><a href="#CalibrationIdentifier.GateCalibration">GateCalibration</a></dd>
                 <dd id="CalibrationIdentifier.MeasureCalibration.MeasureCalibration" class="class"><a href="#CalibrationIdentifier.MeasureCalibration">MeasureCalibration</a></dd>
                 <dd id="CalibrationIdentifier.MeasureCalibration.ResetCalibration" class="class"><a href="#CalibrationIdentifier.ResetCalibration">ResetCalibration</a></dd>
 
@@ -742,7 +742,7 @@ which were generated by this expansion.</p>
                                 <h5>Inherited Members</h5>
                                 <dl>
                                     <div><dt><a href="#CalibrationIdentifier">CalibrationIdentifier</a></dt>
-                                <dd id="CalibrationIdentifier.ResetCalibration.Calibration" class="class"><a href="#CalibrationIdentifier.Calibration">Calibration</a></dd>
+                                <dd id="CalibrationIdentifier.ResetCalibration.GateCalibration" class="class"><a href="#CalibrationIdentifier.GateCalibration">GateCalibration</a></dd>
                 <dd id="CalibrationIdentifier.ResetCalibration.MeasureCalibration" class="class"><a href="#CalibrationIdentifier.MeasureCalibration">MeasureCalibration</a></dd>
                 <dd id="CalibrationIdentifier.ResetCalibration.ResetCalibration" class="class"><a href="#CalibrationIdentifier.ResetCalibration">ResetCalibration</a></dd>
 
@@ -767,6 +767,108 @@ so see the documentation there for more information.</p>
 </div>
 
 
+                            <div id="CalibrationSet.is_empty" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">is_empty</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationSet.is_empty"></a>
+    
+            <div class="docstring"><p>Return true if this contains no data.</p>
+</div>
+
+
+                            </div>
+                            <div id="CalibrationSet.insert_gate_calibration" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">insert_gate_calibration</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">calibration</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationSet.insert_gate_calibration"></a>
+    
+            <div class="docstring"><p>Insert a [<code>GateCalibrationDefinition</code>] into the set.</p>
+
+<p>If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
+exists in the set, it will be replaced and the old calibration will be returned.</p>
+</div>
+
+
+                            </div>
+                            <div id="CalibrationSet.insert_measurement_calibration" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">insert_measurement_calibration</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">calibration</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationSet.insert_measurement_calibration"></a>
+    
+            <div class="docstring"><p>Insert a [<code>MeasureCalibrationDefinition</code>] into the set.</p>
+
+<p>If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
+exists in the set, it will be replaced and the old calibration will be returned.</p>
+</div>
+
+
+                            </div>
+                            <div id="CalibrationSet.insert_reset_calibration" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">insert_reset_calibration</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">calibration</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationSet.insert_reset_calibration"></a>
+    
+            <div class="docstring"><p>Insert a [<code>ResetCalibrationDefinition</code>] into the set.</p>
+
+<p>If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
+exists in the set, it will be replaced and the old calibration will be returned.</p>
+</div>
+
+
+                            </div>
+                            <div id="CalibrationSet.extend" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">extend</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">other</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationSet.extend"></a>
+    
+            <div class="docstring"><p>Append another [<code><a href="#CalibrationSet">CalibrationSet</a></code>] onto this one.</p>
+
+<p>Calibrations with conflicting [signatures][crate::instruction::CalibrationSignature] are
+overwritten by the ones in the given set.</p>
+</div>
+
+
+                            </div>
+                            <div id="CalibrationSet.to_instructions" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_instructions</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationSet.to_instructions"></a>
+    
+            <div class="docstring"><p>Return the Quil instructions which describe the contained calibrations.</p>
+</div>
+
+
+                            </div>
                             <div id="CalibrationSet.expand" class="classattr">
                                 <div class="attr function">
             
@@ -864,108 +966,6 @@ qubit (if any), or otherwise the last-specified one that specified no qubit.</p>
 
 
                             </div>
-                            <div id="CalibrationSet.is_empty" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">is_empty</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationSet.is_empty"></a>
-    
-            <div class="docstring"><p>Return true if this contains no data.</p>
-</div>
-
-
-                            </div>
-                            <div id="CalibrationSet.insert_calibration" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">insert_calibration</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">calibration</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationSet.insert_calibration"></a>
-    
-            <div class="docstring"><p>Insert a [<code>GateCalibrationDefinition</code>] into the set.</p>
-
-<p>If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
-exists in the set, it will be replaced and the old calibration will be returned.</p>
-</div>
-
-
-                            </div>
-                            <div id="CalibrationSet.insert_measurement_calibration" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">insert_measurement_calibration</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">calibration</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationSet.insert_measurement_calibration"></a>
-    
-            <div class="docstring"><p>Insert a [<code>MeasureCalibrationDefinition</code>] into the set.</p>
-
-<p>If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
-exists in the set, it will be replaced and the old calibration will be returned.</p>
-</div>
-
-
-                            </div>
-                            <div id="CalibrationSet.insert_reset_calibration" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">insert_reset_calibration</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">calibration</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationSet.insert_reset_calibration"></a>
-    
-            <div class="docstring"><p>Insert a [<code>ResetCalibrationDefinition</code>] into the set.</p>
-
-<p>If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
-exists in the set, it will be replaced and the old calibration will be returned.</p>
-</div>
-
-
-                            </div>
-                            <div id="CalibrationSet.extend" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">extend</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">other</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationSet.extend"></a>
-    
-            <div class="docstring"><p>Append another [<code><a href="#CalibrationSet">CalibrationSet</a></code>] onto this one.</p>
-
-<p>Calibrations with conflicting [signatures][crate::instruction::CalibrationSignature] are
-overwritten by the ones in the given set.</p>
-</div>
-
-
-                            </div>
-                            <div id="CalibrationSet.to_instructions" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_instructions</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationSet.to_instructions"></a>
-    
-            <div class="docstring"><p>Return the Quil instructions which describe the contained calibrations.</p>
-</div>
-
-
-                            </div>
                             <div id="CalibrationSet.reset_calibrations" class="classattr">
                                 <div class="attr variable">
             <span class="name">reset_calibrations</span>
@@ -979,19 +979,6 @@ overwritten by the ones in the given set.</p>
 
 
                             </div>
-                            <div id="CalibrationSet.calibrations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">calibrations</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationSet.calibrations"></a>
-    
-            <div class="docstring"><p>Return a list of all [<code>GateCalibrationDefinition</code>]s in the set.</p>
-</div>
-
-
-                            </div>
                             <div id="CalibrationSet.measure_calibrations" class="classattr">
                                 <div class="attr variable">
             <span class="name">measure_calibrations</span>
@@ -1001,6 +988,19 @@ overwritten by the ones in the given set.</p>
     <a class="headerlink" href="#CalibrationSet.measure_calibrations"></a>
     
             <div class="docstring"><p>Return a list of all [<code>MeasureCalibrationDefinition</code>]s in the set.</p>
+</div>
+
+
+                            </div>
+                            <div id="CalibrationSet.gate_calibrations" class="classattr">
+                                <div class="attr variable">
+            <span class="name">gate_calibrations</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationSet.gate_calibrations"></a>
+    
+            <div class="docstring"><p>Return a list of all [<code>GateCalibrationDefinition</code>]s in the set.</p>
 </div>
 
 
@@ -1539,19 +1539,6 @@ define an owned type here.</p>
 
 
                             </div>
-                            <div id="OwnedDefGateSequenceExpansion.range" class="classattr">
-                                <div class="attr variable">
-            <span class="name">range</span>
-
-        
-    </div>
-    <a class="headerlink" href="#OwnedDefGateSequenceExpansion.range"></a>
-    
-            <div class="docstring"><p>The range of instructions in the expanded list which were generated by this expansion.</p>
-</div>
-
-
-                            </div>
                             <div id="OwnedDefGateSequenceExpansion.source_signature" class="classattr">
                                 <div class="attr variable">
             <span class="name">source_signature</span>
@@ -1561,6 +1548,19 @@ define an owned type here.</p>
     <a class="headerlink" href="#OwnedDefGateSequenceExpansion.source_signature"></a>
     
             <div class="docstring"><p>The signature of the sequence gate definition which was used to expand the instruction.</p>
+</div>
+
+
+                            </div>
+                            <div id="OwnedDefGateSequenceExpansion.range" class="classattr">
+                                <div class="attr variable">
+            <span class="name">range</span>
+
+        
+    </div>
+    <a class="headerlink" href="#OwnedDefGateSequenceExpansion.range"></a>
+    
+            <div class="docstring"><p>The range of instructions in the expanded list which were generated by this expansion.</p>
 </div>
 
 
@@ -2106,24 +2106,35 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
 
 
                             </div>
-                            <div id="Program.memory_regions" class="classattr">
+                            <div id="Program.declarations" class="classattr">
                                 <div class="attr variable">
-            <span class="name">memory_regions</span>
+            <span class="name">declarations</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.memory_regions"></a>
+    <a class="headerlink" href="#Program.declarations"></a>
     
     
 
                             </div>
-                            <div id="Program.frames" class="classattr">
+                            <div id="Program.circuits" class="classattr">
                                 <div class="attr variable">
-            <span class="name">frames</span>
+            <span class="name">circuits</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.frames"></a>
+    <a class="headerlink" href="#Program.circuits"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.instructions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">instructions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.instructions"></a>
     
     
 
@@ -2139,35 +2150,13 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
     
 
                             </div>
-                            <div id="Program.body_instructions" class="classattr">
+                            <div id="Program.memory_regions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">body_instructions</span>
+            <span class="name">memory_regions</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.body_instructions"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.calibrations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">calibrations</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.calibrations"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.gate_definitions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">gate_definitions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.gate_definitions"></a>
+    <a class="headerlink" href="#Program.memory_regions"></a>
     
     
 
@@ -2194,35 +2183,46 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
     
 
                             </div>
-                            <div id="Program.instructions" class="classattr">
+                            <div id="Program.calibrations" class="classattr">
                                 <div class="attr variable">
-            <span class="name">instructions</span>
+            <span class="name">calibrations</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.instructions"></a>
+    <a class="headerlink" href="#Program.calibrations"></a>
     
     
 
                             </div>
-                            <div id="Program.declarations" class="classattr">
+                            <div id="Program.frames" class="classattr">
                                 <div class="attr variable">
-            <span class="name">declarations</span>
+            <span class="name">frames</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.declarations"></a>
+    <a class="headerlink" href="#Program.frames"></a>
     
     
 
                             </div>
-                            <div id="Program.circuits" class="classattr">
+                            <div id="Program.body_instructions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">circuits</span>
+            <span class="name">body_instructions</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.circuits"></a>
+    <a class="headerlink" href="#Program.body_instructions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.gate_definitions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">gate_definitions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.gate_definitions"></a>
     
     
 
@@ -2385,15 +2385,17 @@ each of which is assigned a start time and duration.</p>
 </div>
 
 
-                            <div id="TimeSpanSeconds.duration" class="classattr">
+                            <div id="TimeSpanSeconds.end" class="classattr">
                                 <div class="attr variable">
-            <span class="name">duration</span>
+            <span class="name">end</span>
 
         
     </div>
-    <a class="headerlink" href="#TimeSpanSeconds.duration"></a>
+    <a class="headerlink" href="#TimeSpanSeconds.end"></a>
     
-            <div class="docstring"><p>The duration of the time span, in seconds.</p>
+            <div class="docstring"><p>The end time of the time span, in seconds.</p>
+
+<p>This is the sum of the start time and duration.</p>
 </div>
 
 
@@ -2412,17 +2414,15 @@ in seconds relative to the start of the scheduling context (such as the basic bl
 
 
                             </div>
-                            <div id="TimeSpanSeconds.end" class="classattr">
+                            <div id="TimeSpanSeconds.duration" class="classattr">
                                 <div class="attr variable">
-            <span class="name">end</span>
+            <span class="name">duration</span>
 
         
     </div>
-    <a class="headerlink" href="#TimeSpanSeconds.end"></a>
+    <a class="headerlink" href="#TimeSpanSeconds.duration"></a>
     
-            <div class="docstring"><p>The end time of the time span, in seconds.</p>
-
-<p>This is the sum of the start time and duration.</p>
+            <div class="docstring"><p>The duration of the time span, in seconds.</p>
 </div>
 
 
