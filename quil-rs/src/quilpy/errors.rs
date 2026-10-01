@@ -2,6 +2,16 @@
 use pyo3::exceptions::PyException;
 use rigetti_pyo3::{create_exception, exception};
 
+/// Errors that can occur when calling a `quil` function.
+///
+/// These errors only apply to Python users and are not reachable directly from the Rust APIs.
+#[derive(Debug, thiserror::Error, PartialEq)]
+#[non_exhaustive]
+pub enum QuilPyValueError {
+    #[error("`{0}` and `{1}` are mutually exclusive")]
+    MutuallyExclusive(String, String),
+}
+
 create_exception!(
     quil._quil,
     QuilError,
@@ -9,7 +19,8 @@ create_exception!(
     "Base exception type for errors raised by this package."
 );
 
-create_exception!(
+exception!(
+    QuilPyValueError,
     quil._quil,
     ValueError,
     QuilError,
