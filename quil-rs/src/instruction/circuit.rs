@@ -40,7 +40,12 @@ impl CircuitDefinition {
         qubit_variables: Vec<String>,
         instructions: Vec<Instruction>,
     ) -> Self {
-        Self { name, parameters, qubit_variables, instructions, }
+        Self {
+            name,
+            parameters,
+            qubit_variables,
+            instructions,
+        }
     }
 }
 

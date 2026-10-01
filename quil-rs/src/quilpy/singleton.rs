@@ -72,7 +72,7 @@ impl PyModuleSingletonExt for Bound<'_, PyModule> {
 /// Implementation-wise, that code is executed within a [`PyOnceLock`]
 /// to ensure that the singleton instance is only created once.
 /// To actually create that instance and add it to the module,
-/// use [`PyModuleSingletonExt::add_singleton`] during module initialization. 
+/// use [`PyModuleSingletonExt::add_singleton`] during module initialization.
 macro_rules! py_singleton {
     ($T:ty, $name:expr, |$py:ident| $value:expr $(,)?) => {
         impl $crate::quilpy::singleton::PySingleton for $T {

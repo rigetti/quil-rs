@@ -49,11 +49,11 @@ pub struct CalibrationDefinition {
 
 impl CalibrationDefinition {
     /// Builds a new calibration definition.
-    pub fn new(
-        identifier: CalibrationIdentifier,
-        instructions: Vec<Instruction>,
-    ) -> Self {
-        Self { identifier, instructions, }
+    pub fn new(identifier: CalibrationIdentifier, instructions: Vec<Instruction>) -> Self {
+        Self {
+            identifier,
+            instructions,
+        }
     }
 }
 
@@ -247,8 +247,11 @@ pub struct MeasureCalibrationDefinition {
 }
 
 impl MeasureCalibrationDefinition {
-    pub fn new(identifier: MeasureCalibrationIdentifier, instructions: Vec<Instruction>) -> Self { 
-        Self { identifier, instructions }
+    pub fn new(identifier: MeasureCalibrationIdentifier, instructions: Vec<Instruction>) -> Self {
+        Self {
+            identifier,
+            instructions,
+        }
     }
 }
 

@@ -290,7 +290,10 @@ where
             let item = if let Ok(item) = item.cast::<U>() {
                 item.borrow().to_owned()
             } else {
-                item.extract::<T>().map_err(Into::into)?.try_into().map_err(Into::into)?
+                item.extract::<T>()
+                    .map_err(Into::into)?
+                    .try_into()
+                    .map_err(Into::into)?
             };
             res.push(item);
         }
@@ -298,7 +301,6 @@ where
         Ok(Self(res, PhantomData))
     }
 }
-
 
 impl<T, U> Seq<T, U> {
     pub const fn new() -> Self {
@@ -314,7 +316,7 @@ impl<T, U> Default for Seq<T, U> {
 
 // It's unlikely to be useful to return this type,
 // but this implementation is occassionally necessary for the stub generator to work right.
-impl <'py, T, U> IntoPyObject<'py> for Seq<T, U>
+impl<'py, T, U> IntoPyObject<'py> for Seq<T, U>
 where
     U: IntoPyObject<'py>,
 {
@@ -334,7 +336,7 @@ impl<T, U> From<Seq<T, U>> for Vec<U> {
 }
 
 #[cfg(feature = "stubs")]
-impl <T: PyStubType, U> pyo3_stub_gen::PyStubType for Seq<T, U> {
+impl<T: PyStubType, U> pyo3_stub_gen::PyStubType for Seq<T, U> {
     fn type_input() -> pyo3_stub_gen::TypeInfo {
         <Vec<T> as PyStubType>::type_input()
     }

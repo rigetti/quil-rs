@@ -38,8 +38,8 @@ use crate::{
     quilpy::{
         deprecated_or_new, deprecated_param,
         errors::{self, PickleError},
-        impl_newargs, impl_to_quil, py_deprecated, singleton, IntoNewArgs, Migrate,
-        NewArgs, NonZeroU64, Seq,
+        impl_newargs, impl_to_quil, py_deprecated, singleton, IntoNewArgs, Migrate, NewArgs,
+        NonZeroU64, Seq,
     },
     validation::identifier::IdentifierValidationError,
 };
@@ -693,7 +693,9 @@ impl From<ArithmeticOperandLike> for ArithmeticOperand {
 impl From<ArithmeticOperandLike> for Expression {
     fn from(value: ArithmeticOperandLike) -> Self {
         match ArithmeticOperand::from(value) {
-            ArithmeticOperand::LiteralInteger(i) => Expression::Number(Complex64::new(i as f64, 0.0)),
+            ArithmeticOperand::LiteralInteger(i) => {
+                Expression::Number(Complex64::new(i as f64, 0.0))
+            }
             ArithmeticOperand::LiteralReal(f) => Expression::Number(Complex64::new(f, 0.0)),
             ArithmeticOperand::MemoryReference(mem_ref) => Expression::Address(mem_ref),
         }
@@ -1994,7 +1996,9 @@ impl Gate {
     ) -> PyResult<Gate> {
         let parameters = match (parameters, params) {
             (Some(_), Some(_)) => {
-                return Err(errors::ValueError::new_err("`parameters` and `params` are mutually exclusive"));
+                return Err(errors::ValueError::new_err(
+                    "`parameters` and `params` are mutually exclusive",
+                ));
             }
             (Some(p), None) => p.into(),
             (None, Some(p)) => p.into(),
@@ -2569,7 +2573,11 @@ impl Measurement {
     // `__getnewargs_ex__` is consistent with `__new__`!
     #[pyo3(signature = (qubit, target, *, name = None))]
     #[new]
-    fn __new__(qubit: QubitLike, target: Option<MemoryReferenceLike>, name: Option<String>) -> Self {
+    fn __new__(
+        qubit: QubitLike,
+        target: Option<MemoryReferenceLike>,
+        name: Option<String>,
+    ) -> Self {
         Self::new(name, qubit.into(), target.map(|t| t.into()))
     }
 
@@ -2711,7 +2719,11 @@ impl MemoryReference {
         Expression::from(other) * Expression::Address(self.clone())
     }
 
-    fn __pow__<'py>(&self, exponent: ExpressionLike, modulo: Option<Bound<'py, PyAny>>) -> PyResult<Expression> {
+    fn __pow__<'py>(
+        &self,
+        exponent: ExpressionLike,
+        modulo: Option<Bound<'py, PyAny>>,
+    ) -> PyResult<Expression> {
         if modulo.is_some() {
             return Err(PyNotImplementedError::new_err(
                 "`modulo` is not supported for `MemoryReference.__pow__`",
@@ -2720,7 +2732,11 @@ impl MemoryReference {
         Ok(Expression::Address(self.clone()) ^ (Expression::from(exponent)))
     }
 
-    fn __rpow__<'py>(&self, base: ExpressionLike, modulo: Option<Bound<'py, PyAny>>) -> PyResult<Expression> {
+    fn __rpow__<'py>(
+        &self,
+        base: ExpressionLike,
+        modulo: Option<Bound<'py, PyAny>>,
+    ) -> PyResult<Expression> {
         if modulo.is_some() {
             return Err(PyNotImplementedError::new_err(
                 "`modulo` is not supported for `MemoryReference.__rpow__`",
@@ -3905,7 +3921,8 @@ impl PauliTerm {
         };
 
         // (-1)^k = exp(i * pi * k)
-        let exp_i_pi_k = quil_exp((IMAGINARY_UNIT * Expression::PiConstant() * expr.clone()).into());
+        let exp_i_pi_k =
+            quil_exp((IMAGINARY_UNIT * Expression::PiConstant() * expr.clone()).into());
 
         let a = (ONE + exp_i_pi_k.clone()) / Expression::Number(Complex64::from(2.0));
         let b = (ONE - exp_i_pi_k) / Expression::Number(Complex64::from(2.0));
