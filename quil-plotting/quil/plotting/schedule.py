@@ -32,7 +32,7 @@ from quil.program import BasicBlock, FrameSet, Program
 from typing_extensions import override
 
 from ._render import BLUE, GRAY, TEAL, YELLOW, gate_name_color, order_labels
-from ._utils import _evaluate_real
+from ._utils import MemoryMap, _evaluate_real
 from .program import PlottableBlock, PlottableProgram
 from .pulse import (
     PlottableFrameUpdate,
@@ -115,6 +115,7 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
         block: BasicBlock,
         program: Program,
         instruction_name_map: list[str],
+        memory_map: MemoryMap,
     ) -> None:
         """Schedule `block` and turn its instructions into drawable events.
 
@@ -124,6 +125,7 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
                 definitions.
             instruction_name_map: One logical instruction name per instruction
                 of `block`.
+            memory_map: Runtime memory values.
         """
         super().__init__(block)
 
@@ -174,7 +176,7 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
         self.duration: float = scheduled.duration
         """The block's scheduled duration, in seconds."""
 
-        self.waveforms = PlottableWaveformCache()
+        self.waveforms = PlottableWaveformCache(memory_map)
         """The distinct waveform shapes this block plays."""
 
         frame_to_channel_type_map = _build_channel_type_map(program)
@@ -302,7 +304,11 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
                 payload = instruction._0
                 if isinstance(instruction, Instruction.SetScale):
                     set_scale = instruction._0
-                    frame_scales_by_frame[set_scale.frame] = _evaluate_real(set_scale.scale)
+                    frame_scales_by_frame[set_scale.frame] = _evaluate_real(
+                        set_scale.scale,
+                        memory_map=memory_map,
+                        subject="SET-SCALE",
+                    )
                 self.events.append(
                     PlottableFrameUpdate(
                         instruction=instruction,
@@ -794,6 +800,12 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
     `RESET`, unless built with `allow_reset=True`, which draws each one as a
     frame-update marker on its qubit's frames.
 
+    A pulse whose waveform or frame scale reads classical memory, such as the
+    `SET-SCALE` an `RX(theta[0])` calibration may expand to, cannot be drawn
+    from the program alone. This execution information must be supplied with
+    `memory_map`, or construction raises naming what is missing. Note, this is
+    not a batch of memory, only one snapshot for single program plot.
+
     This object follows a builder method to construct the final image or widget.
     Configuring a chart is a chain of `with_*` methods, each returning `self`;
     {py:obj}`draw` ends the chain.
@@ -850,6 +862,7 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
         self,
         program: Program,
         allow_reset: bool = False,
+        memory_map: MemoryMap | None = None,
     ) -> list[PlottableBlockPulseSchedule]:
         """Expand `program`'s calibrations, schedule it, and lay out its blocks.
 
@@ -862,18 +875,26 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
                 an accurate pulse schedule. With this on, `RESET`s will be drawn
                 as an instant point rather than their pulses, which will shift
                 all of the pulse timings incorrectly.
+            memory_map: Runtime values of the program's classical memory, by
+                region name, e.g. `{"theta": [0.5], "ro": [0, 1]}`. Needed only
+                when a drawn value reads memory.
 
         Returns:
             One block per basic block, in program order.
 
         Raises:
             ValueError: If a gate or measurement survives calibration expansion,
-                which leaves it with no pulse to draw, or the program has a
-                `RESET` and `allow_reset` is off.
+                which leaves it with no pulse to draw, the program has a `RESET`
+                and `allow_reset` is off, or `memory_map` names a region the
+                program does not declare or holds more values than it does.
             RuntimeError: If a frame is missing a `DEFFRAME`, a waveform cannot
-                be resolved to samples, or - an internal invariant - the blocks
-                built from `program` do not partition its instructions.
+                be resolved to samples, a drawn value reads memory `memory_map`
+                does not hold, or - an internal invariant - the blocks built
+                from `program` do not partition its instructions.
         """
+        memory_map = memory_map or {}
+        _check_memory_map(program, memory_map)
+
         # 1. Decompose the logical level program into primitive instructions
         expansion, instruction_name_map = self._expand_program(program, allow_reset)
 
@@ -893,7 +914,14 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
             block_name_map = instruction_name_map[position : position + count]
             position += count + (1 if block.terminator is not None else 0)
 
-            blocks.append(PlottableBlockPulseSchedule(block, expansion, block_name_map))
+            blocks.append(
+                PlottableBlockPulseSchedule(
+                    block,
+                    expansion,
+                    block_name_map,
+                    memory_map,
+                )
+            )
         if position != len(instruction_name_map):
             raise RuntimeError(
                 f"expected the blocks to partition the program's "
@@ -1402,6 +1430,31 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
         return self
 
 
+def _check_memory_map(program: Program, memory_map: MemoryMap) -> None:
+    """Reject a `memory_map` region `program` does not declare, or overfills.
+
+    Args:
+        program: The program whose `DECLARE`s the map must match.
+        memory_map: The user's runtime memory values, by region name.
+
+    Raises:
+        ValueError: On the first such region.
+    """
+    declarations = program.declarations
+    for name, values in memory_map.items():
+        if name not in declarations:
+            raise ValueError(
+                f"memory_map names {name!r}, which the program does not DECLARE "
+                f"(declared: {sorted(declarations)})"
+            )
+        length = declarations[name].size.length
+        if len(values) > length:
+            raise ValueError(
+                f"memory_map gives {len(values)} values for {name!r}, "
+                f"which is declared with {length}"
+            )
+
+
 def _build_channel_type_map(program: Program) -> dict[FrameIdentifier, str]:
     """The hardware channel type behind every frame the program defines.
 
@@ -1454,7 +1507,9 @@ def _frame_sample_rate(frames: FrameSet, frame: FrameIdentifier) -> float:
     rate = attributes.get("SAMPLE-RATE")
     if not isinstance(rate, AttributeValue.Expression):
         raise RuntimeError(f"{frame!r} has no numeric SAMPLE-RATE (got {rate!r})")
-    return _evaluate_real(rate._0)
+    # A DEFFRAME attribute is fixed hardware configuration, never a runtime
+    # value, so there is no memory to read.
+    return _evaluate_real(rate._0, memory_map={}, subject="SAMPLE-RATE")
 
 
 def _build_qubit_str_map(program: Program) -> dict[FrameIdentifier, str]:

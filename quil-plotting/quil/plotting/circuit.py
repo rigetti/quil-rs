@@ -205,7 +205,10 @@ def _delay_label(payload: Any) -> str:
         The delay's label, with its duration rounded to a readable unit.
     """
     try:
-        seconds = _evaluate_real(payload.duration)
+        # The circuit view has no memory map. A duration it cannot resolve,
+        # such as the `t[0]` an inlined `WAIT(t[0]) 0` substitutes in, falls
+        # back to a bare `DELAY` label below.
+        seconds = _evaluate_real(payload.duration, memory_map={}, subject="DELAY")
     except RuntimeError:
         return "DELAY"
     for scale, unit in ((1e-9, "ns"), (1e-6, "µs"), (1e-3, "ms")):
@@ -888,7 +891,7 @@ class PlottableProgramCircuit(PlottableProgram[PlottableBlockCircuit]):
         {py:obj}`PlottableCircuitEvent`: what a {py:obj}`hide`/{py:obj}`show` predicate is handed.
     """
 
-    def __init__(self, program: Program, inline_defcircuits: bool = False) -> None:
+    def __init__(self, program: Program, *, inline_defcircuits: bool = False) -> None:
         """Parse `program` into a circuit diagram.
 
         Args:

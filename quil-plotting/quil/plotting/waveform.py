@@ -17,7 +17,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass
-from functools import cached_property
+from functools import cached_property, partial
 from typing import Any, Self
 
 import numpy as np
@@ -28,6 +28,7 @@ from quil.waveform import BuiltinWaveform, CommonBuiltinParameters
 import quil
 
 from ._utils import (
+    MemoryMap,
     _evaluate_complex,
     _evaluate_real,
     compress_constant_runs,
@@ -126,6 +127,7 @@ class PlottableCustomWaveform(PlottableWaveform):
         definition: Waveform,
         arguments: Mapping[str, complex],
         sample_rate: float,
+        memory_map: MemoryMap,
     ) -> None:
         """Parse a `definition` with `arguments` bound to its parameters.
 
@@ -134,6 +136,7 @@ class PlottableCustomWaveform(PlottableWaveform):
             definition: The `DEFWAVEFORM` this invocation names.
             arguments: A value for every parameter `definition` declares.
             sample_rate: The playing frame's sample rate in Hz.
+            memory_map: Runtime memory values its samples may read.
 
         Raises:
             WaveformResolutionError: If `arguments` does not match
@@ -157,7 +160,15 @@ class PlottableCustomWaveform(PlottableWaveform):
 
         # Calculate iqs
         self._iqs = np.array(
-            [_evaluate_complex(entry, arguments) for entry in definition.matrix],
+            [
+                _evaluate_complex(
+                    entry,
+                    arguments,
+                    memory_map=memory_map,
+                    subject=f"Waveform {name!r}",
+                )
+                for entry in definition.matrix
+            ],
             dtype=np.complex128,
         )
 
@@ -187,7 +198,12 @@ class WaveformKey:
     """Sorted parameters, with a builtin's `scale` excluded."""
 
     @classmethod
-    def from_invocation(cls, invocation: WaveformInvocation, sample_rate: float) -> Self:
+    def from_invocation(
+        cls,
+        invocation: WaveformInvocation,
+        sample_rate: float,
+        memory_map: MemoryMap,
+    ) -> Self:
         """Key `invocation` by its shape, ignoring a builtin's `scale`.
 
         Two invocations that differ only in scale share one key, and so one
@@ -196,6 +212,7 @@ class WaveformKey:
         Args:
             invocation: The waveform named by a `PULSE` or `CAPTURE`.
             sample_rate: The playing frame's sample rate in Hz.
+            memory_map: Runtime memory values its parameters may read.
 
         Returns:
             The key identifying `invocation`'s shape.
@@ -214,7 +231,14 @@ class WaveformKey:
             builtin=builtin,
             params=tuple(
                 sorted(
-                    (name, _evaluate_complex(expression))
+                    (
+                        name,
+                        _evaluate_complex(
+                            expression,
+                            memory_map=memory_map,
+                            subject=f"Waveform {invocation.name!r}",
+                        ),
+                    )
                     for name, expression in invocation.parameters.items()
                     if not (builtin and name == "scale")
                 )
@@ -229,8 +253,15 @@ class PlottableWaveformCache:
     and a complex scale, so their shape is stored once and shared.
     """
 
-    def __init__(self) -> None:
-        """Start empty; shapes are interned as the block's pulses are read."""
+    def __init__(self, memory_map: MemoryMap) -> None:
+        """Start empty; shapes are interned as the block's pulses are read.
+
+        Args:
+            memory_map: Runtime memory values waveform parameters may read.
+        """
+        self.memory_map = memory_map
+        """Runtime memory values waveform parameters may read."""
+
         self.table: list[PlottableWaveform] = []
         """The interned waveform shapes, indexed by id."""
 
@@ -260,13 +291,21 @@ class PlottableWaveformCache:
                 `invocation` cannot be parsed, or names a custom waveform with
                 no `DEFWAVEFORM` in `definitions`.
         """
-        key = WaveformKey.from_invocation(invocation, sample_rate)
+        key = WaveformKey.from_invocation(invocation, sample_rate, self.memory_map)
 
         # Cache Hit
         if key in self.ids:
             if key.builtin:
                 params = invocation.parameters
-                scale = _evaluate_real(params["scale"]) if "scale" in params else 1.0
+                scale = (
+                    _evaluate_real(
+                        params["scale"],
+                        memory_map=self.memory_map,
+                        subject=f"Waveform {invocation.name!r}",
+                    )
+                    if "scale" in params
+                    else 1.0
+                )
             else:
                 scale = 1.0
             return (self.ids[key], scale)
@@ -278,7 +317,11 @@ class PlottableWaveformCache:
             raise WaveformResolutionError(
                 f"could not parse {invocation.to_quil_or_debug()!r}: {e}"
             ) from e
-        waveform = parsed.evaluate(_evaluate_real, _evaluate_complex)
+        subject = f"Waveform {invocation.name!r}"
+        waveform = parsed.evaluate(
+            partial(_evaluate_real, memory_map=self.memory_map, subject=subject),
+            partial(_evaluate_complex, memory_map=self.memory_map, subject=subject),
+        )
 
         # Process builtin waveforms
         builtin = waveform.as_builtin()
@@ -298,7 +341,13 @@ class PlottableWaveformCache:
                 raise WaveformResolutionError(
                     f"no DEFWAVEFORM for custom waveform {name!r} (known: {sorted(definitions)})"
                 )
-            plottable_c = PlottableCustomWaveform(name, definition, arguments, sample_rate)
+            plottable_c = PlottableCustomWaveform(
+                name,
+                definition,
+                arguments,
+                sample_rate,
+                self.memory_map,
+            )
             return (self._insert(key, plottable_c), 1.0)
 
         raise WaveformResolutionError(f"Unknown Waveform variant for {invocation.name!r}.")

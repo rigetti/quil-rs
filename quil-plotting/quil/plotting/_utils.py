@@ -14,34 +14,104 @@
 
 """Numeric helper functions for the quil plotting library."""
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 
 import numpy as np
 import numpy.typing as npt
 from quil.expression import EvaluationError, Expression
+from quil.instructions import MemoryReference
+
+MemoryMap = Mapping[str, Sequence[int] | Sequence[float]]
+"""Runtime values of a program's classical memory."""
+
+
+def _memory_references(expression: Expression) -> Iterator[MemoryReference]:
+    """Every memory reference `expression` reads, in order, repeats included."""
+    match expression:
+        case Expression.Address(reference):
+            yield reference
+        case Expression.Infix(infix):
+            yield from _memory_references(infix.left)
+            yield from _memory_references(infix.right)
+        case Expression.Prefix(inner) | Expression.FunctionCall(inner):
+            yield from _memory_references(inner.expression)
 
 
 def _evaluate_complex(
     expression: Expression,
     variables: Mapping[str, complex] | None = None,
+    *,
+    memory_map: MemoryMap,
+    subject: str,
 ) -> complex:
-    """Reduce a Quil expression to a complex number."""
+    """Reduce a Quil expression to a complex number.
+
+    Args:
+        expression: The expression to reduce.
+        variables: Values for the `%variables` it names.
+        memory_map: Runtime memory values it may read. Required, even when
+            empty, so no call site forgets to pass the user's map along.
+        subject: What reads `expression`, e.g. `"SET-SCALE"`, named in the
+            missing-memory error.
+
+    Returns:
+        The expression's value.
+
+    Raises:
+        RuntimeError: If `expression` reads memory `memory_map` does not hold,
+            or names an unbound `%variable`.
+    """
     try:
-        return expression.evaluate(variables or {}, {})
+        return expression.evaluate(variables or {}, memory_map)
     except EvaluationError as e:
+        # Parse the generic error message and produce a nice robust one.
+        missing = sorted(
+            {
+                (reference.name, reference.index)
+                for reference in _memory_references(expression)
+                if reference.index >= len(memory_map.get(reference.name, ()))
+            },
+        )
+        if missing:
+            references = ", ".join(f"{name}[{index}]" for name, index in missing)
+            example = ", ".join(
+                f"{name!r}: [...]" for name in sorted({name for name, _ in missing})
+            )
+            raise RuntimeError(
+                f"{subject} reads {references}, which is only known at runtime. Pass its "
+                f"value with `PlottableProgramPulseSchedule(program, memory_map={{{example}}})`."
+            ) from e
         raise RuntimeError(
             f"could not evaluate {expression!r} to a number: {e}. Waveform parameters "
-            "must be resolvable at compile time; memory references and unbound "
-            "%variables are not allowed here."
+            "must be resolvable at compile time; unbound %variables are not allowed here."
         ) from e
 
 
 def _evaluate_real(
     expression: Expression,
     variables: Mapping[str, complex] | None = None,
+    *,
+    memory_map: MemoryMap,
+    subject: str,
 ) -> float:
-    """Reduce a Quil expression to a real number."""
-    value = _evaluate_complex(expression, variables)
+    """Reduce a Quil expression to a real number.
+
+    See: `_evaluate_complex` for more information.
+
+    Args:
+        expression: The expression to reduce.
+        variables: Values for the `%variables` it names.
+        memory_map: Runtime memory values it may read.
+        subject: What reads `expression`, named in the missing-memory error.
+
+    Returns:
+        The expression's real value.
+
+    Raises:
+        RuntimeError: If `_evaluate_complex` cannot reduce `expression`, or its
+            value has a nonzero imaginary part.
+    """
+    value = _evaluate_complex(expression, variables, memory_map=memory_map, subject=subject)
     if abs(value.imag) >= 1e-16:  # account for floating point errors
         raise RuntimeError(f"expected {expression!r} to be real-valued, got {value}")
     return value.real

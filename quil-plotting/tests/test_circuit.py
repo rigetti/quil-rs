@@ -31,7 +31,12 @@ def one_block(name: str):
 
 
 def test_every_program_builds_and_draws_a_valid_spec(program):
-    circuit = PlottableProgramCircuit(program)
+    try:
+        circuit = PlottableProgramCircuit(program)
+    except ValueError as e:
+        if "Quil-T instruction" not in str(e):
+            raise
+        pytest.skip("pulse-level programs have no circuit view")
     drawable = [block for block in circuit._blocks if block.visible_events]
     assert drawable
 

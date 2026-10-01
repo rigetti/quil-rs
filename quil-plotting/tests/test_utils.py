@@ -15,9 +15,12 @@
 import numpy as np
 import pytest
 from conftest import sig_digits
+from quil.expression import Expression
 
 from quil.plotting._render import gate_name_color, natural_sort_key, order_labels
 from quil.plotting._utils import (
+    _evaluate_real,
+    _memory_references,
     compress_constant_runs,
     decimate_to_max_points,
     round_sig,
@@ -122,3 +125,22 @@ def test_gate_colors_group_by_what_the_operation_is():
     assert gate_name_color("RESET") not in (gate_name_color("RX"), gate_name_color("CZ"))
     assert len({gate_name_color(name) for name in ("RESET", "MEASURE", "CZ", "RX")}) == 4
     assert gate_name_color("FOO") is None
+
+
+@pytest.mark.parametrize(
+    "text, memory_map, expected",
+    [
+        ("2*theta[0]", {"theta": [0.25]}, 0.5),
+        ("2*ro[1]", {"ro": [0, 1]}, 2.0),
+    ],
+)
+def test_evaluate_real_reads_float_and_int_memory(text, memory_map, expected):
+    assert _evaluate_real(Expression.parse(text), memory_map=memory_map, subject="test") == expected
+
+
+def test_memory_references_reach_inside_every_kind_of_node():
+    expression = Expression.parse("-theta[1] + sin(%a * ro[0]) * pi")
+    assert [(r.name, r.index) for r in _memory_references(expression)] == [
+        ("theta", 1),
+        ("ro", 0),
+    ]

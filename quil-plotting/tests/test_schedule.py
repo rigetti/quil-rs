@@ -22,7 +22,12 @@ from quil.plotting.waveform import PlottableWaveformCache, WaveformKey
 
 
 def test_every_program_builds_and_draws_a_valid_spec(program):
-    schedule = PlottableProgramPulseSchedule(program, allow_reset=True)
+    try:
+        schedule = PlottableProgramPulseSchedule(program, allow_reset=True)
+    except RuntimeError as e:
+        if "memory_map" not in str(e):
+            raise
+        pytest.skip("program reads runtime memory; covered by the memory_map tests")
     drawable = [block for block in schedule._blocks if block.events]
     assert drawable, "every program in the corpus plays at least one pulse"
 
@@ -40,6 +45,51 @@ def test_every_program_builds_and_draws_a_valid_spec(program):
         chart = block.draw()
         assert isinstance(chart, alt.LayerChart)
         chart.to_dict()
+
+
+# A calibration whose frame scale, after expansion, reads `theta[0]`: known only at runtime.
+MEMORY_PROGRAM = """
+DECLARE theta REAL[1]
+DEFFRAME 0 "drive":
+    HARDWARE-OBJECT: "{\\"channel_type\\":\\"OmegaGateDriveChannel\\"}"
+    SAMPLE-RATE: 1000000000
+DEFCAL RX(%theta) 0:
+    SET-SCALE 0 "drive" %theta
+    PULSE 0 "drive" flat(duration: 4e-8, iq: 1)
+RX(theta[0]) 0
+"""
+
+
+def test_memory_map_resolves_a_runtime_frame_scale():
+    program = Program.parse(MEMORY_PROGRAM)
+    schedule = PlottableProgramPulseSchedule(program, memory_map={"theta": [0.5]})
+    (pulse,) = schedule._blocks[0].pulses
+    assert pulse.frame_scale == 0.5
+    schedule.draw()
+
+
+@pytest.mark.parametrize(
+    "memory_map",
+    [
+        None,
+        {"theta": []},
+    ],
+)
+def test_missing_memory_names_the_reference_and_the_fix(memory_map):
+    with pytest.raises(RuntimeError, match=r"SET-SCALE reads theta\[0\].*memory_map="):
+        PlottableProgramPulseSchedule(Program.parse(MEMORY_PROGRAM), memory_map=memory_map)
+
+
+@pytest.mark.parametrize(
+    "memory_map, message",
+    [
+        ({"thta": [0.5]}, "does not DECLARE"),
+        ({"theta": [0.5, 1.0]}, "declared with 1"),
+    ],
+)
+def test_memory_map_rejects_regions_the_program_cannot_hold(memory_map, message):
+    with pytest.raises(ValueError, match=message):
+        PlottableProgramPulseSchedule(Program.parse(MEMORY_PROGRAM), memory_map=memory_map)
 
 
 def test_reset_raises_unless_allowed():
@@ -84,9 +134,9 @@ def test_waveform_key_ignores_scale_for_builtins():
     assert "scale" in invocation.parameters, "the RX calibration's waveform is scaled"
     assert pulse.scale != 1.0, "the stripped scale is carried on the pulse instead"
 
-    cache = PlottableWaveformCache()
+    cache = PlottableWaveformCache(memory_map={})
 
-    key = WaveformKey.from_invocation(invocation, 1e9)
+    key = WaveformKey.from_invocation(invocation, 1e9, memory_map={})
     assert key.builtin
     assert "scale" not in dict(key.params)
     identifier, scale = cache.cache(invocation, program.waveforms, 1e9)
