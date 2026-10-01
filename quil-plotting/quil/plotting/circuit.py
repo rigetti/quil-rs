@@ -848,6 +848,11 @@ class PlottableProgramCircuit(PlottableProgram[PlottableBlockCircuit]):
     says what you meant; reach for the pulse schedule to see what the hardware
     will do about it.
 
+    A `DEFCIRCUIT` call is drawn as one box under its own name. Build with
+    `inline_defcircuits=True` to draw the gates it stands for instead, expanded
+    recursively. This is experimental, and raises rather than draw a call it
+    cannot reproduce faithfully.
+
     Configuring a diagram is a chain of `with_*` methods, each returning `self`;
     {py:obj}`draw` ends the chain.
 
@@ -890,25 +895,6 @@ class PlottableProgramCircuit(PlottableProgram[PlottableBlockCircuit]):
             of the same program.
         {py:obj}`PlottableCircuitEvent`: what a {py:obj}`hide`/{py:obj}`show` predicate is handed.
     """
-
-    def __init__(self, program: Program, *, inline_defcircuits: bool = False) -> None:
-        """Parse `program` into a circuit diagram.
-
-        Args:
-            program: Any parseable Quil program.
-            inline_defcircuits: Whether to replace every `DEFCIRCUIT` call with
-                the instructions it stands for, recursively, so the diagram
-                shows `RX(pi/2) 23` rather than the macro that contains it.
-                Experimental!
-
-        Raises:
-            TypeError: If `program` is not a `quil.program.Program`.
-            ValueError: If `inline_defcircuits` is set and a call cannot be
-                inlined faithfully.
-        """
-        if inline_defcircuits and isinstance(program, Program):
-            program = self._inline_defcircuits(program)
-        super().__init__(program)
 
     @staticmethod
     def _inline_defcircuits(program: Program) -> Program:
@@ -1099,16 +1085,30 @@ class PlottableProgramCircuit(PlottableProgram[PlottableBlockCircuit]):
         return inlined
 
     @override
-    def _build_blocks(self, program: Program) -> list[PlottableBlockCircuit]:
+    def _build_blocks(
+        self,
+        program: Program,
+        inline_defcircuits: bool = False,
+    ) -> list[PlottableBlockCircuit]:
         """Lay `program` out as a circuit, block by block.
 
         Args:
             program: Any parseable Quil program. Calibrations, frames and
                 waveforms are not needed and not consulted.
+            inline_defcircuits: Whether to replace every `DEFCIRCUIT` call with
+                the instructions it stands for, recursively, so the diagram
+                shows `RX(pi/2) 23` rather than the macro that contains it.
+                Experimental!
 
         Returns:
             One block per basic block, in program order.
+
+        Raises:
+            ValueError: If `inline_defcircuits` is set and a call cannot be
+                inlined faithfully.
         """
+        if inline_defcircuits:
+            program = self._inline_defcircuits(program)
         # No calibration expansion: a circuit is the program as written. That is
         # the whole difference from the pulse view, which has to expand before
         # it has anything to draw.
