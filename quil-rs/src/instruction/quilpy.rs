@@ -28,8 +28,6 @@ create_init_submodule! {
         AttributeValue,
         BinaryLogic,
         BinaryOperator,
-        CalibrationDefinition,
-        CalibrationIdentifier,
         Call,
         Capture,
         CircuitDefinition,
@@ -46,6 +44,8 @@ create_init_submodule! {
         FrameDefinition,
         FrameIdentifier,
         Gate,
+        GateCalibrationDefinition,
+        GateCalibrationIdentifier,
         GateDefinition,
         GateModifier,
         GateType,
@@ -70,6 +70,8 @@ create_init_submodule! {
         QubitPlaceholder,
         RawCapture,
         Reset,
+        ResetCalibrationDefinition,
+        ResetCalibrationIdentifier,
         ScalarType,
         SetFrequency,
         SetPhase,
@@ -196,8 +198,6 @@ impl_instruction!([
     BinaryLogic,
     BinaryOperand,
     BinaryOperator,
-    CalibrationDefinition,
-    CalibrationIdentifier,
     Call,
     Capture,
     CircuitDefinition,
@@ -216,6 +216,8 @@ impl_instruction!([
     FrameDefinition,
     FrameIdentifier,
     Gate,
+    GateCalibrationDefinition,
+    GateCalibrationIdentifier,
     GateDefinition,
     GateModifier,
     GateSpecification,
@@ -244,6 +246,8 @@ impl_instruction!([
     QubitPlaceholder[repr],
     RawCapture,
     Reset,
+    ResetCalibrationDefinition,
+    ResetCalibrationIdentifier,
     ScalarType,
     SetFrequency,
     SetPhase,
@@ -319,7 +323,6 @@ instruction_getnewargs!(
     BinaryLogic,
     Call,
     Capture,
-    CalibrationDefinition,
     CircuitDefinition,
     Comparison,
     Convert,
@@ -329,6 +332,7 @@ instruction_getnewargs!(
     Fence,
     FrameDefinition,
     Gate,
+    GateCalibrationDefinition,
     GateDefinition,
     Include,
     Jump,
@@ -343,6 +347,7 @@ instruction_getnewargs!(
     Pulse,
     RawCapture,
     Reset,
+    ResetCalibrationDefinition,
     SetFrequency,
     SetPhase,
     SetScale,
@@ -417,7 +422,7 @@ impl ComparisonOperand {
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
-impl CalibrationDefinition {
+impl GateCalibrationDefinition {
     /// The gate name that this calibration definition is for.
     #[getter]
     fn name(&self) -> &str {
@@ -444,7 +449,7 @@ impl CalibrationDefinition {
 }
 
 pickleable_new! {
-    impl CalibrationIdentifier {
+    impl GateCalibrationIdentifier {
         /// Builds a new calibration identifier.
         ///
         /// Raises an error if the given name isn't a valid Quil identifier.
@@ -453,7 +458,7 @@ pickleable_new! {
             parameters: Vec<Expression>,
             qubits: Vec<Qubit>,
             modifiers: Vec<GateModifier>,
-        ) -> Result<CalibrationIdentifier, IdentifierValidationError> {
+        ) -> Result<GateCalibrationIdentifier, IdentifierValidationError> {
             // Note that  the parameter order is different for the Python version :(
             Self::new(name, modifiers, parameters, qubits)
         }
@@ -831,6 +836,52 @@ impl QubitPlaceholder {
         Err(PickleError::new_err(
             "Unable to pickle or deepcopy a QubitPlaceholder.",
         ))
+    }
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl ResetCalibrationDefinition {
+    /// The Quil-T name of the reset that this reset calibration definition is for, if any.
+    #[getter]
+    fn name(&self) -> Option<&str> {
+        self.identifier.name.as_deref()
+    }
+
+    /// The qubit that this reset calibration definition is for, if any.
+    #[getter]
+    fn qubit(&self) -> Option<Qubit> {
+        self.identifier.qubit.clone()
+    }
+}
+
+// We don't use [`pickleable_new!`] here because we're separating Rust's
+// [`ResetCalibrationIdentifier::new`] and Python's `ResetCalibrationIdentifier.new`.
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl ResetCalibrationIdentifier {
+    // Note that the Python argument order is not the same as the Rust argument order for
+    // [`Self::new`], and that this function requires keywords on the Python side!  Make sure
+    // `__getnewargs_ex__` is consistent with `__new__`!
+    #[pyo3(signature = (qubit, *, name = None))]
+    #[new]
+    fn __new__(qubit: Option<Qubit>, name: Option<String>) -> Self {
+        Self::new(name, qubit)
+    }
+
+    #[gen_stub(override_return_type(
+        type_repr = "builtins.tuple[
+            Qubit,
+            builtins.dict[builtins.str, typing.Optional[builtins.str]]
+        ]",
+        imports = ("builtins", "typing")
+    ))]
+    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+        let Self { name, qubit } = self;
+        let positional: Bound<'py, PyAny> = qubit.clone().into_pyobject(py)?;
+        let keyword: Bound<'py, PyDict> = [("name", name)].into_py_dict(py)?;
+        (positional, keyword).into_pyobject(py)
     }
 }
 

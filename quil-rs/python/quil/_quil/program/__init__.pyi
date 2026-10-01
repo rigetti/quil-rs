@@ -13,8 +13,8 @@ __all__ = [
     "BasicBlock",
     "BasicBlockScheduleError",
     "CalibrationExpansion",
+    "CalibrationIdentifier",
     "CalibrationSet",
-    "CalibrationSource",
     "ComputedScheduleError",
     "ControlFlowGraph",
     "FrameSet",
@@ -81,7 +81,7 @@ class CalibrationExpansion:
     Details about the expansion of a calibration.
     """
     @property
-    def calibration_used(self) -> CalibrationSource:
+    def calibration_used(self) -> CalibrationIdentifier:
         r"""
         The calibration used to expand the instruction.
         """
@@ -103,6 +103,58 @@ class CalibrationExpansion:
         [`Debug`](std::fmt::Debug) implementation.
         """
 
+class CalibrationIdentifier:
+    r"""
+    The source of a calibration, either a [`CalibrationIdentifier`] or a
+    [`MeasureCalibrationIdentifier`].
+    """
+    def __getnewargs__(self) -> builtins.tuple[
+            _quil.instructions.GateCalibrationIdentifier 
+            | _quil.instructions.MeasureCalibrationIdentifier 
+            | _quil.instructions.ResetCalibrationIdentifier
+        ]: ...
+    def __repr__(self) -> builtins.str:
+        r"""
+        Implements `__repr__` for Python in terms of the Rust
+        [`Debug`](std::fmt::Debug) implementation.
+        """
+    @typing.final
+    class GateCalibration(CalibrationIdentifier):
+        r"""
+        Describes a `DEFCAL` instruction
+        """
+        __match_args__ = ("_0",)
+        @property
+        def _0(self) -> instructions.GateCalibrationIdentifier: ...
+        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
+        def __len__(self) -> builtins.int: ...
+        def __new__(cls, _0: instructions.GateCalibrationIdentifier) -> CalibrationIdentifier.GateCalibration: ...
+    
+    @typing.final
+    class MeasureCalibration(CalibrationIdentifier):
+        r"""
+        Describes a `DEFCAL MEASURE` instruction
+        """
+        __match_args__ = ("_0",)
+        @property
+        def _0(self) -> instructions.MeasureCalibrationIdentifier: ...
+        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
+        def __len__(self) -> builtins.int: ...
+        def __new__(cls, _0: instructions.MeasureCalibrationIdentifier) -> CalibrationIdentifier.MeasureCalibration: ...
+    
+    @typing.final
+    class ResetCalibration(CalibrationIdentifier):
+        r"""
+        Describes a `DEFCAL RESET` instruction
+        """
+        __match_args__ = ("_0",)
+        @property
+        def _0(self) -> instructions.ResetCalibrationIdentifier: ...
+        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
+        def __len__(self) -> builtins.int: ...
+        def __new__(cls, _0: instructions.ResetCalibrationIdentifier) -> CalibrationIdentifier.ResetCalibration: ...
+    
+
 class CalibrationSet:
     r"""
     A collection of Quil calibrations (`DEFCAL` instructions) with utility methods.
@@ -111,27 +163,32 @@ class CalibrationSet:
     so see the documentation there for more information.
     """
     @property
-    def calibrations(self) -> builtins.list[instructions.CalibrationDefinition]:
+    def gate_calibrations(self) -> builtins.list[instructions.GateCalibrationDefinition]:
         r"""
-        Return a list of all [`CalibrationDefinition`]s in the set.
+        Return a list of all [`GateCalibrationDefinition`]s in the set.
         """
     @property
     def measure_calibrations(self) -> builtins.list[instructions.MeasureCalibrationDefinition]:
         r"""
         Return a list of all [`MeasureCalibrationDefinition`]s in the set.
         """
+    @property
+    def reset_calibrations(self) -> builtins.list[instructions.ResetCalibrationDefinition]:
+        r"""
+        Return a list of all [`ResetCalibrationDefinition`]s in the set.
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __len__(self) -> builtins.int:
         r"""
         Return the count of contained calibrations.
         """
-    def __new__(cls, calibrations: typing.Sequence[instructions.CalibrationDefinition], measure_calibrations: typing.Sequence[instructions.MeasureCalibrationDefinition]) -> CalibrationSet: ...
+    def __new__(cls, gate_calibrations: typing.Sequence[instructions.GateCalibrationDefinition], measure_calibrations: typing.Sequence[instructions.MeasureCalibrationDefinition], reset_calibrations: typing.Sequence[instructions.ResetCalibrationDefinition]) -> CalibrationSet: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
-    def expand(self, instruction: instructions.Instruction, previous_calibrations: typing.Sequence[instructions.Instruction]) -> typing.Optional[builtins.list[instructions.Instruction]]:
+    def expand(self, instruction: instructions.Instruction, previous_calibrations: typing.Sequence[instructions.Instruction], qubits_available: builtins.set[instructions.Qubit]) -> typing.Optional[builtins.list[instructions.Instruction]]:
         r"""
         Given an instruction, return the instructions to which it is expanded if there is a match.
         Recursively calibrate instructions, returning an error if a calibration directly or indirectly
@@ -147,7 +204,7 @@ class CalibrationSet:
         Calibrations with conflicting [signatures][crate::instruction::CalibrationSignature] are
         overwritten by the ones in the given set.
         """
-    def get_match_for_gate(self, gate: instructions.Gate) -> typing.Optional[instructions.CalibrationDefinition]:
+    def get_match_for_gate(self, gate: instructions.Gate) -> typing.Optional[instructions.GateCalibrationDefinition]:
         r"""
         Return the final calibration which matches the gate per the `QuilT` specification:
         
@@ -161,7 +218,7 @@ class CalibrationSet:
         """
     def get_match_for_measurement(self, measurement: instructions.Measurement) -> typing.Optional[instructions.MeasureCalibrationDefinition]:
         r"""
-        Returns the last-specified ``MeasureCalibrationDefinition`` that matches the target
+        Returns the last-specified [`MeasureCalibrationDefinition`] that matches the target
         qubit (if any), or otherwise the last-specified one that specified no qubit.
         
         If multiple calibrations match the measurement, the precedence is as follows:
@@ -172,9 +229,21 @@ class CalibrationSet:
         
         In the case of multiple calibrations with equal precedence, the last one wins.
         """
-    def insert_calibration(self, calibration: instructions.CalibrationDefinition) -> typing.Optional[instructions.CalibrationDefinition]:
+    def get_match_for_reset(self, reset: instructions.Reset) -> typing.Optional[instructions.ResetCalibrationDefinition]:
         r"""
-        Insert a [`CalibrationDefinition`] into the set.
+        Returns the last-specified [`ResetCalibrationDefinition`] that matches the target
+        qubit (if any), or otherwise the last-specified one that specified no qubit.
+        
+        If multiple calibrations match the measurement, the precedence is as follows:
+        
+          1. Match fixed qubit.
+          2. Match variable qubit.
+        
+        In the case of multiple calibrations with equal precedence, the last one wins.
+        """
+    def insert_gate_calibration(self, calibration: instructions.GateCalibrationDefinition) -> typing.Optional[instructions.GateCalibrationDefinition]:
+        r"""
+        Insert a [`GateCalibrationDefinition`] into the set.
         
         If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
         exists in the set, it will be replaced and the old calibration will be returned.
@@ -182,6 +251,13 @@ class CalibrationSet:
     def insert_measurement_calibration(self, calibration: instructions.MeasureCalibrationDefinition) -> typing.Optional[instructions.MeasureCalibrationDefinition]:
         r"""
         Insert a [`MeasureCalibrationDefinition`] into the set.
+        
+        If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
+        exists in the set, it will be replaced and the old calibration will be returned.
+        """
+    def insert_reset_calibration(self, calibration: instructions.ResetCalibrationDefinition) -> typing.Optional[instructions.ResetCalibrationDefinition]:
+        r"""
+        Insert a [`ResetCalibrationDefinition`] into the set.
         
         If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
         exists in the set, it will be replaced and the old calibration will be returned.
@@ -194,42 +270,6 @@ class CalibrationSet:
         r"""
         Return the Quil instructions which describe the contained calibrations.
         """
-
-class CalibrationSource:
-    r"""
-    The source of a calibration, either a [`CalibrationIdentifier`] or a
-    [`MeasureCalibrationIdentifier`].
-    """
-    def __getnewargs__(self) -> builtins.tuple[_quil.instructions.CalibrationIdentifier | _quil.instructions.MeasureCalibrationIdentifier]: ...
-    def __repr__(self) -> builtins.str:
-        r"""
-        Implements `__repr__` for Python in terms of the Rust
-        [`Debug`](std::fmt::Debug) implementation.
-        """
-    @typing.final
-    class Calibration(CalibrationSource):
-        r"""
-        Describes a `DEFCAL` instruction
-        """
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> instructions.CalibrationIdentifier: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: instructions.CalibrationIdentifier) -> CalibrationSource.Calibration: ...
-    
-    @typing.final
-    class MeasureCalibration(CalibrationSource):
-        r"""
-        Describes a `DEFCAL MEASURE` instruction
-        """
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> instructions.MeasureCalibrationIdentifier: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: instructions.MeasureCalibrationIdentifier) -> CalibrationSource.MeasureCalibration: ...
-    
 
 class ComputedScheduleError(ProgramError):
     r"""
@@ -313,9 +353,9 @@ class InstructionSourceMap:
     a calibration or a sequence gate definition.
     """
     def entries(self) -> builtins.list[InstructionSourceMapEntry]: ...
-    def list_sources_for_calibration_used(self, calibration_used: CalibrationSource) -> builtins.list[builtins.int]:
+    def list_sources_for_calibration_used(self, calibration_used: CalibrationIdentifier) -> builtins.list[builtins.int]:
         r"""
-        Given a particular calibration (`DEFCAL` or `DEFCAL MEASURE`), =
+        Given a particular calibration (`DEFCAL`, `DEFCAL MEASURE`, or `DEFCAL RESET`),
         return the locations in the source which were expanded using that calibration.
         
         This is `O(n)` where `n` is the number of first-level calibration expansions performed,

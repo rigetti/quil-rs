@@ -6,10 +6,10 @@ import pytest
 import quil
 from quil.expression import Expression
 from quil.instructions import (
-    CalibrationDefinition,
-    CalibrationIdentifier,
     Delay,
     FrameIdentifier,
+    GateCalibrationDefinition,
+    GateCalibrationIdentifier,
     Instruction,
     Pulse,
     Qubit,
@@ -24,12 +24,12 @@ def qubit(request: pytest.FixtureRequest) -> Qubit:
     return request.param
 
 
-def _calibration(qubit: Qubit) -> tuple[CalibrationDefinition, Instruction]:
-    calibration = CalibrationDefinition(
-        CalibrationIdentifier("MYCAL", [], [qubit], []),
+def _calibration(qubit: Qubit) -> tuple[GateCalibrationDefinition, Instruction]:
+    calibration = GateCalibrationDefinition(
+        GateCalibrationIdentifier("MYCAL", [], [qubit], []),
         [Instruction.Delay(Delay(Expression.Number(complex(0.5)), [], [qubit]))],
     )
-    return calibration, Instruction.CalibrationDefinition(calibration)
+    return calibration, Instruction.GateCalibrationDefinition(calibration)
 
 
 def _pulse(qubit: Qubit) -> tuple[Pulse, Instruction]:
@@ -57,4 +57,3 @@ def test_copy(qubit: Qubit, make_instr: Callable[[Qubit], tuple[Any, Instruction
             _ = copy.deepcopy(inner)
         with pytest.raises(quil.PickleError, match=r"\bQubitPlaceholder\b"):
             _ = copy.deepcopy(instr)
-
