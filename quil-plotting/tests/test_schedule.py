@@ -364,6 +364,33 @@ def test_pan_and_zoom_bind_to_each_axis_independently(pan_y, zoom_y, expected_y)
     assert gestures.get("y") == expected_y
 
 
+@pytest.mark.parametrize(("smooth", "expected"), [(False, "step-after"), (True, "linear")])
+def test_smooth_pulses_picks_area_interpolation(smooth, expected):
+    schedule = PlottableProgramPulseSchedule(load("test_blocks")).with_smooth_pulses(smooth)
+    spec = schedule._blocks[0].draw().to_dict()
+
+    interpolations = {
+        layer["mark"]["interpolate"]
+        for outer in spec["layer"]
+        for layer in outer.get("layer", [])
+        if layer["mark"]["type"] == "area"
+    }
+    assert interpolations == {expected}
+
+
+def test_frame_updates_hidden_and_shown_toggle_only_frame_updates():
+    schedule = PlottableProgramPulseSchedule(load("cz_cycle"))
+    block = schedule._blocks[0]
+    assert block.frame_updates and block.pulses
+
+    schedule.with_frame_updates_hidden()
+    assert all(update.hidden for update in block.frame_updates)
+    assert not any(pulse.hidden for pulse in block.pulses)
+
+    schedule.with_frame_updates_shown()
+    assert not any(update.hidden for update in block.frame_updates)
+
+
 def _frame_scale_program(body: str) -> PlottableProgramPulseSchedule:
     frames = "\n".join(
         f'DEFFRAME {q} "rf":\n'

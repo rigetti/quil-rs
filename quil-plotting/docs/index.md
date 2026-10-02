@@ -19,6 +19,7 @@ for an interactive showcase of this packages features. See the main quil-rs
 :maxdepth: 2
 
 getting-started
+performance
 ```
 
 ```{toctree}

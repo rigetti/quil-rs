@@ -156,7 +156,7 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
         `None` normalizes nothing, so amplitudes are drawn absolute.
         """
 
-        self.max_points_per_pulse: int | None = 500
+        self.max_points_per_pulse: int | None = None
         """Caps a pulse's rendered sample count, or `None` for no cap."""
 
         self.frame_update_color: str = "#0d0d36"
@@ -170,6 +170,9 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
 
         self.frame_scales: bool = False
         """Whether each frame's scale multiplies into drawn pulse heights."""
+
+        self.smooth_pulses: bool = False
+        """Whether pulses are drawn as lines through their samples, not steps."""
 
         block_instructions = block.instructions
         scheduled = block.as_schedule_seconds(program)
@@ -652,7 +655,7 @@ class PlottableBlockPulseSchedule(PlottableBlock[PlottablePulseEvent]):
             raw_field, raw_title = ("i", "I") if component == "yi" else ("q", "Q")
             tooltip = [*base_tooltip, alt.Tooltip(f"{raw_field}:Q", title=raw_title)]
             area = fig.mark_area(
-                interpolate="linear",
+                interpolate="linear" if self.smooth_pulses else "step-after",
                 line=True,
                 strokeWidth=1.5,
                 aria=False,
@@ -1312,9 +1315,10 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
         fidelity for a smaller, faster chart, keeping each pulse's peak
         amplitude and its start and end timing.
 
-        Defaults to 500, which on real programs is visually indistinguishable
-        from uncapped. Raise it if a slowly-varying envelope looks faceted;
-        disable it when exporting a figure where exact shape matters.
+        Uncapped by default, so every sample is drawn. A cap of a few hundred
+        is usually visually indistinguishable from uncapped, but it can make
+        stepped pulses look blocky, since each kept sample is held across the
+        ones dropped after it; it suits {py:obj}`with_smooth_pulses` better.
 
         Args:
             max_points: Maximum samples per pulse, or `None` to draw every
@@ -1325,7 +1329,7 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
 
         Examples:
             ```python
-            schedule.with_max_points_per_pulse(None).draw("figures/schedule.html")
+            schedule.with_max_points_per_pulse(500).draw("figures/schedule.html")
             ```
 
         See Also:
@@ -1341,6 +1345,31 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
         for block in self._blocks:
             block.frame_update_color = frame_update_color
         return self
+
+    def with_frame_updates_hidden(self) -> Self:
+        """Hide every frame update, leaving only pulses and captures.
+
+        Frame updates are often a third or more of a schedule's events, so
+        hiding them makes a large schedule smaller and faster to draw.
+
+        Returns:
+            `self`, so calls chain.
+
+        See Also:
+            {py:obj}`with_frame_updates_shown`: the inverse.
+        """
+        return self.hide(lambda event: isinstance(event, PlottableFrameUpdate))
+
+    def with_frame_updates_shown(self) -> Self:
+        """Show every frame update, undoing any earlier hide of one.
+
+        Returns:
+            `self`, so calls chain.
+
+        See Also:
+            {py:obj}`with_frame_updates_hidden`: the inverse.
+        """
+        return self.show(lambda event: isinstance(event, PlottableFrameUpdate))
 
     def with_qubit_labels(self, labels: dict[FrameIdentifier, str]) -> Self:
         """Relabel the `"Qubit"` field of every event on the given frames.
@@ -1393,6 +1422,24 @@ class PlottableProgramPulseSchedule(PlottableProgram[PlottableBlockPulseSchedule
         """
         for block in self._blocks:
             block.frame_scales = on
+        return self
+
+    def with_smooth_pulses(self, on: bool = True) -> Self:
+        """Draw pulses as smooth lines through their samples, or as steps.
+
+        Off by default: each sample is held flat for one sample period, the
+        staircase the hardware actually plays. Smoothing joins samples with
+        straight lines instead, which can improve rendering performance on a
+        large schedule but is less accurate to hardware.
+
+        Args:
+            on: Whether to interpolate linearly between samples.
+
+        Returns:
+            `self`, so calls chain.
+        """
+        for block in self._blocks:
+            block.smooth_pulses = on
         return self
 
     def with_pan_y(self, on: bool = True) -> Self:
