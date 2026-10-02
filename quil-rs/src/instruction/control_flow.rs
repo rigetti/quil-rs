@@ -53,13 +53,7 @@ impl Quil for Label {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(
-        module = "quil._quil.instructions",
-        eq,
-        frozen,
-        hash,
-        from_py_object
-    )
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, from_py_object)
 )]
 pub enum Target {
     Fixed(String),
@@ -192,9 +186,9 @@ impl Quil for Jump {
     }
 }
 
-pickleable_new! {
-    impl Jump {
-        pub fn new(target: Target);
+impl Jump {
+    pub fn new(target: Target) -> Self {
+        Self { target }
     }
 }
 

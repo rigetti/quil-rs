@@ -8,10 +8,14 @@ use indexmap::IndexMap;
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
 use pyo3::{
-    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit, exceptions::{
+    exceptions::{
         PyDeprecationWarning, PyIndexError, PyKeyError, PyNotImplementedError, PyTypeError,
         PyUserWarning, PyValueError,
-    }, prelude::*, sync::PyOnceLock, types::{IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyString, PyTuple},
+    },
+    prelude::*,
+    sync::PyOnceLock,
+    types::{IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyString, PyTuple},
+    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit,
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -2192,24 +2196,26 @@ impl<'a> TryFrom<&'a OwnedGateSignature> for GateSignature<'a> {
 }
 
 pickleable_new! {
+    impl Jump {
+        fn __new__(target: Target as TargetLike);
+    }
+}
+
+pickleable_new! {
     impl JumpWhen {
         fn __new__(
-            target: Target,
+            target: Target as TargetLike,
             condition: MemoryReference as MemoryReferenceLike,
-        ) -> JumpWhen {
-            Self::new(target, condition.into())
-        }
+        );
     }
 }
 
 pickleable_new! {
     impl JumpUnless {
         fn __new__(
-            target: Target,
+            target: Target as TargetLike,
             condition: MemoryReference as MemoryReferenceLike,
-        ) -> JumpUnless {
-            Self::new(target, condition.into())
-        }
+        );
     }
 }
 
@@ -2474,7 +2480,9 @@ impl Label {
 
         match self.target {
             Target::Fixed(ref name) => Ok(name.clone()),
-            Target::Placeholder(_) => Err(errors::ValueError::new_err("label `target` is not `Fixed`")),
+            Target::Placeholder(_) => {
+                Err(errors::ValueError::new_err("label `target` is not `Fixed`"))
+            }
         }
     }
 
@@ -5383,8 +5391,7 @@ enum LabelTargetLike {
     Existing(Target),
 }
 
-impl<'a, 'py> FromPyObject<'a, 'py> for LabelTargetLike
-{
+impl<'a, 'py> FromPyObject<'a, 'py> for LabelTargetLike {
     type Error = pyo3::PyErr;
 
     fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
@@ -5431,7 +5438,6 @@ impl From<TargetLike> for Target {
         }
     }
 }
-
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -5624,8 +5630,6 @@ mod stubs {
     impl_stub_type!(ComparisonOperandLike<'_> = ComparisonOperand | i64 | f64 | MemoryReferenceLike);
     impl_stub_type!(GateModifierDesignator = GateModifier | String);
     impl_stub_type!(FrameAttributeValueLike = AttributeValue | ExpressionLike);
-    impl_stub_enum!(TargetLike = Target | TargetPlaceholder | String);
-    impl_stub_type!(LabelTargetLike = Target | Label | String);
     impl_stub_type!(
         MemoryReferenceLike = MemoryReference | DeclarationAt | Declaration | (String, u64)
     );
@@ -5634,8 +5638,15 @@ mod stubs {
     impl_stub_enum!(QubitLike = Qubit | i64 | String | QubitPlaceholder);
     impl_stub_enum!(PragmaArgumentLike = PragmaArgument | String | u64);
 
-    // Expose some of these as type aliases. Note that these must be added to the module.
-    type_alias!("quil._quil.instructions", LabelTargetParameter = LabelTargetLike);
+    // See docs on `TargetLike` and `LabelTargetLike` for why these are separate types.
+    impl_stub_enum!(TargetLike = Target | String | TargetPlaceholder | Label);
+    impl_stub_type!(LabelTargetLike = TargetLike);
+
+    // Expose some of these as type aliases. Note: these must be added to the module in post_init.
+    type_alias!(
+        "quil._quil.instructions",
+        LabelTargetParameter = LabelTargetLike
+    );
     type_alias!(
         "quil._quil.instructions",
         MemoryReferenceDesignator = MemoryReferenceLike
