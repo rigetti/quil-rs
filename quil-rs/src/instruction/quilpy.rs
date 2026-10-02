@@ -3383,7 +3383,39 @@ pyo3_stub_gen::inventory::submit! {
             @typing.overload
             def __pow__(self, exponent: _quil.expression.Expression | builtins.str, modulo: None=None) -> PauliSum: ...
             @typing.overload
-            def __pow__(self, exponent: typing.Any, modulo: typing.Any) -> typing.NoReturn: ...
+            def __pow__(self, exponent: _quil.expression.Expression | builtins.str, modulo: None=None) -> PauliSum:
+                r"""Compute the power of this `PauliTerm`.
+
+                Note: This method additionally supports `float`, but cannot be typed as such
+                due a limitation within [the Python type system specification][type_spec]
+                concerning the [special case for `float` and `complex`][special_case].
+                Type checkers like `mypy` and Pyright implement that special case unsoundly
+                by treating `float := int | float` and `complex := int | float | complex`,
+                causing errors when diverging overloads dependent on `float` or `complex`.
+                In other words, if this specified the `exponent` could be a `float | complex`,
+                then those type checkers would report that they overlap with the `int` case.
+
+                If we don't `@overload` the integer case, when a user writes `term ** some_int`,
+                the type checker will say the result is a `PauliSum`,
+                even though it will actually be a single `PauliTerm`.
+                Because (non-Expression) integers are the more likely value to be used as an exponent,
+                and because users should (correctly) assume the result can be a single `PauliTerm`,
+                we choose to `@overload` the integer case and report that the result is a `PauliTerm`.
+
+                As a consequence, users who do write `term ** some_float` will get a type error.
+                They can ignore the type error by appending `# pyright:ignore[reportOperatorIssue]`,
+                but if they know the `float` can be represented as an `int`, they should cast it,
+                or wrap the `float` in an `Expression` to get a `PauliSum` result.
+
+                For more discussion, see:
+                https://discuss.python.org/t/clarifying-the-float-int-complex-special-case/54018/71
+
+                [type_spec]: https://typing.python.org/en/latest/spec/type-system.html
+                [special_case]: https://typing.python.org/en/latest/spec/special-types.html#special-cases-for-float-and-complex
+                """
+            @typing.overload
+            def __pow__(self, exponent: typing.Any, modulo: typing.Any) -> typing.NoReturn:
+                """Raising a `PauliTerm` with a `modulo` argument is not supported."""
         "#
     }
 }
