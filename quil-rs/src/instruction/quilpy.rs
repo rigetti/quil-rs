@@ -8,14 +8,10 @@ use indexmap::IndexMap;
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
 use pyo3::{
-    exceptions::{
+    BoundObject, CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit, exceptions::{
         PyDeprecationWarning, PyIndexError, PyKeyError, PyNotImplementedError, PyTypeError,
         PyUserWarning, PyValueError,
-    },
-    prelude::*,
-    sync::PyOnceLock,
-    types::{IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyString, PyTuple},
-    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit,
+    }, prelude::*, sync::PyOnceLock, types::{IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyString, PyTuple},
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -2275,8 +2271,12 @@ impl Load {
 )]
 #[pyfunction]
 #[pyo3(warn(message = "use `MemoryReference(...)` directly instead", category = PyDeprecationWarning))]
-fn unpack_classical_reg<'py>(obj: &Bound<'py, PyAny>) -> PyResult<MemoryReference> {
-    Ok(obj.extract()?)
+fn unpack_classical_reg<'py>(obj: &Bound<'py, PyAny>) -> PyResult<Bound<'py, MemoryReference>> {
+    if let Ok(value) = obj.cast::<MemoryReference>() {
+        Ok(value.to_owned())
+    } else {
+        MemoryReference::from(obj.extract::<MemoryReferenceLike>()?).into_pyobject(obj.py())
+    }
 }
 
 #[derive(FromPyObject)]
