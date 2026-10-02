@@ -6,27 +6,6 @@ use pyo3_stub_gen::PyStubType;
 
 use crate::quilpy::errors::QuilPyValueError;
 
-#[doc(hidden)]
-#[inline]
-pub(crate) fn aliased_impl<A, B, R>(
-    a: Option<A>,
-    b: Option<B>,
-    a_to_r: impl FnOnce(A) -> PyResult<R>,
-    b_to_r: impl FnOnce(B) -> PyResult<R>,
-    default: impl FnOnce() -> PyResult<R>,
-    name_a: &'static str,
-    name_b: &'static str,
-) -> PyResult<R> {
-    match (a, b) {
-        (Some(a), None) => a_to_r(a),
-        (None, Some(b)) => b_to_r(b),
-        (None, None) => default(),
-        (Some(_), Some(_)) => {
-            Err(QuilPyValueError::MutuallyExclusive(name_a.to_string(), name_b.to_string()).into())
-        }
-    }
-}
-
 /// Accept one of two mutually exclusive parameters, converting them to a single type.
 ///
 /// The first two arguments must be `Option` types.
@@ -36,6 +15,18 @@ pub(crate) fn aliased_impl<A, B, R>(
 ///
 /// If you need to convert the parameters, use a closure instead of just the parameter name.
 /// If you need to specify a different default value, provide a closure that returns a `PyResult`.
+///
+/// As a special case, you can set the default argument as `None` to get `PyResult<Option<_>>`,
+/// which will be `Ok(None)` if both parameters are `None` or `Ok(Some(_))` if not an `Err`;
+/// the other arguments, if not closures, will be wrapped in `Ok(Some(...))` automatically.
+/// In other words, these are all equivalent:
+///
+/// ```rust,ignore
+/// let _: Option<_> = aliased!(a, b, None)?;
+/// let _: Option<_> = aliased!(a,               |b| Ok(Some(b)), || Ok(None))?;
+/// let _: Option<_> = aliased!(|a| Ok(Some(a)),  b,              || Ok(None))?;
+/// let _: Option<_> = aliased!(|a| Ok(Some(a)), |b| Ok(Some(b)), || Ok(None))?;
+/// ```
 ///
 /// # Examples
 ///
@@ -83,25 +74,48 @@ macro_rules! aliased {
     (
         $(|)?$a:ident$(| $a_to_r:expr)?,
         $(|)?$b:ident$(| $b_to_r:expr)?
-    $(, || $default:expr)?) => {
+    $(, $($default:tt)*)?) => {
         $crate::quilpy::migrations::aliased_impl(
             $a,
             $b,
-            $crate::quilpy::migrations::aliased!(@conv |$a| $($a_to_r)?),
-            $crate::quilpy::migrations::aliased!(@conv |$b| $($b_to_r)?),
-            $crate::quilpy::migrations::aliased!(@conv || $($default)?),
+            $crate::quilpy::migrations::aliased!(@conv    [$($($default)*)?] |$a| $($a_to_r)?),
+            $crate::quilpy::migrations::aliased!(@conv    [$($($default)*)?] |$b| $($b_to_r)?),
+            $crate::quilpy::migrations::aliased!(@default [$($($default)*)?]),
             stringify!($a),
             stringify!($b),
         )
     };
 
-    (@conv |$x:ident|) => { |$x| Ok($x) };
-    (@conv |$x:ident| $x_to_r:expr) => { |$x| $x_to_r };
-    (@conv || $default:expr) => { || $default };
-    (@conv ||) => { || Ok(Default::default()) };
+    (@conv [None]        |$x:ident|        ) => { |$x| Ok(Some($x)) };
+    (@conv [$($d:expr)?] |$x:ident|        ) => { |$x| Ok($x) };
+    (@conv [$($d:expr)?] |$x:ident| $e:expr) => { |$x| $e };
+    (@default [None]            ) => { || Ok(None) };
+    (@default [|| $default:expr]) => { || $default };
+    (@default []                ) => { || Ok(Default::default()) };
 }
 
 pub(crate) use aliased;
+
+#[doc(hidden)]
+#[inline]
+pub(crate) fn aliased_impl<A, B, R>(
+    a: Option<A>,
+    b: Option<B>,
+    a_to_r: impl FnOnce(A) -> PyResult<R>,
+    b_to_r: impl FnOnce(B) -> PyResult<R>,
+    default: impl FnOnce() -> PyResult<R>,
+    name_a: &'static str,
+    name_b: &'static str,
+) -> PyResult<R> {
+    match (a, b) {
+        (Some(a), None) => a_to_r(a),
+        (None, Some(b)) => b_to_r(b),
+        (None, None) => default(),
+        (Some(_), Some(_)) => {
+            Err(QuilPyValueError::MutuallyExclusive(name_a.to_string(), name_b.to_string()).into())
+        }
+    }
+}
 
 /// A helper enum to migrate parameters from one signature to another.
 ///
@@ -132,10 +146,3 @@ impl<New: PyStubType, Old: PyStubType> PyStubType for Migrate<New, Old> {
         New::type_output() | Old::type_output()
     }
 }
-
-/// A type that accepts one of two types and will correctly provide type stub information.
-///
-/// This (currently) has the same implementation as `Migrate`, but is semantically distinct,
-/// in the sense that `Migrate` implies the `Old` type is deprecated and will be removed,
-/// whereas `Either` implies that the argument slot accepts either type and will continue to do so.
-pub(crate) type Either<New, Old> = Migrate<New, Old>;

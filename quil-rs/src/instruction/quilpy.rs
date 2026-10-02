@@ -29,14 +29,14 @@ use super::*;
 use crate::{
     expression::{
         consts::{IMAGINARY_UNIT, ONE, ZERO},
-        quilpy::{quil_exp, ExpressionArgs, ExpressionLike, QualifiedExpression},
+        quilpy::{quil_exp, ExpressionLike, QualifiedExpression},
     },
     instruction::gate::GateSignature,
     pickleable_new,
     quilpy::{
         aliased, deprecated_or_new, deprecated_param,
         errors::{self, PickleError},
-        impl_newargs, impl_to_quil, py_deprecated, singleton, IntoNewArgs, Migrate, NewArgs,
+        impl_newargs, impl_to_quil, py_deprecated, singleton, IntoNewArgs, Like, Migrate, NewArgs,
         NonZeroU64, Seq,
     },
     validation::identifier::IdentifierValidationError,
@@ -956,32 +956,39 @@ impl Arithmetic {
     }
 }
 
+impl_newargs!(ArithmeticOperandArgs = i64 | f64 | MemoryReference);
+
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl ArithmeticOperand {
-    #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.int | builtins.float | MemoryReference]", imports = ("builtins")))]
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+    fn __getnewargs__<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<NewArgs<'py, ArithmeticOperandArgs>> {
         match self {
-            Self::LiteralInteger(value) => (value,).into_pyobject(py),
-            Self::LiteralReal(value) => (value,).into_pyobject(py),
-            Self::MemoryReference(value) => (value.clone(),).into_pyobject(py),
+            Self::LiteralInteger(value) => (value,).into_new_args(py),
+            Self::LiteralReal(value) => (value,).into_new_args(py),
+            Self::MemoryReference(value) => (value.clone(),).into_new_args(py),
         }
     }
 }
+
+impl_newargs!(AttributeValueArgs = String | Expression);
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl AttributeValue {
-    #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.str | Expression]", imports = ("builtins")))]
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<NewArgs<'py, AttributeValueArgs>> {
         match self {
-            Self::String(value) => (value.clone(),).into_pyobject(py),
-            Self::Expression(value) => (value.clone(),).into_pyobject(py),
+            Self::String(value) => (value.clone(),).into_new_args(py),
+            Self::Expression(value) => (value.clone(),).into_new_args(py),
         }
     }
 }
+
+impl_newargs!(BinaryOperandArgs = i64 | MemoryReference);
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -992,11 +999,10 @@ impl BinaryOperand {
         operand.into()
     }
 
-    #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.int | MemoryReference]", imports = ("builtins")))]
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<NewArgs<'py, BinaryOperandArgs>> {
         match self {
-            Self::LiteralInteger(value) => (value,).into_pyobject(py),
-            Self::MemoryReference(value) => (value.clone(),).into_pyobject(py),
+            Self::LiteralInteger(value) => (value,).into_new_args(py),
+            Self::MemoryReference(value) => (value.clone(),).into_new_args(py),
         }
     }
 }
@@ -1037,16 +1043,20 @@ impl BinaryLogic {
     }
 }
 
+impl_newargs!(ComparisonOperandArgs = i64 | f64 | MemoryReference);
+
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl ComparisonOperand {
-    #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.int | builtins.float | MemoryReference]", imports = ("builtins")))]
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+    fn __getnewargs__<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<NewArgs<'py, ComparisonOperandArgs>> {
         match self {
-            Self::LiteralInteger(value) => (value,).into_pyobject(py),
-            Self::LiteralReal(value) => (value,).into_pyobject(py),
-            Self::MemoryReference(value) => (value.clone(),).into_pyobject(py),
+            Self::LiteralInteger(value) => (value,).into_new_args(py),
+            Self::LiteralReal(value) => (value,).into_new_args(py),
+            Self::MemoryReference(value) => (value.clone(),).into_new_args(py),
         }
     }
 }
@@ -1464,7 +1474,7 @@ impl Declaration {
 
     /// Get the DECLARE directive as a dictionary.
     #[gen_stub(override_return_type(
-            type_repr = "builtins.dict[str, builtins.list[builtins.tuple[builtins.int, builtins.str]] | builtins.str | builtins.int | None]",
+            type_repr = "builtins.dict[builtins.str, builtins.list[builtins.tuple[builtins.int, builtins.str]] | builtins.str | builtins.int | None]",
             imports = ("builtins")
     ))]
     fn asdict<'py>(&self, py: Python<'py>) -> PyResult<Py<PyDict>> {
@@ -1907,15 +1917,19 @@ impl pyo3_stub_gen::PyStubType for ExternPragmaMap {
     }
 }
 
+impl_newargs!(ExternParameterTypeArgs = ScalarType | Vector);
+
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl ExternParameterType {
-    #[gen_stub(override_return_type(type_repr = "builtins.tuple[ScalarType | Vector]", imports = ("builtins")))]
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+    fn __getnewargs__<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<NewArgs<'py, ExternParameterTypeArgs>> {
         match self {
-            Self::Scalar(value) | Self::VariableLengthVector(value) => (*value,).into_pyobject(py),
-            Self::FixedLengthVector(value) => (value.clone(),).into_pyobject(py),
+            Self::Scalar(value) | Self::VariableLengthVector(value) => (*value,).into_new_args(py),
+            Self::FixedLengthVector(value) => (value.clone(),).into_new_args(py),
         }
     }
 }
@@ -2112,16 +2126,12 @@ impl GateModifier {
     }
 }
 
-impl_newargs!(GateSpecificationArgs = Vec<Vec<ExpressionArgs>> | Vec<i64> | PauliSum | DefGateSequence);
+impl_newargs!(GateSpecificationArgs = Vec<Vec<Expression>> | Vec<i64> | PauliSum | DefGateSequence);
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl GateSpecification {
-    #[gen_stub(override_return_type(
-        type_repr = "builtins.tuple[builtins.list[builtins.list[expression.Expression]] | builtins.list[builtins.int] | PauliSum | DefGateSequence]",
-        imports = ("quil._quil.expression")
-    ))]
     fn __getnewargs__<'py>(
         &self,
         py: Python<'py>,
@@ -2555,22 +2565,15 @@ impl MeasureCalibrationIdentifier {
         Self::new(name, qubit, target)
     }
 
-    #[gen_stub(override_return_type(
-        type_repr = "builtins.tuple[
-            builtins.tuple[Qubit, typing.Optional[builtins.str]],
-            builtins.dict[builtins.str, typing.Optional[builtins.str]]
-        ]",
-        imports = ("builtins", "typing")
-    ))]
-    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+    fn __getnewargs_ex__(&self) -> ((Qubit, Option<String>), HashMap<String, Option<String>>) {
         let Self {
             name,
             qubit,
             target,
         } = self;
-        let positional: Bound<'py, PyTuple> = (qubit.clone(), target.clone()).into_pyobject(py)?;
-        let keyword: Bound<'py, PyDict> = [("name", name)].into_py_dict(py)?;
-        (positional, keyword).into_pyobject(py)
+        let positional = (qubit.clone(), target.clone());
+        let keyword = HashMap::from([("name".to_string(), name.clone())]);
+        (positional, keyword)
     }
 }
 
@@ -2598,35 +2601,24 @@ impl Measurement {
         name: Option<String>,
         classical_reg: Option<MemoryReferenceLike>,
     ) -> PyResult<Self> {
-        let target = match (target, classical_reg) {
-            (Some(_), Some(_)) => {
-                return Err(errors::ValueError::new_err(
-                    "`target` and `classical_reg` are mutually exclusive",
-                ));
-            }
-            (Some(t), None) => Some(MemoryReference::from(t)),
-            (None, Some(t)) => Some(MemoryReference::from(t)),
-            (None, None) => None,
-        };
+        let target = aliased!(target, classical_reg, None)?.map(Into::into);
         Ok(Self::new(name, qubit.into(), target))
     }
 
-    #[gen_stub(override_return_type(
-        type_repr = "builtins.tuple[
-            builtins.tuple[Qubit, typing.Optional[MemoryReference]],
-            builtins.dict[builtins.str, typing.Optional[builtins.str]]
-        ]",
-        imports = ("builtins", "typing")
-    ))]
-    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+    fn __getnewargs_ex__(
+        &self,
+    ) -> (
+        (Qubit, Option<MemoryReference>),
+        HashMap<String, Option<String>>,
+    ) {
         let Self {
             name,
             qubit,
             target,
         } = self;
-        let positional: Bound<'py, PyTuple> = (qubit.clone(), target.clone()).into_pyobject(py)?;
-        let keyword: Bound<'py, PyDict> = [("name", name)].into_py_dict(py)?;
-        (positional, keyword).into_pyobject(py)
+        let positional = (qubit.clone(), target.clone());
+        let keyword = HashMap::from([("name".to_string(), name.clone())]);
+        (positional, keyword)
     }
 }
 
@@ -2694,9 +2686,6 @@ impl MemoryReference {
         Ok(Self { name, index })
     }
 
-    // This is implemented manually (rather than with `pickleable_new!`)
-    // because the Rust struct doesn't include `declared_size`.
-    #[gen_stub(override_return_type(type_repr = "tuple[str, int]"))]
     fn __getnewargs__(&self) -> (String, u64) {
         (self.name.clone(), self.index)
     }
@@ -2972,18 +2961,10 @@ impl Pulse {
         Ok(Self::new(blocking, frame, waveform))
     }
 
-    #[gen_stub(override_return_type(
-        type_repr = "builtins.tuple[
-            builtins.tuple[FrameIdentifier, WaveformInvocation],
-            builtins.dict[builtins.str, builtins.bool]
-        ]",
-        imports = ("builtins",)
-    ))]
-    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        let positional: Bound<'py, PyTuple> =
-            (self.frame.clone(), self.waveform.clone()).into_pyobject(py)?;
-        let keyword: Bound<'py, PyDict> = [("blocking", self.blocking)].into_py_dict(py)?;
-        (positional, keyword).into_pyobject(py)
+    fn __getnewargs_ex__(&self) -> ((FrameIdentifier, WaveformInvocation), HashMap<String, bool>) {
+        let positional = (self.frame.clone(), self.waveform.clone());
+        let keyword = HashMap::from([("blocking".to_string(), self.blocking)]);
+        (positional, keyword)
     }
 
     #[pyo3(warn(message = "use `not blocking` instead", category = PyDeprecationWarning))]
@@ -3024,22 +3005,19 @@ impl Capture {
         Ok(Self::new(blocking, frame, memory_region.into(), kernel))
     }
 
-    #[gen_stub(override_return_type(
-        type_repr = "builtins.tuple[
-            builtins.tuple[FrameIdentifier, WaveformInvocation, MemoryReference],
-            builtins.dict[builtins.str, builtins.bool]
-        ]",
-        imports = ("builtins",)
-    ))]
-    fn __getnewargs_ex__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        let positional: Bound<'py, PyTuple> = (
+    fn __getnewargs_ex__(
+        &self,
+    ) -> (
+        (FrameIdentifier, WaveformInvocation, MemoryReference),
+        HashMap<String, bool>,
+    ) {
+        let positional = (
             self.frame.clone(),
             self.waveform.clone(),
             self.memory_reference.clone(),
-        )
-            .into_pyobject(py)?;
-        let keyword: Bound<'py, PyDict> = [("blocking", self.blocking)].into_py_dict(py)?;
-        (positional, keyword).into_pyobject(py)
+        );
+        let keyword = HashMap::from([("blocking".to_string(), self.blocking)]);
+        (positional, keyword)
     }
 
     #[pyo3(warn(message = "use `not capture.blocking` instead", category = PyDeprecationWarning))]
@@ -3638,13 +3616,6 @@ impl PauliTerm {
         }
     }
 
-    #[gen_stub(override_return_type(
-        type_repr = "builtins.tuple[
-            builtins.list[builtins.tuple[PauliGate, builtins.str]],
-            _quil.expression.Expression
-        ]",
-        imports = ("quil._quil.expression", "builtins")
-    ))]
     fn __getnewargs__(&self) -> (Vec<(PauliGate, String)>, QualifiedExpression) {
         (self.arguments.clone(), self.expression.clone().into())
     }
@@ -4873,35 +4844,40 @@ impl PauliSum {
     }
 }
 
-#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl PragmaArgument {
-    #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.int | builtins.str]", imports = ("builtins")))]
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
-        match self {
-            Self::Identifier(value) => (value.clone(),).into_pyobject(py),
-            Self::Integer(value) => (*value,).into_pyobject(py),
+#[derive(FromPyObject)]
+pub(crate) enum PragmaArgumentLike {
+    PragmaArgument(PragmaArgument),
+    Identifier(String),
+    Integer(u64),
+}
+
+impl From<PragmaArgumentLike> for PragmaArgument {
+    fn from(value: PragmaArgumentLike) -> Self {
+        match value {
+            PragmaArgumentLike::PragmaArgument(arg) => arg,
+            PragmaArgumentLike::Identifier(id) => PragmaArgument::Identifier(id),
+            PragmaArgumentLike::Integer(int) => PragmaArgument::Integer(int),
         }
     }
 }
 
-/// Accept an existing `PragmaArgument`, or a bare `int`/`str`,
-/// converting the latter into the appropriate variant.
-impl<'a, 'py> FromPyObject<'a, 'py> for PragmaArgument {
-    type Error = PyErr;
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl PragmaArgument {
+    #[pyo3(signature = (arg, /))]
+    #[new]
+    fn __new__(arg: PragmaArgumentLike) -> Self {
+        arg.into()
+    }
 
-    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-        if let Ok(value) = obj.cast::<PragmaArgument>() {
-            Ok(value.get().clone())
-        } else if let Ok(value) = obj.cast::<PyInt>() {
-            Ok(PragmaArgument::Integer(value.extract::<u64>()?))
-        } else if let Ok(value) = obj.cast::<PyString>() {
-            Ok(PragmaArgument::Identifier(value.extract::<String>()?))
-        } else {
-            Err(PyTypeError::new_err(
-                "expected a PragmaArgument, int, or str",
-            ))
+    fn __getnewargs__<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<NewArgs<'py, Like<PragmaArgumentLike, Self>>> {
+        match self {
+            Self::Identifier(value) => value.clone().into_new_args(py),
+            Self::Integer(value) => (*value).into_new_args(py),
         }
     }
 }
@@ -4919,11 +4895,11 @@ impl<'a, 'py> FromPyObject<'a, 'py> for PragmaArgument {
 impl Pragma {
     /// Initialize a new PRAGMA instruction.
     #[new]
-    #[pyo3(signature = (name, args = Vec::new(), data = None, *, command = None, freeform_string = None))]
+    #[pyo3(signature = (name, args = Seq::new(), data = None, *, command = None, freeform_string = None))]
     fn __new__(
         py: Python<'_>,
         name: String,
-        args: Vec<PragmaArgument>,
+        args: Seq<PragmaArgumentLike, PragmaArgument>,
         data: Option<String>,
         command: Option<String>,
         freeform_string: Option<String>,
@@ -4943,7 +4919,7 @@ impl Pragma {
                 some => some,
             };
 
-        Ok(Self::new(name, args, data))
+        Ok(Self::new(name, args.into(), data))
     }
 
     fn __getnewargs__(&self) -> (String, Vec<PragmaArgument>, Option<String>) {
@@ -5011,8 +4987,7 @@ impl Qubit {
         qubit.into()
     }
 
-    #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.int | builtins.str | QubitPlaceholder]", imports = ("builtins")))]
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<NewArgs<'py, Qubit>> {
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<NewArgs<'py, QubitLike>> {
         match self {
             Self::Fixed(value) => NewArgs::new(py, *value),
             Self::Variable(value) => NewArgs::new(py, value),
@@ -5530,9 +5505,8 @@ impl WaveformInvocation {
 
 #[cfg(feature = "stubs")]
 mod stubs {
+    use crate::quilpy::impl_stub_enum;
     use pyo3_stub_gen::{impl_stub_type, type_alias};
-
-    // pyo3_stub_gen::export_verbatim!("quil.instructions", "Halt");
 
     #[allow(clippy::wildcard_imports)]
     use super::*;
@@ -5548,7 +5522,8 @@ mod stubs {
     );
     impl_stub_type!(PauliArg = Qubit | i64 | String);
     impl_stub_type!(PyMemRef<'_> = MemoryReferenceLike);
-    impl_stub_type!(QubitLike = Qubit | i64 | String | QubitPlaceholder);
+    impl_stub_enum!(QubitLike = Qubit | i64 | String | QubitPlaceholder);
+    impl_stub_enum!(PragmaArgumentLike = PragmaArgument | String | u64);
 
     // Expose some of these as type aliases. Note that these must be added to the module.
     type_alias!("quil._quil.instructions", LabelTargetParameter = LabelTargetLike<'_>);
@@ -5556,6 +5531,9 @@ mod stubs {
         "quil._quil.instructions",
         MemoryReferenceDesignator = MemoryReferenceLike
     );
-    type_alias!("quil._quil.instructions", QubitDesignator = QubitLike);
+    type_alias!(
+        "quil._quil.instructions",
+        QubitDesignator = Qubit | QubitLike
+    );
     type_alias!("quil._quil.instructions", PauliTargetDesignator = PauliArg);
 }
