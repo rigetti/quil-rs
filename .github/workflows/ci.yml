@@ -52,6 +52,49 @@ jobs:
       - name: Check for unmarked Breaking Changes
         run: cargo make --cwd quil-rs check-api
 
+  test-plotting:
+    name: Test quil-plotting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: Swatinem/rust-cache@v2
+      - uses: astral-sh/setup-uv@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Check quil-plotting is pinned to this quil
+        run: python .github/scripts/plotting_version.py --check
+
+      - name: Build and install quil
+        run: |
+          uv tool install maturin
+          maturin build --features python --release --out dist
+          pip install dist/*.whl
+        working-directory: quil-rs
+
+      - name: Install quil-plotting
+        run: pip install './quil-plotting[dev]'
+
+      - name: Lint
+        run: |
+          ruff check .
+          ruff format --check .
+        working-directory: quil-plotting
+
+      - name: Type check
+        run: mypy quil/plotting
+        working-directory: quil-plotting
+
+      - name: Run tests
+        run: pytest
+        working-directory: quil-plotting
+
+      # Runs outside the checkout so the source tree cannot satisfy the import.
+      - name: Smoke-test the installed import
+        run: cd "$RUNNER_TEMP" && python -c "from quil.plotting import PlottableProgramCircuit"
+
   test:
     name: Run Tests
     strategy:

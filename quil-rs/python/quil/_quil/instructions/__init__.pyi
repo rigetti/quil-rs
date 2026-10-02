@@ -1073,6 +1073,16 @@ class Instruction:
             # note the `()` -- these aren't like Python's enumerations!
     ```
     """
+    @property
+    def name(self) -> builtins.str:
+        r"""
+        The name of the operation the instruction performs.
+        
+        For instructions that define or reference something nameable - a
+        [`Gate`][Instruction::Gate], a [`DEFCAL`][Instruction::CalibrationDefinition], a
+        [`DECLARE`][Instruction::Declaration]d memory region, and so on - this is that name.
+        Everything else returns its fixed Quil mnemonic, e.g. `"HALT"` or `"JUMP-WHEN"`.
+        """
     def __getnewargs__(self) -> builtins.tuple[()] | builtins.tuple[Arithmetic | BinaryLogic | Call | Capture | CalibrationDefinition | CircuitDefinition | Comparison | Convert | Declaration | Delay | Exchange | Fence | FrameDefinition | Gate | GateDefinition | Include | Jump | JumpUnless | JumpWhen | Label | Load | MeasureCalibrationDefinition | Measurement | Move | Pragma | Pulse | RawCapture | Reset | SetFrequency | SetPhase | SetScale | ShiftFrequency | ShiftPhase | Store | SwapPhases | UnaryLogic | WaveformDefinition]: ...
     def __repr__(self) -> builtins.str:
         r"""
