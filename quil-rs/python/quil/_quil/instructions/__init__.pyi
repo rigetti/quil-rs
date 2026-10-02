@@ -110,7 +110,7 @@ __all__ = [
     "unpack_classical_reg",
 ]
 
-LabelTargetParameter: TypeAlias = builtins.str  |  Label  |  Target
+LabelTargetParameter: TypeAlias = builtins.str  |  TargetPlaceholder  |  Label
 MemoryReferenceDesignator: TypeAlias = MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]
 PauliTargetDesignator: TypeAlias = Qubit  |  builtins.int  |  builtins.str
 QubitDesignator: TypeAlias = Qubit  |  builtins.int  |  builtins.str  |  QubitPlaceholder
@@ -1525,7 +1525,7 @@ class Jump(Instruction):
     def target(self, value: Target) -> None: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[Target]: ...
-    def __new__(cls, target: Target) -> Jump: ...
+    def __new__(cls, target: Target  |  builtins.str  |  TargetPlaceholder  |  Label) -> Jump: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1550,7 +1550,7 @@ class JumpUnless(Instruction):
     def target(self, value: Target) -> None: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[Target, MemoryReference]: ...
-    def __new__(cls, target: Target, condition: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> JumpUnless: ...
+    def __new__(cls, target: Target  |  builtins.str  |  TargetPlaceholder  |  Label, condition: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> JumpUnless: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1575,7 +1575,7 @@ class JumpWhen(Instruction):
     def target(self, value: Target) -> None: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[Target, MemoryReference]: ...
-    def __new__(cls, target: Target, condition: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> JumpWhen: ...
+    def __new__(cls, target: Target  |  builtins.str  |  TargetPlaceholder  |  Label, condition: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> JumpWhen: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1591,18 +1591,38 @@ class JumpWhen(Instruction):
 
 class Label(Instruction):
     @property
+    def label(self) -> Target:
+        r"""
+        Get a copy of the `Label`'s `target`.
+        
+        This is an alias of `target`, the canonical name of this property.
+        """
+    @property
     def name(self) -> builtins.str:
         r"""
         Get the `Label`'s name, assuming it is a `Fixed` target.
         
         This is deprecated because a `Label`'s `target` might not be `Fixed`.
+        It is provided for backwards compatibility with PyQuil v4.
+        
+        Users can use the following pattern to check if the `Label`'s `Target` is `Fixed`,
+        and if so, get its name:
+        
+        ```python
+        match some_label:
+            case Label(target=Target.Fixed(name)):
+                print(f"Label has a fixed target: {name}")
+            case Label(target=Target.Placeholder(_)):
+                print("Label has a placeholder target")
+        ```
         """
     @property
     def target(self) -> Target: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[Target]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, target: typing.Optional[builtins.str  |  Label  |  Target] = None, *, placeholder: typing.Optional[builtins.bool] = None) -> Label:
+    def __match_args__(self) -> tuple[builtins.str]: ...
+    def __new__(cls, target: typing.Optional[Target  |  builtins.str  |  TargetPlaceholder  |  Label] = None, *, placeholder: typing.Optional[builtins.bool] = None) -> Label:
         r"""
         Create a new `Label`.
         
@@ -2175,11 +2195,50 @@ class PauliTerm:
         and only reference real numeric literals or parameters.
         """
     @typing.overload
-    def __pow__(self, exponent: builtins.int, modulo: None = None) -> PauliTerm: ...
+    def __pow__(self, exponent: builtins.int, modulo: None = None) -> PauliTerm:
+        r"""
+        Compute an integer power of this `PauliTerm`.
+        
+        Integer exponents can be computed efficiently into a single `PauliTerm`.
+        See the documentation on [`PauliTerm::__pow__`] for more information.
+        """
     @typing.overload
-    def __pow__(self, exponent: _quil.expression.Expression | builtins.str, modulo: None = None) -> PauliSum: ...
+    def __pow__(self, exponent: _quil.expression.Expression | builtins.str, modulo: None = None) -> PauliSum:
+        r"""
+        Compute the power of this `PauliTerm`.
+        
+        Note: This method additionally supports `float`, but cannot be typed as such
+        due a limitation within [the Python type system specification][type_spec]
+        concerning the [special case for `float` and `complex`][special_case].
+        Type checkers like `mypy` and Pyright implement that special case unsoundly
+        by treating `float := int | float` and `complex := int | float | complex`,
+        causing errors when diverging overloads dependent on `float` or `complex`.
+        In other words, if this specified the `exponent` could be a `float | complex`,
+        then those type checkers would report that they overlap with the `int` case.
+        
+        If we don't `@overload` the integer case, when a user writes `term ** some_int`,
+        the type checker will say the result is a `PauliSum`,
+        even though it will actually be a single `PauliTerm`.
+        Because (non-Expression) integers are the more likely value to be used as an exponent,
+        and because users should (correctly) assume the result can be a single `PauliTerm`,
+        we choose to `@overload` the integer case and report that the result is a `PauliTerm`.
+        
+        As a consequence, users who do write `term ** some_float` will get a type error.
+        They can ignore the type error by appending `# pyright:ignore[reportOperatorIssue]`,
+        but if they know the `float` can be represented as an `int`, they should cast it,
+        or wrap the `float` in an `Expression` to get a `PauliSum` result.
+        
+        For more discussion, see:
+        https://discuss.python.org/t/clarifying-the-float-int-complex-special-case/54018/71
+        
+        [type_spec]: https://typing.python.org/en/latest/spec/type-system.html
+        [special_case]: https://typing.python.org/en/latest/spec/special-types.html#special-cases-for-float-and-complex
+        """
     @typing.overload
-    def __pow__(self, exponent: typing.Any, modulo: typing.Any) -> typing.NoReturn: ...
+    def __pow__(self, exponent: typing.Any, modulo: typing.Any) -> typing.NoReturn:
+        r"""
+        Raising a `PauliTerm` with a `modulo` argument is not supported.
+        """
     @typing.overload
     def __pow__(self, exponent: int | str | _quil.expression.Expression, modulo: typing.Optional[typing.Any] = None) -> PauliTerm | PauliSum:
         r"""
@@ -2812,7 +2871,8 @@ class SwapPhases(Instruction):
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Target:
-    def __getnewargs__(self) -> builtins.tuple[builtins.str | TargetPlaceholder]: ...
+    def __getnewargs__(self) -> builtins.tuple[builtins.str  |  TargetPlaceholder  |  Label]: ...
+    def __new__(cls, target: Target  |  builtins.str  |  TargetPlaceholder  |  Label) -> Target: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
