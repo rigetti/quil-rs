@@ -1,4 +1,5 @@
 import inspect
+import itertools
 import pickle
 from typing import Optional
 
@@ -449,3 +450,32 @@ def test_defgate_sequence_expansion_with_error_handling():
 
     with pytest.raises(BaseException):
         _, _ = program.expand_defgate_sequences_with_source_map(predicate=filter_fn)
+
+
+def test_parse_heavy_nesting():
+    """We should be able to _fail_ at parsing a heavily-nested program without crashing the process.
+
+    If the parser gets smarter, we might need to come up with a different way to overflow the stack.
+    """
+    n = 1
+    while n < 1_000_000_000:
+        if n > 1_000:
+            pytest.xfail(
+                reason="Deep nesting crashes the process due to stack overflow."
+                "This needs to be fixed by setting a recursion limit in the parser."
+            )
+
+        program_text = f"RX{'':(<{n}}1.0{'':)>{n}} 0\n"
+        try:
+            pgm = Program.parse(program_text)
+        except QuilError:
+            return
+
+        assert isinstance(g := pgm.instructions[0], Gate)
+        assert g.to_quil() == "RX(1) 0"
+        assert float(g.parameters[0]) == 1.0
+
+        n *= 10
+
+    assert False, "Did not raise a QuilError for deeply nested expression."
+
