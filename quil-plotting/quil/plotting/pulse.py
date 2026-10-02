@@ -123,8 +123,8 @@ class PlottablePulse(PlottablePulseEvent):
         return {
             "p": index,
             "s": self.waveform_id,
-            "t0": short(self.start_time),
-            "t1": short(self.start_time + self.duration),
+            "t0": self.start_time,
+            "t1": self.start_time + self.duration,
             "b": lane,
             "kr": short(lane_fraction * self.amplitude(frame_scaled) / normalization),
             "label": label,
@@ -182,7 +182,7 @@ class PlottableFrameUpdate(PlottablePulseEvent):
         # color group, so both kinds of record share the one field the legend
         # and its selection are built on.
         return {
-            "t": short(self.start_time),
+            "t": self.start_time,
             "b": lane,
             "frame": self.frame.name,
             "channel": self.channel_type,
@@ -221,8 +221,8 @@ class PlottableRawCapture(PlottablePulseEvent):
             The necessary data for Altair to plot this capture.
         """
         return {
-            "t": short(self.start_time),
-            "t2": short(self.start_time + self.duration),
+            "t": self.start_time,
+            "t2": self.start_time + self.duration,
             "b": lane,
             "b2": lane + lane_fraction,
             "label": label,

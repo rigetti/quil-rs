@@ -371,8 +371,14 @@ class PlottableWaveformCache:
         """
         records = []
         for waveform_id, waveform in enumerate(self.table):
-            ts = round_sig(waveform.ts)
-            iqs = round_sig(waveform.iqs.real) + 1j * round_sig(waveform.iqs.imag)
+            ts, iqs = waveform.ts, waveform.iqs
+            # Hold the last sample for its full period, so a pulse ends where
+            # the next one on its frame begins rather than one sample early.
+            if len(iqs):
+                ts = np.append(ts, len(iqs) / waveform.sample_rate)
+                iqs = np.append(iqs, iqs[-1])
+            ts = round_sig(ts)
+            iqs = round_sig(iqs.real) + 1j * round_sig(iqs.imag)
             ts, iqs = compress_constant_runs(ts, iqs)
             if max_points is not None:
                 ts, iqs = decimate_to_max_points(ts, iqs, max_points)
