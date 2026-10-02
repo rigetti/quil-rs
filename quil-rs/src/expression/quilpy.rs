@@ -188,13 +188,16 @@ pub(crate) mod stubs {
 
     #[allow(clippy::wildcard_imports)]
     use super::*;
+    use std::collections::HashSet;
 
     impl PyStubType for QualifiedExpression {
         fn type_output() -> TypeInfo {
-            TypeInfo::with_module(
-                "_quil.expression.Expression",
-                "quil._quil.expression".into(),
-            )
+            TypeInfo {
+                name: "_quil.expression.Expression".to_string(),
+                source_module: None,
+                import: HashSet::from(["quil._quil.expression".into()]),
+                type_refs: HashMap::new(),
+            }
         }
     }
 

@@ -66,7 +66,8 @@ impl Quil for Pragma {
         frozen,
         hash,
         skip_from_py_object
-    )
+    ),
+    derive(pyo3::FromPyObject)
 )]
 pub enum PragmaArgument {
     Identifier(String),
