@@ -179,7 +179,7 @@ class TestTermPower:
     def test_expr(self, t_2_X0: PauliTerm):
         k = Expression.parse("2*pi + 1")
         # TODO: this may justify making Expression work like Instruction, as a class hierarchy.
-        exp_i_pi_k = Expression.FunctionCall(quil_exp(1.0j * Expression.Pi() * k))
+        exp_i_pi_k = quil_exp(1.0j * Expression.Pi() * k)
         a = (1 + exp_i_pi_k) / 2
         b = (1 - exp_i_pi_k) / 2
         c_pow_k = t_2_X0.expression**k
@@ -196,7 +196,16 @@ class TestTermPower:
             ), f"{t0.expression.to_quil()} != {t1.expression.to_quil()}"
 
     def test_int_vs_float(self, t_2_X0: PauliTerm):
-        assert t_2_X0**3 == t_2_X0**3.0
+        """Small float exponents that can be represented exactly as an integer
+        should be treated the same as integer exponents,
+        returning a `PauliTerm` with a simplified coefficient.
+
+        Note that static type checkers will report an error for the float exponent;
+        see the type stubs for `PauliTerm.__pow__` for details.
+        """
+        to_int_power = t_2_X0**3
+        to_float_power = t_2_X0**3.0  # pyright:ignore[reportOperatorIssue]
+        assert to_int_power == to_float_power
 
 
 class TestSumConstructor:
