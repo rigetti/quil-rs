@@ -272,13 +272,13 @@ impl Expression {
 
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<NewArgs<'py, ExpressionArgs>> {
         match self {
-            Self::Address(value) => value.clone().into_new_args(py),
-            Self::FunctionCall(value) => value.clone().into_new_args(py),
-            Self::Infix(value) => value.clone().into_new_args(py),
-            Self::Number(value) => value.into_new_args(py),
-            Self::PiConstant() => Self::PiConstant().into_new_args(py),
-            Self::Prefix(value) => value.clone().into_new_args(py),
-            Self::Variable(value) => value.into_new_args(py),
+            Self::Address(value) => value.clone().into_newargs(py),
+            Self::FunctionCall(value) => value.clone().into_newargs(py),
+            Self::Infix(value) => value.clone().into_newargs(py),
+            Self::Number(value) => value.into_newargs(py),
+            Self::PiConstant() => Self::PiConstant().into_newargs(py),
+            Self::Prefix(value) => value.clone().into_newargs(py),
+            Self::Variable(value) => value.into_newargs(py),
         }
     }
 

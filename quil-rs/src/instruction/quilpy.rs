@@ -8,7 +8,7 @@ use indexmap::IndexMap;
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
 use pyo3::{
-    BoundObject, CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit, exceptions::{
+    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit, exceptions::{
         PyDeprecationWarning, PyIndexError, PyKeyError, PyNotImplementedError, PyTypeError,
         PyUserWarning, PyValueError,
     }, prelude::*, sync::PyOnceLock, types::{IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyString, PyTuple},
@@ -963,9 +963,9 @@ impl ArithmeticOperand {
         py: Python<'py>,
     ) -> PyResult<NewArgs<'py, ArithmeticOperandArgs>> {
         match self {
-            Self::LiteralInteger(value) => (value,).into_new_args(py),
-            Self::LiteralReal(value) => (value,).into_new_args(py),
-            Self::MemoryReference(value) => (value.clone(),).into_new_args(py),
+            Self::LiteralInteger(value) => (value,).into_newargs(py),
+            Self::LiteralReal(value) => (value,).into_newargs(py),
+            Self::MemoryReference(value) => (value.clone(),).into_newargs(py),
         }
     }
 }
@@ -978,8 +978,8 @@ impl_newargs!(AttributeValueArgs = String | Expression);
 impl AttributeValue {
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<NewArgs<'py, AttributeValueArgs>> {
         match self {
-            Self::String(value) => (value.clone(),).into_new_args(py),
-            Self::Expression(value) => (value.clone(),).into_new_args(py),
+            Self::String(value) => (value.clone(),).into_newargs(py),
+            Self::Expression(value) => (value.clone(),).into_newargs(py),
         }
     }
 }
@@ -997,8 +997,8 @@ impl BinaryOperand {
 
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<NewArgs<'py, BinaryOperandArgs>> {
         match self {
-            Self::LiteralInteger(value) => (value,).into_new_args(py),
-            Self::MemoryReference(value) => (value.clone(),).into_new_args(py),
+            Self::LiteralInteger(value) => (value,).into_newargs(py),
+            Self::MemoryReference(value) => (value.clone(),).into_newargs(py),
         }
     }
 }
@@ -1050,9 +1050,9 @@ impl ComparisonOperand {
         py: Python<'py>,
     ) -> PyResult<NewArgs<'py, ComparisonOperandArgs>> {
         match self {
-            Self::LiteralInteger(value) => (value,).into_new_args(py),
-            Self::LiteralReal(value) => (value,).into_new_args(py),
-            Self::MemoryReference(value) => (value.clone(),).into_new_args(py),
+            Self::LiteralInteger(value) => (value,).into_newargs(py),
+            Self::LiteralReal(value) => (value,).into_newargs(py),
+            Self::MemoryReference(value) => (value.clone(),).into_newargs(py),
         }
     }
 }
@@ -1924,8 +1924,8 @@ impl ExternParameterType {
         py: Python<'py>,
     ) -> PyResult<NewArgs<'py, ExternParameterTypeArgs>> {
         match self {
-            Self::Scalar(value) | Self::VariableLengthVector(value) => (*value,).into_new_args(py),
-            Self::FixedLengthVector(value) => (value.clone(),).into_new_args(py),
+            Self::Scalar(value) | Self::VariableLengthVector(value) => (*value,).into_newargs(py),
+            Self::FixedLengthVector(value) => (value.clone(),).into_newargs(py),
         }
     }
 }
@@ -2133,10 +2133,10 @@ impl GateSpecification {
         py: Python<'py>,
     ) -> PyResult<NewArgs<'py, GateSpecificationArgs>> {
         match self {
-            Self::Matrix(value) => value.clone().into_new_args(py),
-            Self::Permutation(value) => value.into_new_args(py),
-            Self::PauliSum(value) => value.clone().into_new_args(py),
-            Self::Sequence(value) => value.clone().into_new_args(py),
+            Self::Matrix(value) => value.clone().into_newargs(py),
+            Self::Permutation(value) => value.into_newargs(py),
+            Self::PauliSum(value) => value.clone().into_newargs(py),
+            Self::Sequence(value) => value.clone().into_newargs(py),
         }
     }
 }
@@ -2287,34 +2287,6 @@ struct MemoryReferencePair {
     index: u64,
 }
 
-/// Used to create `Label`s from existing `Target`s as well as Python `str` instances.
-///
-/// Since a `Label`'s `target` can be either a `Target::Fixed` or a `Target::Placeholder`,
-/// and we implement `FromPyObject` for `Target` to accept either a `str` or a `Target`,
-/// we need a way to distinguish between the two cases when constructing a `Label` from Python.
-///
-/// See the documentation on `Label.__new__` for more information.
-enum LabelTargetLike<'a> {
-    Str(String),
-    Existing(&'a Target),
-}
-
-impl<'a, 'py> FromPyObject<'a, 'py> for LabelTargetLike<'a> {
-    type Error = pyo3::PyErr;
-
-    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-        if let Ok(value) = obj.cast::<PyString>() {
-            Ok(LabelTargetLike::Str(value.extract()?))
-        } else if let Ok(value) = obj.cast::<Target>() {
-            Ok(LabelTargetLike::Existing(value.get()))
-        } else if let Ok(value) = obj.cast::<Label>() {
-            Ok(LabelTargetLike::Existing(&value.get().target))
-        } else {
-            Err(PyTypeError::new_err("cannot convert to Target"))
-        }
-    }
-}
-
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Label {
@@ -2332,14 +2304,22 @@ impl Label {
     //   The former was always `Target::Fixed` while the latter was `Target::Placeholder`,
     //   meaning the class basically represented the `quil.Target` type anyway,
     //   and neither was the actual `quil.Label` class.
+    //   Instead, v4 had `quilbase.JumpTarget`, which subclassed `quil.Label`,
+    //   and took a `target` parameter of type `quilatom.Label` or `quilatom.LabelPlaceholder`,
+    //   making it the closest equivalent to this type.
     //
-    //   So, in v5, we get rid of those and tell users to just use the `Label` class directly,
-    //   and let them construct it from an existing `Target`, or from a `str` or `None`,
-    //   letting the constructor create the `Target::Fixed` or `Target::Placeholder` for them.
-    //   On the offchance they want to specify the `TargetPlaceholder`'s `base_label` explicitly,
+    //   In other words, these are the equivalents:
+    //   - `quilatom.Label` -> `quil.Target.Fixed`
+    //   - `quilatom.LabelPlaceholder` -> `quil.Target.Placeholder`
+    //   - `quilbase.JumpTarget` -> `quil.Label`
+    //
+    //   So, in v5, we tell users to just use the `quil.Label` class directly,
+    //   and let them construct it from an existing `quil.Target`, or from a `str` or `None`,
+    //   letting the constructor create the `Target.Fixed` or `Target.Placeholder` for them.
+    //   On the off-chance they want to specify the `TargetPlaceholder`'s `base_label` explicitly,
     //   they can pass a `str` and use the keyword-only `placeholder=True` argument.
     //
-    //   The old uses can be updated as follows:
+    //   The old `quil` uses can be updated as follows:
     //
     //   |  Deprecated Usage                      | Updated Usage                         |
     //   | ---------------------------------------| ------------------------------------- |
@@ -2349,12 +2329,24 @@ impl Label {
     //   | `LabelPlaceholder("L")`                | `Label("L", placeholder=True)`        |
     //   | `LabelPlaceholder(prefix="L")`         | `Label(target="L", placeholder=True)` |
     //   | `LabelPlaceholder(placeholder=p)`      | `Label(target=p)`                     |
-    //   | `LabelPlaceholder("L", placeholder=p)` | Raises TypeError (see below)          |
+    //   | `LabelPlaceholder("L", placeholder=p)` | Raises TypeError (see Note 1)         |
     //
-    //   Note: the `LabelPlaceholder("L", placeholder=p)` before was technically legal,
+    //   Note 1: the `LabelPlaceholder("L", placeholder=p)` before was technically legal,
     //   but the `prefix` was ignored, so it is equivalent to just giving a `placeholder`.
     //   Since we repurposed the `placeholder` name to be a `bool` for the new `Label` constructor,
     //   that usage is no longer valid, and will raise a `TypeError`.
+    //
+    //   The old PyQuil v4 uses of `Label` and `LabelPlaceholder` can be updated as follows:
+    //   | Deprecated Usage                       | Updated Usage                         |
+    //   | ---------------------------------------| ------------------------------------- |
+    //   | `JumpTarget(Label("jump-target"))`     | `Label("jump-target")` (see Note 2)   |
+    //   | `JumpTarget(Label("jump-target"))`     | `Label("jump-target")` (see Note 2)   |
+    //
+    //   Note 2: The following aliases exist within PyQuil v5:
+    //   - `quilatom.JumpTarget` -> `quil.Label`
+    //   - `quilatom.Label` -> `quil.Target.Fixed`
+    //   - `quilatom.LabelPlaceholder` -> `quil.Target.Placeholder`
+    //   so existing usage of `JumpTarget(Label("jump-target"))` will still work for now.
 
     /// Create a new `Label`.
     ///
@@ -2440,7 +2432,7 @@ impl Label {
             // Label(t), Label(t, placeholder=None), Label(target=t, placeholder=None)
             // Label(t), Label(t, placeholder=False), Label(target=t), Label(target=t, placeholder=False)
             // Label(t, placeholder=True), Label(target=t, placeholder=True)
-            (Some(LabelTargetLike::Existing(target)), _) => target.clone(),
+            (Some(LabelTargetLike::Existing(target)), Some(true) | Some(false) | None) => target,
         };
 
         Ok(Self { target })
@@ -2450,9 +2442,29 @@ impl Label {
         (self.target.clone(),)
     }
 
+    /// Get a copy of the `Label`'s `target`.
+    ///
+    /// This is an alias of `target`, the canonical name of this property.
+    #[getter]
+    fn label(&self) -> Target {
+        self.target.clone()
+    }
+
     /// Get the `Label`'s name, assuming it is a `Fixed` target.
     ///
     /// This is deprecated because a `Label`'s `target` might not be `Fixed`.
+    /// It is provided for backwards compatibility with PyQuil v4.
+    ///
+    /// Users can use the following pattern to check if the `Label`'s `Target` is `Fixed`,
+    /// and if so, get its name:
+    ///
+    /// ```python
+    /// match some_label:
+    ///     case Label(target=Target.Fixed(name)):
+    ///         print(f"Label has a fixed target: {name}")
+    ///     case Label(target=Target.Placeholder(_)):
+    ///         print("Label has a placeholder target")
+    /// ```
     #[getter]
     fn name(&self, py: Python<'_>) -> PyResult<String> {
         py_deprecated!(
@@ -2462,8 +2474,12 @@ impl Label {
 
         match self.target {
             Target::Fixed(ref name) => Ok(name.clone()),
-            Target::Placeholder(_) => Err(PyValueError::new_err("label `target` is not `Fixed`")),
+            Target::Placeholder(_) => Err(errors::ValueError::new_err("label `target` is not `Fixed`")),
         }
+    }
+
+    fn __match_args__(&self) -> (&str,) {
+        ("target",)
     }
 }
 
@@ -3374,14 +3390,14 @@ pyo3_stub_gen::inventory::submit! {
             @typing.overload
             def __radd__(self, other: PauliTerm | PauliSum) -> PauliSum: ...
 
-            # Note: Do **NOT** specify `float` or `complex` in these annotations,
-            # because Pyright special-cases them as if `int | float` and `int | float | complex`,
-            # both of which are unsound, causing overlapping overloads/errors.
-            # See: https://discuss.python.org/t/clarifying-the-float-int-complex-special-case/54018/71
             @typing.overload
-            def __pow__(self, exponent: builtins.int, modulo: None=None) -> PauliTerm: ...
-            @typing.overload
-            def __pow__(self, exponent: _quil.expression.Expression | builtins.str, modulo: None=None) -> PauliSum: ...
+            def __pow__(self, exponent: builtins.int, modulo: None=None) -> PauliTerm:
+                r"""Compute an integer power of this `PauliTerm`.
+
+                Integer exponents can be computed efficiently into a single `PauliTerm`.
+                See the documentation on [`PauliTerm::__pow__`] for more information.
+                """
+            # Note: Do **NOT** specify `float` or `complex` in these annotations!
             @typing.overload
             def __pow__(self, exponent: _quil.expression.Expression | builtins.str, modulo: None=None) -> PauliSum:
                 r"""Compute the power of this `PauliTerm`.
@@ -4908,8 +4924,8 @@ impl PragmaArgument {
         py: Python<'py>,
     ) -> PyResult<NewArgs<'py, Like<PragmaArgumentLike, Self>>> {
         match self {
-            Self::Identifier(value) => value.clone().into_new_args(py),
-            Self::Integer(value) => (*value).into_new_args(py),
+            Self::Identifier(value) => value.clone().into_newargs(py),
+            Self::Integer(value) => (*value).into_newargs(py),
         }
     }
 }
@@ -5351,33 +5367,93 @@ impl Store {
     }
 }
 
-impl<'a, 'py> FromPyObject<'a, 'py> for Target {
+/// Input type for constructing a `Label` from Python, permitting a `str` or existing `Target`.
+///
+/// This type has a [`FromPyObject`] implementation that makes it essentially this union:
+/// `LabelTargetLike: TypeAlias = str | Target | Label`;
+/// however, it explicitly distinguishes between a user passing a `str`
+/// versus passing an existing `Target` (or `Label` from which we can extract the `Target`).
+///
+/// See the documentation on `Label.__new__` for why this distinction is sometimes important.
+///
+/// If you just want to a `Target`, but want to allow strings, `Placeholder`s, and `Label`s,
+/// and you don't care to distinguish between how the user passed it, use [`TargetLike`] instead.
+enum LabelTargetLike {
+    Str(String),
+    Existing(Target),
+}
+
+impl<'a, 'py> FromPyObject<'a, 'py> for LabelTargetLike
+{
     type Error = pyo3::PyErr;
 
     fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-        if let Ok(value) = obj.cast::<Target>() {
-            Ok(value.get().clone())
+        if let Ok(value) = obj.cast::<PyString>() {
+            Ok(LabelTargetLike::Str(value.to_string()))
+        } else if let Ok(value) = obj.cast::<Target>() {
+            Ok(LabelTargetLike::Existing(value.get().clone()))
         } else if let Ok(value) = obj.cast::<Label>() {
-            Ok(value.get().target.clone())
-        } else if let Ok(value) = obj.cast::<TargetPlaceholder>() {
-            Ok(Target::Placeholder(value.get().clone()))
-        } else if let Ok(value) = obj.cast::<PyString>() {
-            Ok(Target::Fixed(value.extract()?))
+            Ok(LabelTargetLike::Existing(value.get().target.clone()))
         } else {
             Err(PyTypeError::new_err("cannot convert to Target"))
         }
     }
 }
 
+/// Extracts a `Target` from Python a `str`, `TargetPlaceholder`, `Label`, or existing `Target`.
+///
+/// Type stubs generated for this type are a union of the types when used as an input parameter
+/// and `Target.TargetPlaceholder | Target.Fixed` when used as a return type.
+#[derive(FromPyObject)]
+enum TargetLike {
+    Str(String),
+    Placeholder(TargetPlaceholder),
+    Target(Target),
+    Label(Label),
+}
+
+impl From<LabelTargetLike> for Target {
+    fn from(value: LabelTargetLike) -> Self {
+        match value {
+            LabelTargetLike::Str(s) => Target::Fixed(s),
+            LabelTargetLike::Existing(t) => t,
+        }
+    }
+}
+
+impl From<TargetLike> for Target {
+    fn from(value: TargetLike) -> Self {
+        match value {
+            TargetLike::Str(s) => Target::Fixed(s),
+            TargetLike::Placeholder(p) => Target::Placeholder(p),
+            TargetLike::Target(t) => t,
+            TargetLike::Label(l) => l.target,
+        }
+    }
+}
+
+
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Target {
-    #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.str | TargetPlaceholder]", imports = ("builtins")))]
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+    // TODO(migration-guide): PyQuil v4's `quilatom.Label` and `quilatom.LabelPlaceholder
+    // are the equivalents of `quil.Target.Fixed`  and `quil.Target.Placeholder`, respectively.
+    // See the notes in `Label` for more details on how these are migrated.
+
+    // Developer note: This takes `LabelTargetLike` rather than `TargetLike`,
+    // since the latter accepts only `str` and `TargetPlaceholder`,
+    // while the former additionally accepts existing `Label`s,
+    // from which we can easily extract the `Target` value.
+    #[new]
+    fn __new__(target: LabelTargetLike) -> Self {
+        target.into()
+    }
+
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<NewArgs<'py, TargetLike>> {
         match self {
-            Self::Fixed(value) => (value,).into_pyobject(py),
-            Self::Placeholder(value) => (value.clone(),).into_pyobject(py),
+            Self::Fixed(value) => (value,).into_newargs(py),
+            Self::Placeholder(value) => (value.clone(),).into_newargs(py),
         }
     }
 }
@@ -5548,7 +5624,8 @@ mod stubs {
     impl_stub_type!(ComparisonOperandLike<'_> = ComparisonOperand | i64 | f64 | MemoryReferenceLike);
     impl_stub_type!(GateModifierDesignator = GateModifier | String);
     impl_stub_type!(FrameAttributeValueLike = AttributeValue | ExpressionLike);
-    impl_stub_type!(LabelTargetLike<'_> = String | Label | Target);
+    impl_stub_enum!(TargetLike = Target | TargetPlaceholder | String);
+    impl_stub_type!(LabelTargetLike = Target | Label | String);
     impl_stub_type!(
         MemoryReferenceLike = MemoryReference | DeclarationAt | Declaration | (String, u64)
     );
@@ -5558,7 +5635,7 @@ mod stubs {
     impl_stub_enum!(PragmaArgumentLike = PragmaArgument | String | u64);
 
     // Expose some of these as type aliases. Note that these must be added to the module.
-    type_alias!("quil._quil.instructions", LabelTargetParameter = LabelTargetLike<'_>);
+    type_alias!("quil._quil.instructions", LabelTargetParameter = LabelTargetLike);
     type_alias!(
         "quil._quil.instructions",
         MemoryReferenceDesignator = MemoryReferenceLike
