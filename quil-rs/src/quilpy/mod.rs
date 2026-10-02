@@ -396,14 +396,14 @@ macro_rules! impl_newargs {
 pub(crate) use impl_newargs;
 
 pub(crate) trait IntoNewArgs<'py, T> {
-    fn into_new_args(self, py: Python<'py>) -> PyResult<NewArgs<'py, T>>;
+    fn into_newargs(self, py: Python<'py>) -> PyResult<NewArgs<'py, T>>;
 }
 
 impl<'py, T, U> IntoNewArgs<'py, T> for U
 where
     U: IntoPyObject<'py>,
 {
-    fn into_new_args(self, py: Python<'py>) -> PyResult<NewArgs<'py, T>> {
+    fn into_newargs(self, py: Python<'py>) -> PyResult<NewArgs<'py, T>> {
         Ok(NewArgs((self,).into_pyobject(py)?, PhantomData))
     }
 }

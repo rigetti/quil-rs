@@ -58,7 +58,7 @@ impl Quil for Label {
         eq,
         frozen,
         hash,
-        skip_from_py_object
+        from_py_object
     )
 )]
 pub enum Target {
