@@ -2341,16 +2341,17 @@ impl Label {
     //
     //   The old uses can be updated as follows:
     //
-    //   |  Deprecated Usage                 | Updated Usage                         |
-    //   | --------------------------------- | ------------------------------------- |
-    //   | `Label("jump-target")`            | No Need to Update                     |
-    //   | `Label(label_name="jump-target")` | `Label(target="jump-target")`         |
-    //   | `LabelPlaceholder()`              | `Label()`                             |
-    //   | `LabelPlaceholder("L")`           | `Label("L", placeholder=True)`        |
-    //   | `LabelPlaceholder(prefix="L")`    | `Label(target="L", placeholder=True)` |
-    //   | `LabelPlaceholder(placeholder=p)` | `Label(target=p)`                     |
+    //   |  Deprecated Usage                      | Updated Usage                         |
+    //   | ---------------------------------------| ------------------------------------- |
+    //   | `Label("jump-target")`                 | No Need to Update                     |
+    //   | `Label(label_name="jump-target")`      | `Label(target="jump-target")`         |
+    //   | `LabelPlaceholder()`                   | `Label()`                             |
+    //   | `LabelPlaceholder("L")`                | `Label("L", placeholder=True)`        |
+    //   | `LabelPlaceholder(prefix="L")`         | `Label(target="L", placeholder=True)` |
+    //   | `LabelPlaceholder(placeholder=p)`      | `Label(target=p)`                     |
+    //   | `LabelPlaceholder("L", placeholder=p)` | Raises TypeError (see below)          |
     //
-    //   Note the `LabelPlaceholder("L", placeholder=p)` was technically legal,
+    //   Note: the `LabelPlaceholder("L", placeholder=p)` before was technically legal,
     //   but the `prefix` was ignored, so it is equivalent to just giving a `placeholder`.
     //   Since we repurposed the `placeholder` name to be a `bool` for the new `Label` constructor,
     //   that usage is no longer valid, and will raise a `TypeError`.
@@ -2395,7 +2396,6 @@ impl Label {
     /// | `Label("A")`                     | `Label(Target.Fixed("A"))`                                     |
     /// | `Label()`                        | `Label(Target.Placeholder(TargetPlaceholder(base_label="L")))` |
     /// | `Label("A", placeholder=True)`   | `Label(Target.Placeholder(TargetPlaceholder(base_label="A")))` |
-
     #[new]
     #[pyo3(signature = (target=None, *, placeholder=None))]
     fn __new__(target: Option<LabelTargetLike>, placeholder: Option<bool>) -> PyResult<Self> {
