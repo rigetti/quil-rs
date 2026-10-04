@@ -1521,6 +1521,12 @@ impl Declaration {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[pyclass(module = "quil._quil.instructions", frozen, skip_from_py_object)]
 pub(crate) struct DeclarationAt {
+    // TODO: instead of (or in addition to) the Py<Declaration>,
+    // we should store the name as a PyString and use it to generate PyMemRefs instead,
+    // so that they can all share the same underlying string object;
+    // that will take some reworking of the PyMemRef to use Py<_> fields instead,
+    // and likely will need some work for proper interop.
+    // The point is the same: we can do better.
     declaration: Py<Declaration>,
     index: u64,
 }
