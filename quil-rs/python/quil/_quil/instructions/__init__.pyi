@@ -386,7 +386,7 @@ class CalibrationIdentifier:
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[builtins.str, builtins.list[expression.Expression], builtins.list[Qubit], builtins.list[GateModifier]]: ...
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = [], qubits: typing.Sequence[Qubit  |  builtins.int  |  builtins.str  |  QubitPlaceholder] = [], modifiers: typing.Sequence[GateModifier] = []) -> CalibrationIdentifier:
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex] = [], qubits: typing.Sequence[Qubit  |  builtins.int  |  builtins.str  |  QubitPlaceholder] = [], modifiers: typing.Sequence[GateModifier  |  builtins.str] = []) -> CalibrationIdentifier:
         r"""
         Builds a new calibration identifier.
         

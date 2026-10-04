@@ -37,7 +37,7 @@ use crate::{
         aliased, deprecated_or_new, deprecated_param,
         errors::{self, PickleError},
         impl_newargs, impl_to_quil, py_deprecated, singleton, IntoNewArgs, Like, Migrate, NewArgs,
-        NonZeroU64, Seq,
+        NonZeroU64, Seq, Seq2,
     },
     validation::identifier::IdentifierValidationError,
 };
@@ -1178,14 +1178,14 @@ impl CalibrationDefinition {
     #[new]
     fn __new__(
         identifier: Option<Migrate<CalibrationIdentifier, String>>,
-        instructions: Option<Migrate<Vec<Instruction>, Seq<ExpressionLike, Expression>>>,
+        instructions: Option<Migrate<Vec<Instruction>, Vec<ExpressionLike>>>,
 
         qubits: Option<Seq<QubitLike, Qubit>>,
         instrs: Option<Vec<Instruction>>,
         modifiers: Option<Vec<GateModifier>>,
 
         name: Option<String>,
-        parameters: Option<Seq<ExpressionLike, Expression>>,
+        parameters: Option<Vec<ExpressionLike>>,
     ) -> PyResult<Self> {
         match (
             identifier,
@@ -1250,7 +1250,7 @@ impl CalibrationDefinition {
     #[staticmethod]
     fn from_parts(
         name: String,
-        parameters: Seq<ExpressionLike, Expression>,
+        parameters: Vec<ExpressionLike>,
         qubits: Seq<QubitLike, Qubit>,
         instructions: Vec<Instruction>,
         modifiers: Option<Vec<GateModifier>>,
@@ -1258,7 +1258,7 @@ impl CalibrationDefinition {
         let identifier = CalibrationIdentifier::new(
             name,
             modifiers.unwrap_or_default(),
-            parameters.into(),
+            parameters.into_iter().map(Expression::from).collect(),
             qubits.into(),
         )?;
         Ok(Self::new(identifier, instructions))
@@ -1300,16 +1300,21 @@ pickleable_new! {
         /// Builds a new calibration identifier.
         ///
         /// Raises an error if the given name isn't a valid Quil identifier.
-        #[pyo3(signature = (name, parameters = Seq::new(), qubits = Seq::new(), modifiers = Vec::new()))]
+        #[pyo3(signature = (name, parameters = Seq2::new(), qubits = Seq::new(), modifiers = Seq::new()))]
         #[pyo3(text_signature = "(name, parameters = [], qubits = [], modifiers = [])")]
         fn __new__(
             name: String,
-            parameters: Vec<Expression> as Seq<ExpressionLike, Expression>,
+            parameters: Vec<Expression> as Seq2<ExpressionLike, Expression>,
             qubits: Vec<Qubit> as Seq<QubitLike, Qubit>,
-            modifiers: Vec<GateModifier>,
+            modifiers: Vec<GateModifier> as Seq<GateModifierDesignator, GateModifier>
         ) -> Result<CalibrationIdentifier, IdentifierValidationError> {
             // Note that  the parameter order is different for the Python version :(
-            Self::new(name, modifiers, parameters.into(), qubits.into())
+            Self::new(
+                name,
+                modifiers.into(),
+                parameters.into(),
+                qubits.into(),
+            )
         }
     }
 }
@@ -2019,10 +2024,10 @@ impl Gate {
     #[pyo3(signature = (name, parameters=None, qubits=None, modifiers=None, *, params=None))]
     fn __new__(
         name: String,
-        parameters: Option<Seq<ExpressionLike, Expression>>,
+        parameters: Option<Seq2<ExpressionLike, Expression>>,
         qubits: Option<Seq<QubitLike, Qubit>>,
         modifiers: Option<Seq<GateModifierDesignator, GateModifier>>,
-        params: Option<Seq<ExpressionLike, Expression>>,
+        params: Option<Seq2<ExpressionLike, Expression>>,
     ) -> PyResult<Gate> {
         let parameters = aliased!(parameters, params)?.into();
         let qubits = qubits.unwrap_or_default().into();
@@ -2064,9 +2069,12 @@ impl Gate {
     fn py_forked(
         &self,
         fork_qubit: QubitLike,
-        alt_params: Seq<ExpressionLike, Expression>,
+        alt_params: Vec<ExpressionLike>,
     ) -> Result<Self, GateError> {
-        self.clone().forked(fork_qubit.into(), alt_params.into())
+        self.clone().forked(
+            fork_qubit.into(),
+            alt_params.into_iter().map(Expression::from).collect(),
+        )
     }
 
     /// Get the matrix resulting from lifting this ``Gate``
@@ -3779,8 +3787,6 @@ impl PauliTerm {
             (self.clone() * other.get().clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.cast::<PauliSum>() {
             (self.clone() * other.get().clone()).into_bound_py_any(py)
-        } else if let Ok(other) = other.cast::<Expression>() {
-            (self.clone() * other.get().clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.extract::<ExpressionLike>() {
             (self.clone() * Expression::from(other)).into_bound_py_any(py)
         } else {
@@ -3804,8 +3810,6 @@ impl PauliTerm {
         if let Ok(other) = other.cast::<PauliTerm>() {
             (self.clone() + other.get().clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.cast::<PauliSum>() {
-            (self.clone() + other.get().clone()).into_bound_py_any(py)
-        } else if let Ok(other) = other.cast::<Expression>() {
             (self.clone() + other.get().clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.extract::<ExpressionLike>() {
             (self.clone() + Expression::from(other)).into_bound_py_any(py)
@@ -3831,8 +3835,6 @@ impl PauliTerm {
             (self.clone() - other.get().clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.cast::<PauliSum>() {
             (self.clone() - other.get().clone()).into_bound_py_any(py)
-        } else if let Ok(other) = other.cast::<Expression>() {
-            (self.clone() - other.get().clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.extract::<ExpressionLike>() {
             (self.clone() - Expression::from(other)).into_bound_py_any(py)
         } else {
@@ -3848,8 +3850,6 @@ impl PauliTerm {
         if let Ok(other) = other.cast::<PauliTerm>() {
             (other.get().clone() - self.clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.cast::<PauliSum>() {
-            (other.get().clone() - self.clone()).into_bound_py_any(py)
-        } else if let Ok(other) = other.cast::<Expression>() {
             (other.get().clone() - self.clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.extract::<ExpressionLike>() {
             (Expression::from(other) - self.clone()).into_bound_py_any(py)
@@ -4799,8 +4799,6 @@ impl PauliSum {
             (self.clone() + other.get().clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.cast::<PauliSum>() {
             (self.clone() + other.get().clone()).into_bound_py_any(py)
-        } else if let Ok(other) = other.cast::<Expression>() {
-            (self.clone() + other.get().clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.extract::<ExpressionLike>() {
             (self.clone() + Expression::from(other)).into_bound_py_any(py)
         } else {
@@ -4824,8 +4822,6 @@ impl PauliSum {
         if let Ok(other) = other.cast::<PauliTerm>() {
             (self.clone() * other.get().clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.cast::<PauliSum>() {
-            (self.clone() * other.get().clone()).into_bound_py_any(py)
-        } else if let Ok(other) = other.cast::<Expression>() {
             (self.clone() * other.get().clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.extract::<ExpressionLike>() {
             (self.clone() * Expression::from(other)).into_bound_py_any(py)
@@ -4872,8 +4868,6 @@ impl PauliSum {
             (self.clone() - other.get().clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.cast::<PauliSum>() {
             (self.clone() - other.get().clone()).into_bound_py_any(py)
-        } else if let Ok(other) = other.cast::<Expression>() {
-            (self.clone() - other.get().clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.extract::<ExpressionLike>() {
             (self.clone() - Expression::from(other)).into_bound_py_any(py)
         } else {
@@ -4889,8 +4883,6 @@ impl PauliSum {
         if let Ok(other) = other.cast::<PauliTerm>() {
             (other.get().clone() - self.clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.cast::<PauliSum>() {
-            (other.get().clone() - self.clone()).into_bound_py_any(py)
-        } else if let Ok(other) = other.cast::<Expression>() {
             (other.get().clone() - self.clone()).into_bound_py_any(py)
         } else if let Ok(other) = other.extract::<ExpressionLike>() {
             (Expression::from(other) - self.clone()).into_bound_py_any(py)
@@ -5580,9 +5572,12 @@ impl WaveformDefinition {
     fn __new__(
         name: String,
         parameters: Vec<String>,
-        entries: Seq<ExpressionLike, Expression>,
+        entries: Vec<ExpressionLike>,
     ) -> Self {
-        Self::new(name, Waveform::new(entries.into(), parameters))
+        Self::new(
+            name,
+            Waveform::new(entries.into_iter().map(Expression::from).collect(), parameters),
+        )
     }
 
     fn __getnewargs__(&self) -> (String, Vec<String>, Vec<Expression>) {
