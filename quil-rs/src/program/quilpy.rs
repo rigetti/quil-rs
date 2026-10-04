@@ -183,6 +183,13 @@ impl Program {
         self.waveforms = waveforms;
     }
 
+    // TODO(migration-guide): In PyQuil v4, this used to include `circuits` ( `CircuitDefinition`s)
+    // but now that is a separate field on the `Program` struct;
+    // because PyQuil has its own `Program` class (which uses but does NOT subclass `quil`'s),
+    // we can make up for it there, but if we want to eventually get rid of that class, 
+    // we may need to have an `instructions` property that returns all three. 
+    // In PyQuil, `instructions` returns `declarations.values()` + `body_instructions`,
+    // so there's probably more room for improvement yet to be had.
     #[getter(body_instructions)]
     fn py_body_instructions(&self) -> Vec<Instruction> {
         self.instructions.clone()
