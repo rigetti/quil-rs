@@ -417,7 +417,7 @@ mod test_measure_calibration_definition {
             },
             instructions: vec![Instruction::Gate(Gate {
                 name: "X".to_string(),
-                parameters: vec![Expression::PiConstant()],
+                parameters: vec![Expression::PiConstant],
                 qubits: vec![Qubit::Fixed(0)],
                 modifiers: vec![],
 
@@ -433,7 +433,7 @@ mod test_measure_calibration_definition {
             },
             instructions: vec![Instruction::Gate(Gate {
                 name: "X".to_string(),
-                parameters: vec![Expression::PiConstant()],
+                parameters: vec![Expression::PiConstant],
                 qubits: vec![Qubit::Fixed(0)],
                 modifiers: vec![],
 
@@ -479,7 +479,7 @@ mod test_measure_calibration_definition {
             },
             instructions: vec![Instruction::Gate(Gate {
                 name: "X".to_string(),
-                parameters: vec![Expression::PiConstant()],
+                parameters: vec![Expression::PiConstant],
                 qubits: vec![Qubit::Variable("q".to_string())],
                 modifiers: vec![],
             })]},
@@ -494,7 +494,7 @@ mod test_measure_calibration_definition {
             },
             instructions: vec![Instruction::Gate(Gate {
                 name: "X".to_string(),
-                parameters: vec![Expression::PiConstant()],
+                parameters: vec![Expression::PiConstant],
                 qubits: vec![Qubit::Variable("q".to_string())],
                 modifiers: vec![],
             })]},

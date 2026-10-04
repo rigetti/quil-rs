@@ -96,7 +96,7 @@ pub enum Expression {
     FunctionCall(FunctionCallExpression),
     Infix(InfixExpression),
     Number(Complex64),
-    PiConstant(),
+    PiConstant,
     Prefix(PrefixExpression),
     Variable(String),
 }
@@ -281,7 +281,7 @@ impl PartialEq for Expression {
             (Self::Prefix(left), Self::Prefix(right)) => left == right,
             (Self::FunctionCall(left), Self::FunctionCall(right)) => left == right,
             (Self::Variable(left), Self::Variable(right)) => left == right,
-            (Self::PiConstant(), Self::PiConstant()) => true,
+            (Self::PiConstant, Self::PiConstant) => true,
 
             // This explicit or-pattern ensures that we'll get a compilation error if
             // `Expression` grows another constructor.
@@ -292,7 +292,7 @@ impl PartialEq for Expression {
                 | Self::Prefix(_)
                 | Self::FunctionCall(_)
                 | Self::Variable(_)
-                | Self::PiConstant(),
+                | Self::PiConstant,
                 _,
             ) => false,
         }
@@ -332,8 +332,8 @@ impl Hash for Expression {
                 "Number".hash(state);
                 floating_point_eq::complex64::hash(*n, state);
             }
-            Self::PiConstant() => {
-                "PiConstant()".hash(state);
+            Self::PiConstant => {
+                "PiConstant".hash(state);
             }
             Self::Prefix(p) => {
                 "Prefix".hash(state);
@@ -386,7 +386,7 @@ macro_rules! impl_expr_op {
         impl $name_assign for Expression {
             fn $function_assign(&mut self, other: Self) {
                 // Move out of self to avoid potentially cloning a large value
-                let temp = ::std::mem::replace(self, Self::PiConstant());
+                let temp = ::std::mem::replace(self, Self::PiConstant);
                 *self = temp.$function(other);
             }
         }
@@ -394,7 +394,7 @@ macro_rules! impl_expr_op {
         impl $name_assign<ArcIntern<Expression>> for Expression {
             fn $function_assign(&mut self, other: ArcIntern<Expression>) {
                 // Move out of self to avoid potentially cloning a large value
-                let temp = ::std::mem::replace(self, Self::PiConstant());
+                let temp = ::std::mem::replace(self, Self::PiConstant);
                 *self = temp.$function(other);
             }
         }
@@ -472,7 +472,7 @@ impl Expression {
     pub fn simplify(&mut self) {
         match self {
             Expression::Address(_) | Expression::Number(_) | Expression::Variable(_) => {}
-            Expression::PiConstant() => {
+            Expression::PiConstant => {
                 *self = PI_NUMERIC.clone();
             }
             _ => *self = simplification::run(self),
@@ -531,7 +531,7 @@ impl Expression {
     {
         match self.evaluate_partial(variables, memory_references) {
             Expression::Number(value) => Ok(value),
-            Expression::PiConstant() => Ok(Complex64::from(PI)),
+            Expression::PiConstant => Ok(Complex64::from(PI)),
             _ => Err(EvaluationError::Incomplete),
         }
     }
@@ -555,7 +555,7 @@ impl Expression {
                 Expression::Number(value) => {
                     Expression::Number(calculate_function(*function, value))
                 }
-                Expression::PiConstant() => {
+                Expression::PiConstant => {
                     Expression::Number(calculate_function(*function, Complex64::from(PI)))
                 }
                 other => Expression::FunctionCall(FunctionCallExpression {
@@ -574,13 +574,13 @@ impl Expression {
                     (Expression::Number(left), Expression::Number(right)) => {
                         Expression::Number(calculate_infix(left, *operator, right))
                     }
-                    (Expression::Number(left), Expression::PiConstant()) => {
+                    (Expression::Number(left), Expression::PiConstant) => {
                         Expression::Number(calculate_infix(left, *operator, Complex64::from(PI)))
                     }
-                    (Expression::PiConstant(), Expression::Number(right)) => {
+                    (Expression::PiConstant, Expression::Number(right)) => {
                         Expression::Number(calculate_infix(Complex64::from(PI), *operator, right))
                     }
-                    (Expression::PiConstant(), Expression::PiConstant()) => Expression::Number(
+                    (Expression::PiConstant, Expression::PiConstant) => Expression::Number(
                         calculate_infix(Complex64::from(PI), *operator, Complex64::from(PI)),
                     ),
                     (left, right) => Expression::Infix(InfixExpression {
@@ -603,7 +603,7 @@ impl Expression {
                     (Number(value), Minus) => Number(-value),
                     // Leave positive pi as a pi constant;
                     // if it's needed in a function, it will be converted to a number then.
-                    (Expression::PiConstant(), Minus) => Number(-Complex64::from(PI)),
+                    (Expression::PiConstant, Minus) => Number(-Complex64::from(PI)),
                     (expression, operator) => Prefix(PrefixExpression {
                         operator: *operator,
                         expression: ArcIntern::new(expression),
@@ -621,7 +621,7 @@ impl Expression {
                     Some(Expression::Number(real!(*value)))
                 })
                 .unwrap_or_else(|| Expression::Address((*memory_reference).clone())),
-            PiConstant() => Expression::PiConstant(),
+            PiConstant => Expression::PiConstant,
             Number(number) => Expression::Number(*number),
         }
     }
@@ -703,7 +703,7 @@ impl Expression {
     /// that number. Otherwise, error with an evaluation error of a descriptive type.
     pub fn to_real(&self) -> Result<f64, EvaluationError> {
         match self {
-            Expression::PiConstant() => Ok(PI),
+            Expression::PiConstant => Ok(PI),
             Expression::Number(x) if is_small(x.im) => Ok(x.re),
             Expression::Number(_) => Err(EvaluationError::NumberNotReal),
             _ => Err(EvaluationError::NotANumber),
@@ -796,7 +796,7 @@ impl Quil for Expression {
                 format_inner_expression(f, fall_back_to_debug, right)
             }
             Number(value) => write!(f, "{}", format_complex(value)).map_err(Into::into),
-            PiConstant() => write!(f, "pi").map_err(Into::into),
+            PiConstant => write!(f, "pi").map_err(Into::into),
             Prefix(PrefixExpression {
                 operator,
                 expression,
@@ -854,7 +854,7 @@ mod test {
             })),
             operator: InfixOperator::Star,
             right: ArcIntern::new(Expression::Infix(InfixExpression {
-                left: ArcIntern::new(Expression::PiConstant()),
+                left: ArcIntern::new(Expression::PiConstant),
                 operator: InfixOperator::Slash,
                 right: ArcIntern::new(Expression::Number(real!(2f64))),
             })),
@@ -997,8 +997,9 @@ pub mod interned {
                 #[inline(always)]
                 pub fn $func($(value: $typ)?) -> ArcIntern<Expression> {
                     // Using `std::convert::identity` lets us refer to `$typ` and thus make the
-                    // constructor argument optional
-                    ArcIntern::new(Expression::$ctor($(std::convert::identity::<$typ>(value))?))
+                    // constructor argument optional. Note that `$ctor` may be a unit variant
+                    // (no parens) when there's no `$typ`, since `PiConstant` isn't tuple-like.
+                    ArcIntern::new(Expression::$ctor$((std::convert::identity::<$typ>(value)))?)
                 }
             )+
         };
@@ -1173,7 +1174,7 @@ pub mod proptest_helpers {
         let leaf = prop_oneof![
             arb_memory_reference().prop_map(Address),
             arb_complex64().prop_map(Number),
-            Just(PiConstant()),
+            Just(PiConstant),
             arb_variable().prop_map(Variable),
         ];
         leaf.prop_recursive(
@@ -1346,7 +1347,7 @@ mod tests {
                 parenthesized(right)
             ),
             Number(value) => format!("({})", format_complex(value)),
-            PiConstant() => "pi".to_string(),
+            PiConstant => "pi".to_string(),
             Prefix(PrefixExpression {
                 operator,
                 expression,
@@ -1404,7 +1405,7 @@ mod tests {
         }
 
         #[test]
-        fn no_other_exps_are_real(expr in any::<Expression>().prop_filter("Not numbers", |e| !matches!(e, Expression::Number(_) | Expression::PiConstant()))) {
+        fn no_other_exps_are_real(expr in any::<Expression>().prop_filter("Not numbers", |e| !matches!(e, Expression::Number(_) | Expression::PiConstant))) {
             prop_assert_eq!(expr.to_real(), Err(EvaluationError::NotANumber))
         }
 
@@ -1561,7 +1562,7 @@ mod tests {
     #[test]
     fn specific_to_real_tests() {
         for (input, expected) in [
-            (Expression::PiConstant(), Ok(PI)),
+            (Expression::PiConstant, Ok(PI)),
             (Expression::Number(Complex64 { re: 1.0, im: 0.0 }), Ok(1.0)),
             (
                 Expression::Number(Complex64 { re: 1.0, im: 1.0 }),
