@@ -3491,7 +3491,7 @@ pyo3_stub_gen::impl_stub_type!(PauliExponent = PyInt | PyString | QualifiedExpre
 /// ```rust,ignore
 /// let (a, b) = (Complex64::new(1.0, 2.0), Complex64::new(3.0, 4.0));
 /// assert_eq!(simple!(Expression::Number(a) * Expression::Number(b)), Expression::Number(a * b));
-/// assert_matches!(simple!(Expression::PiConstant() * Expression::Number(b)), Expression::InfixExpression(_));
+/// assert_matches!(simple!(Expression::PiConstant * Expression::Number(b)), Expression::InfixExpression(_));
 /// ```
 macro_rules! simple {
     // Division is a bit special compared to other operators, so we handle it separately.
@@ -3985,7 +3985,7 @@ impl PauliTerm {
 
         // (-1)^k = exp(i * pi * k)
         let exp_i_pi_k =
-            quil_exp((IMAGINARY_UNIT * Expression::PiConstant() * expr.clone()).into());
+            quil_exp((IMAGINARY_UNIT * Expression::PiConstant * expr.clone()).into());
 
         let a = (ONE + exp_i_pi_k.clone()) / Expression::Number(Complex64::from(2.0));
         let b = (ONE - exp_i_pi_k) / Expression::Number(Complex64::from(2.0));
@@ -4530,7 +4530,7 @@ impl std::ops::MulAssign<(PauliGate, String)> for PauliTerm {
                 } else {
                     self.arguments[idx] = (new_op, qubit);
                     // Take the expression out of self so we expand simple! without cloning.
-                    let expr = mem::replace(&mut self.expression, Expression::PiConstant());
+                    let expr = mem::replace(&mut self.expression, Expression::PiConstant);
                     self.expression = simple!(expr * Expression::Number(phase))
                 }
             }

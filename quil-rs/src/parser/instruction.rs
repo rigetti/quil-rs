@@ -638,7 +638,7 @@ mod tests {
         "RX(pi) 10",
         vec![Instruction::Gate(Gate {
             name: "RX".to_owned(),
-            parameters: vec![Expression::PiConstant()],
+            parameters: vec![Expression::PiConstant],
             qubits: vec![Qubit::Fixed(10)],
             modifiers: vec![],
         })]

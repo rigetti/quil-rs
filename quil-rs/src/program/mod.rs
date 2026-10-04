@@ -2341,7 +2341,7 @@ CALL foo octets[1] reals
     fn test_defgate_as_sequence_mechanics() {
         let pi_divided_by_2 = Expression::Infix(InfixExpression {
             operator: InfixOperator::Slash,
-            left: ArcIntern::new(Expression::PiConstant()),
+            left: ArcIntern::new(Expression::PiConstant),
             right: ArcIntern::new(Expression::Number(Complex64 { re: 2.0, im: 0.0 })),
         });
         let negate_variable = |variable: String| {

@@ -375,13 +375,13 @@ impl Quil for PiType {
         writer: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> Result<(), crate::quil::ToQuilError> {
-        Expression::PiConstant().write(writer, fall_back_to_debug)
+        Expression::PiConstant.write(writer, fall_back_to_debug)
     }
 }
 
 impl From<PiType> for Expression {
     fn from(_: PiType) -> Self {
-        Expression::PiConstant()
+        Expression::PiConstant
     }
 }
 
@@ -632,7 +632,7 @@ macro_rules! impl_expression_methods {
                 let memory_references = memory_references.unwrap_or_default();
 
                 match Expression::from(self.clone()).evaluate_partial(&variables, &memory_references) {
-                    Expression::PiConstant() => Ok(Evaluated::Full(Complex64::new(PI, 0.0))),
+                    Expression::PiConstant => Ok(Evaluated::Full(Complex64::new(PI, 0.0))),
                     Expression::Number(c) => Ok(Evaluated::Full(c)),
                     other => {
                         if partial {
@@ -785,7 +785,7 @@ macro_rules! impl_expression_methods {
             /// This will raise an error if simplification doesn't result in a complex number.
             fn __complex__(&self) -> PyResult<Complex64> {
                 match Expression::from(self.clone()).into_simplified() {
-                    Expression::PiConstant() => Ok(PI.into()),
+                    Expression::PiConstant => Ok(PI.into()),
                     Expression::Number(c) => Ok(c),
                     _ => Err(EvaluationError::NotANumber)?,
                 }
@@ -871,7 +871,7 @@ impl<'py> IntoPyObject<'py> for Expression {
             Expression::FunctionCall(value) => value.into_bound_py_any(py),
             Expression::Infix(value) => value.into_bound_py_any(py),
             Expression::Number(value) => Number(value).into_bound_py_any(py),
-            Expression::PiConstant() => PiType.into_bound_py_any(py),
+            Expression::PiConstant => PiType.into_bound_py_any(py),
             Expression::Prefix(value) => value.into_bound_py_any(py),
             Expression::Variable(name) => Parameter { name }.into_bound_py_any(py),
         }
@@ -891,7 +891,7 @@ impl<'a, 'py> FromPyObject<'a, 'py> for Expression {
         } else if let Ok(value) = obj.cast::<Number>() {
             Ok(Expression::Number(value.get().0))
         } else if obj.cast::<PiType>().is_ok() {
-            Ok(Expression::PiConstant())
+            Ok(Expression::PiConstant)
         } else if let Ok(value) = obj.cast::<PrefixExpression>() {
             Ok(Expression::Prefix(value.get().clone()))
         } else if let Ok(value) = obj.cast::<Parameter>() {
