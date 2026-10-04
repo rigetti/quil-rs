@@ -1,10 +1,10 @@
-from typing import TypeAlias, cast, reveal_type
+from typing import TypeAlias, cast
 
 import pytest
 import numpy as np
 
-from quil.instructions import MemoryReference
-from quil.expression import Expression
+from quil.instructions import MemoryReference, GateDefinition, GateSpecification
+from quil.expression import Expression, quil_cos, quil_sin
 
 VarMap: TypeAlias = dict[str | MemoryReference, complex | list[complex]]
 ZERO = Expression(0)
@@ -112,7 +112,29 @@ def test_substitute_memref() -> None:
         assert expr.substitute(cast(VarMap, dict(y=(2,3)))) == Expression.parse(r"%x + 3")
 
 
+@pytest.mark.xfail(reason="GateSpecification.Matrix should accept ndarray as well as lists.")
 def test_gate_definition() -> None:
     """Check that we can correctly use `Expression`s in gate definitions."""
 
-    # We need a couple helpers to don't really belong in `quil` necessarily.
+    theta = Expression.Variable('theta')
+
+    # TODO: make Matrix and others accept ExpressionLike and remove this shim. 
+    def ex(l): return [x if isinstance(x, Expression) else Expression.parse(str(x)) for x in l]
+
+    arr = np.array([
+        ex([1, 0, 0, 0]),
+        ex([0, 1, 0, 0]),
+        ex([0, 0, quil_cos(theta / 2), quil_sin(theta / 2) * -1.0j ]),
+        ex([0, 0, quil_sin(theta / 2) * -1.0j, quil_cos(theta / 2) ]),
+    ], dtype=object)
+    crx = [
+        ex([1, 0, 0, 0]),
+        ex([0, 1, 0, 0]),
+        ex([0, 0, quil_cos(theta / 2), quil_sin(theta / 2) * -1.0j ]),
+        ex([0, 0, quil_sin(theta / 2) * -1.0j, quil_cos(theta / 2) ]),
+    ]
+
+    from_list = GateDefinition("CRX", ["theta"], GateSpecification.Matrix(crx))
+    from_arr = GateDefinition("CRX", ["theta"], GateSpecification.Matrix(arr))
+    assert from_list == from_arr
+
