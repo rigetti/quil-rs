@@ -45,11 +45,11 @@ use proptest_derive::Arbitrary;
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{
-    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum, gen_stub_pymethods,
-};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_enum, gen_stub_pymethods};
 #[cfg(feature = "python")]
 pub(crate) mod quilpy;
+#[cfg(feature = "python")]
+use quilpy::PyExpression;
 
 mod simplification;
 
@@ -85,22 +85,17 @@ pub enum EvaluationError {
 ///
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
+// Developer note: This enum is no longer exposed directly as a PyO3 "complex enum".
+// Instead, each variant has a corresponding Python-exposed type that extends `PyExpression`
+// (see `quilpy.rs` for the Python bindings), mirroring the `Instruction`/`PyInstruction`
+// pattern. This allows Python users to directly use and subclass e.g. `Number` or `Address`
+// without needing to go through a wrapping `Expression.Number(...)` constructor/accessor.
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil._quil.expression", eq, frozen, hash, from_py_object)
-)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub enum Expression {
     Address(MemoryReference),
     FunctionCall(FunctionCallExpression),
     Infix(InfixExpression),
     Number(Complex64),
-    // Developer note: In Rust, this could be just `PiConstant`,
-    // but to be compatible with PyO3's "complex enums",
-    // it has to be an empty tuple variant.
-    #[pyo3(name = "Pi")]
     PiConstant(),
     Prefix(PrefixExpression),
     Variable(String),
@@ -150,6 +145,7 @@ impl proptest::prelude::Arbitrary for Expression {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.expression",
+        extends = PyExpression,
         eq,
         frozen,
         hash,
@@ -173,6 +169,12 @@ impl FunctionCallExpression {
     }
 }
 
+impl From<FunctionCallExpression> for Expression {
+    fn from(val: FunctionCallExpression) -> Self {
+        Expression::FunctionCall(val)
+    }
+}
+
 /// The type of infix Quil expressions, e.g. `e1 + e2`.
 ///
 /// Quil expressions take advantage of *structural sharing*, which is why the `left` and `right`
@@ -187,6 +189,7 @@ impl FunctionCallExpression {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.expression",
+        extends = PyExpression,
         eq,
         frozen,
         hash,
@@ -216,6 +219,12 @@ impl InfixExpression {
     }
 }
 
+impl From<InfixExpression> for Expression {
+    fn from(val: InfixExpression) -> Self {
+        Expression::Infix(val)
+    }
+}
+
 /// The type of prefix Quil expressions, e.g. `-e`.
 ///
 /// Quil expressions take advantage of *structural sharing*, which is why the `expression` here is
@@ -229,6 +238,7 @@ impl InfixExpression {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.expression",
+        extends = PyExpression,
         eq,
         frozen,
         hash,
@@ -249,6 +259,12 @@ impl PrefixExpression {
             operator,
             expression,
         }
+    }
+}
+
+impl From<PrefixExpression> for Expression {
+    fn from(val: PrefixExpression) -> Self {
+        Expression::Prefix(val)
     }
 }
 
@@ -682,8 +698,6 @@ impl Expression {
     }
 }
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg_attr(feature = "python", pyo3::pymethods)]
 impl Expression {
     /// If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
     /// that number. Otherwise, error with an evaluation error of a descriptive type.

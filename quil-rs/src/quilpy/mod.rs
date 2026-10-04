@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use pyo3::types::PyType;
-use pyo3::{prelude::*, pyclass::boolean_struct::True, types::PyTuple, PyClass, PyTypeCheck};
+use pyo3::{prelude::*, types::PyTuple, PyClass, PyTypeCheck};
 use rigetti_pyo3::create_init_submodule;
 
 #[cfg(feature = "stubs")]
@@ -253,6 +253,13 @@ impl pyo3_stub_gen::PyStubType for NonZeroU64 {
 #[derive(Debug)]
 pub(crate) struct Seq<T, U>(Vec<U>, PhantomData<T>);
 
+/// This is just like [`Seq`], but does not require `U: PyClass + PyTypeCheck` to extract.
+///
+/// This allows it to work with types that implement [`FromPyObject`]
+/// but are not [`PyClass`]es.
+#[derive(Debug)]
+pub(crate) struct Seq2<T, U>(Vec<U>, PhantomData<T>);
+
 impl<'py, T, U> FromPyObject<'_, 'py> for Seq<T, U>
 where
     for<'a> T: FromPyObject<'a, 'py> + TryInto<U>,
@@ -280,13 +287,48 @@ where
     }
 }
 
+impl<'py, T, U> FromPyObject<'_, 'py> for Seq2<T, U>
+where
+    for<'a> T: FromPyObject<'a, 'py> + TryInto<U>,
+    U: ToOwned<Owned = U>,
+    for<'a> <T as TryInto<U>>::Error: Into<PyErr>,
+{
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
+        let mut res = Vec::with_capacity(obj.len().unwrap_or(0));
+        for item in obj.try_iter()? {
+            let item = item?.extract::<T>()
+                .map_err(Into::into)?
+                .try_into()
+                .map_err(Into::into)?;
+            res.push(item);
+        }
+
+        Ok(Self(res, PhantomData))
+    }
+}
+
 impl<T, U> Seq<T, U> {
     pub const fn new() -> Self {
         Self(Vec::new(), PhantomData)
     }
 }
 
+impl<T, U> Seq2<T, U> {
+    pub const fn new() -> Self {
+        Self(Vec::new(), PhantomData)
+    }
+}
+
+
 impl<T, U> Default for Seq<T, U> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<T, U> Default for Seq2<T, U> {
     fn default() -> Self {
         Self::new()
     }
@@ -307,8 +349,27 @@ where
     }
 }
 
+impl<'py, T, U> IntoPyObject<'py> for Seq2<T, U>
+where
+    U: IntoPyObject<'py>,
+{
+    type Target = PyAny;
+    type Output = Bound<'py, Self::Target>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        self.0.into_pyobject(py)
+    }
+}
+
 impl<T, U> From<Seq<T, U>> for Vec<U> {
     fn from(val: Seq<T, U>) -> Self {
+        val.0
+    }
+}
+
+impl<T, U> From<Seq2<T, U>> for Vec<U> {
+    fn from(val: Seq2<T, U>) -> Self {
         val.0
     }
 }
@@ -323,6 +384,18 @@ impl<T: PyStubType, U> pyo3_stub_gen::PyStubType for Seq<T, U> {
         <Vec<T> as PyStubType>::type_output()
     }
 }
+
+#[cfg(feature = "stubs")]
+impl<T: PyStubType, U> pyo3_stub_gen::PyStubType for Seq2<T, U> {
+    fn type_input() -> pyo3_stub_gen::TypeInfo {
+        <Vec<T> as PyStubType>::type_input()
+    }
+
+    fn type_output() -> pyo3_stub_gen::TypeInfo {
+        <Vec<T> as PyStubType>::type_output()
+    }
+}
+
 
 /// Extracts as `U`, stubs like `T`.
 ///
