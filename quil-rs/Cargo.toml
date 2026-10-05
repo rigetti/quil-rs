@@ -84,6 +84,10 @@ harness = false
 name = "simplification"
 harness = false
 
+[[bench]]
+name = "body_instructions"
+harness = false
+
 [[example]]
 name = "generate_test_expressions"
 
