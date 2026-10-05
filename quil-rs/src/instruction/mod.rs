@@ -207,7 +207,6 @@ impl Instruction {
             | Instruction::MeasureCalibrationDefinition(_)
             | Instruction::Pulse(_)
             | Instruction::RawCapture(_)
-            | Instruction::Reset(_)
             | Instruction::ResetCalibrationDefinition(_)
             | Instruction::SetFrequency(_)
             | Instruction::SetPhase(_)
@@ -238,6 +237,7 @@ impl Instruction {
             | Instruction::Move(_)
             | Instruction::Nop()
             | Instruction::Pragma(_)
+            | Instruction::Reset(_)
             | Instruction::Store(_)
             | Instruction::Wait()
             | Instruction::UnaryLogic(_) => false,
@@ -270,10 +270,6 @@ pub enum InstructionRole {
 
     /// An instruction affecting the pulse level portion of the program, such as
     /// [`PULSE`][Instruction::Pulse].  The RF stands for Radio Frequency.
-    ///
-    /// Unlike for [`MEASURE`][Instruction::Measurement], [`RESET`][Instruction::Reset] is, [by
-    /// default][DefaultHandler], considered an RF control instruction, as it is not realized
-    /// through calibration into a lower-level instruction.
     RFControl,
 
     /// An instruction that can perform control flow, such as [`JUMP-WHEN`][Instruction::JumpWhen].
@@ -584,10 +580,7 @@ impl Instruction {
         }
     }
 
-    pub(crate) fn default_frame_match_condition<'a>(
-        &'a self,
-        qubits_available: &'a HashSet<Qubit>,
-    ) -> Option<FrameMatchConditions<'a>> {
+    pub(crate) fn default_frame_match_condition<'a>(&'a self) -> Option<FrameMatchConditions<'a>> {
         match self {
             Instruction::Pulse(Pulse {
                 blocking, frame, ..
@@ -627,21 +620,6 @@ impl Instruction {
                 }),
                 blocked: None,
             }),
-            Instruction::Reset(Reset { qubit, .. }) => {
-                let qubits = match qubit {
-                    Some(qubit) => {
-                        let mut set = HashSet::new();
-                        set.insert(qubit);
-                        set
-                    }
-                    None => qubits_available.iter().collect(),
-                };
-
-                Some(FrameMatchConditions {
-                    used: Some(FrameMatchCondition::ExactQubits(qubits.clone())),
-                    blocked: Some(FrameMatchCondition::AnyOfQubits(qubits)),
-                })
-            }
             Instruction::SetFrequency(SetFrequency { frame, .. })
             | Instruction::SetPhase(SetPhase { frame, .. })
             | Instruction::SetScale(SetScale { frame, .. })
@@ -683,6 +661,7 @@ impl Instruction {
             | Instruction::Move(_)
             | Instruction::Nop()
             | Instruction::Pragma(_)
+            | Instruction::Reset(_)
             | Instruction::ResetCalibrationDefinition(_)
             | Instruction::Store(_)
             | Instruction::UnaryLogic(_)
@@ -937,7 +916,6 @@ pub trait InstructionHandler {
 }
 
 /// The default instruction-handling behavior.
-// TODO: check RESET is treated as gate-level instruction
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct DefaultHandler;
 
@@ -950,7 +928,6 @@ impl fmt::Display for DefaultHandler {
 impl InstructionHandler for DefaultHandler {
     fn is_scheduled(&self, instruction: &Instruction) -> bool {
         match instruction {
-            Instruction::Reset(_) => false,
             Instruction::Wait() => true,
             _ => self.role(instruction) == InstructionRole::RFControl,
         }
@@ -968,11 +945,11 @@ impl InstructionHandler for DefaultHandler {
             | Instruction::Label(_)
             | Instruction::MeasureCalibrationDefinition(_)
             | Instruction::Measurement(_)
+            | Instruction::Reset(_)
             | Instruction::ResetCalibrationDefinition(_)
             | Instruction::WaveformDefinition(_) => InstructionRole::ProgramComposition,
 
-            Instruction::Reset(_)
-            | Instruction::Capture(_)
+            Instruction::Capture(_)
             | Instruction::Delay(_)
             | Instruction::Fence(_)
             | Instruction::Pulse(_)
@@ -1011,7 +988,7 @@ impl InstructionHandler for DefaultHandler {
         instruction: &Instruction,
     ) -> Option<MatchedFrames<'p>> {
         instruction
-            .default_frame_match_condition(program.get_used_qubits())
+            .default_frame_match_condition()
             .map(|condition| program.frames.filter(condition))
     }
 

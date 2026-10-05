@@ -469,12 +469,20 @@ PULSE 0 "a" flat(duration: 1.0)
             block,
             &program,
             &DefaultHandler,
-        )
-        .unwrap();
-        match (
-            scheduled_block.as_schedule_seconds(&program, &DefaultHandler),
-            expected_times,
-        ) {
+        );
+
+        let schedule_seconds = match scheduled_block {
+            Ok(scheduled_block) => scheduled_block.as_schedule_seconds(&program, &DefaultHandler),
+            Err(error) => {
+                if expected_times.is_err() {
+                    return;
+                } else {
+                    panic!("expected success, got error: {error}");
+                }
+            }
+        };
+
+        match (schedule_seconds, expected_times) {
             (Ok(schedule), Ok(expected_times)) => {
                 let times = schedule
                     .items()
