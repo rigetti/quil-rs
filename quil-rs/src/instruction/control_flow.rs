@@ -170,8 +170,8 @@ impl PartialEq for TargetPlaceholder {
         module = "quil._quil.instructions",
         extends = PyInstruction,
         eq,
+        frozen,
         get_all,
-        set_all,
         subclass,
         from_py_object
     )
@@ -206,8 +206,8 @@ pickleable_new! {
         module = "quil._quil.instructions",
         extends = PyInstruction,
         eq,
+        frozen,
         get_all,
-        set_all,
         subclass,
         from_py_object
     )
@@ -244,8 +244,8 @@ impl Quil for JumpWhen {
         module = "quil._quil.instructions",
         extends = PyInstruction,
         eq,
+        frozen,
         get_all,
-        set_all,
         subclass,
         from_py_object
     )
