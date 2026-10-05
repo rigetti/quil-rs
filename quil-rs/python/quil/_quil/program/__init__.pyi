@@ -13,6 +13,7 @@ from typing import TypeAlias
 __all__ = [
     "BasicBlock",
     "BasicBlockScheduleError",
+    "BodyInstructionsView",
     "CalibrationExpansion",
     "CalibrationSet",
     "CalibrationSource",
@@ -74,6 +75,37 @@ class BasicBlock:
 
 class BasicBlockScheduleError(ProgramError):
     ...
+
+@typing.final
+class BodyInstructionsView:
+    r"""
+    A live, read-only view of a ``Program``'s body instructions.
+    
+    This is a ``collections.abc.Sequence`` that reflects later changes to the program.
+    The program caches a Python list of converted instructions for a prefix of its body.
+    Reading index ``i`` first converts any uncached instructions up to ``i``, and iterating
+    converts the rest, then iterates the list directly. Later reads return the same objects
+    until the program's body is modified other than by appending.
+    """
+    def __contains__(self, value: typing.Any) -> builtins.bool: ...
+    def __eq__(self, other: typing.Any) -> builtins.bool: ...
+    def __getitem__(self, index: builtins.int | builtins.slice) -> _quil.instructions.Instruction | builtins.list[_quil.instructions.Instruction]: ...
+    def __iter__(self) -> typing.Iterator[_quil.instructions.Instruction]:
+        r"""
+        Iterate the cached list directly, after converting any instructions not yet cached.
+        """
+    def __len__(self) -> builtins.int: ...
+    def __repr__(self) -> builtins.str: ...
+    def count(self, value: typing.Any) -> builtins.int:
+        r"""
+        Return the number of instructions equal to ``value``.
+        """
+    def index(self, value: typing.Any) -> builtins.int:
+        r"""
+        Return the index of the first instruction equal to ``value``.
+        
+        Raises ``ValueError`` if there is none.
+        """
 
 @typing.final
 class CalibrationExpansion:
@@ -527,7 +559,12 @@ class Program:
     ```
     """
     @property
-    def body_instructions(self) -> builtins.list[instructions.Instruction]: ...
+    def body_instructions(self) -> typing.Sequence[_quil.instructions.Instruction]:
+        r"""
+        A live, read-only view of the program's body instructions.
+        
+        Use ``list(program.body_instructions)`` for a snapshot.
+        """
     @property
     def calibrations(self) -> CalibrationSet: ...
     @calibrations.setter
