@@ -16,6 +16,8 @@ __all__ = [
     "BinaryLogic",
     "BinaryOperand",
     "BinaryOperator",
+    "CalibrationDefinition",
+    "CalibrationIdentifier",
     "Call",
     "CallArgument",
     "CallError",
@@ -222,6 +224,82 @@ class BinaryOperand:
         def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
         def __len__(self) -> builtins.int: ...
         def __new__(cls, _0: MemoryReference) -> BinaryOperand.MemoryReference: ...
+    
+
+class CalibrationDefinition:
+    @property
+    def identifier(self) -> CalibrationIdentifier: ...
+    @identifier.setter
+    def identifier(self, value: CalibrationIdentifier) -> None: ...
+    @property
+    def instructions(self) -> builtins.list[Instruction]: ...
+    @instructions.setter
+    def instructions(self, value: typing.Sequence[Instruction]) -> None: ...
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __getnewargs__(self) -> tuple[CalibrationIdentifier, builtins.list[Instruction]]: ...
+    def __new__(cls, identifier: CalibrationIdentifier, instructions: typing.Sequence[Instruction]) -> CalibrationDefinition:
+        r"""
+        Builds a new calibration definition.
+        """
+    def __repr__(self) -> builtins.str:
+        r"""
+        Implements `__repr__` for Python in terms of the Rust
+        [`Debug`](std::fmt::Debug) implementation.
+        """
+    def to_quil(self) -> builtins.str: ...
+    def to_quil_or_debug(self) -> builtins.str: ...
+
+class CalibrationIdentifier:
+    r"""
+    Unique identifier for all supported calibration definition variants.
+    """
+    def __getnewargs__(self) -> builtins.tuple[
+            _quil.instructions.GateCalibrationIdentifier 
+            | _quil.instructions.MeasureCalibrationIdentifier 
+            | _quil.instructions.ResetCalibrationIdentifier
+        ]: ...
+    def __repr__(self) -> builtins.str:
+        r"""
+        Implements `__repr__` for Python in terms of the Rust
+        [`Debug`](std::fmt::Debug) implementation.
+        """
+    def to_quil(self) -> builtins.str: ...
+    def to_quil_or_debug(self) -> builtins.str: ...
+    @typing.final
+    class GateCalibration(CalibrationIdentifier):
+        r"""
+        Describes a `DEFCAL` instruction
+        """
+        __match_args__ = ("_0",)
+        @property
+        def _0(self) -> GateCalibrationIdentifier: ...
+        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
+        def __len__(self) -> builtins.int: ...
+        def __new__(cls, _0: GateCalibrationIdentifier) -> CalibrationIdentifier.GateCalibration: ...
+    
+    @typing.final
+    class MeasureCalibration(CalibrationIdentifier):
+        r"""
+        Describes a `DEFCAL MEASURE` instruction
+        """
+        __match_args__ = ("_0",)
+        @property
+        def _0(self) -> MeasureCalibrationIdentifier: ...
+        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
+        def __len__(self) -> builtins.int: ...
+        def __new__(cls, _0: MeasureCalibrationIdentifier) -> CalibrationIdentifier.MeasureCalibration: ...
+    
+    @typing.final
+    class ResetCalibration(CalibrationIdentifier):
+        r"""
+        Describes a `DEFCAL RESET` instruction
+        """
+        __match_args__ = ("_0",)
+        @property
+        def _0(self) -> ResetCalibrationIdentifier: ...
+        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
+        def __len__(self) -> builtins.int: ...
+        def __new__(cls, _0: ResetCalibrationIdentifier) -> CalibrationIdentifier.ResetCalibration: ...
     
 
 class Call:

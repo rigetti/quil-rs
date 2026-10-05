@@ -17,10 +17,10 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen
 
 use crate::{
     instruction::{
-        quilpy::OwnedGateSignature, Declaration, DefaultHandler, ExternPragmaMap, FrameAttributes,
-        FrameIdentifier, Gate, GateCalibrationDefinition, Instruction,
-        MeasureCalibrationDefinition, Measurement, MemoryReference, Qubit, QubitPlaceholder, Reset,
-        ResetCalibrationDefinition, Target, TargetPlaceholder, Waveform,
+        quilpy::OwnedGateSignature, CalibrationIdentifier, Declaration, DefaultHandler,
+        ExternPragmaMap, FrameAttributes, FrameIdentifier, Gate, GateCalibrationDefinition,
+        Instruction, MeasureCalibrationDefinition, Measurement, MemoryReference, Qubit,
+        QubitPlaceholder, Reset, ResetCalibrationDefinition, Target, TargetPlaceholder, Waveform,
     },
     quil::Quil,
     quilpy::{errors, impl_to_quil},
@@ -32,16 +32,14 @@ use super::{
         ControlFlowGraph, ControlFlowGraphOwned, QubitGraph, QubitGraphError,
     },
     scheduling::{ComputedScheduleItem, Schedule, Seconds, TimeSpan},
-    CalibrationExpansion, CalibrationIdentifier, Calibrations, DefGateSequenceExpansion,
-    ExpansionResult, FrameSet, InstructionIndex, MemoryRegion, Program, Result, SourceMap,
-    SourceMapEntry, SourceMapIndexable,
+    CalibrationExpansion, Calibrations, DefGateSequenceExpansion, ExpansionResult, FrameSet,
+    InstructionIndex, MemoryRegion, Program, Result, SourceMap, SourceMapEntry, SourceMapIndexable,
 };
 
 create_init_submodule! {
     classes: [
         BasicBlockOwned, // Python name: BasicBlock
         CalibrationExpansion,
-        CalibrationIdentifier,
         Calibrations, // Python: CalibrationSet
         ControlFlowGraphOwned, // Python: ControlFlowGraph
         FlatExpansionResult,
@@ -55,7 +53,7 @@ create_init_submodule! {
         ScheduleSecondsItem,
         TimeSpanSeconds
     ],
-    complex_enums: [ CalibrationIdentifier, FlatExpansionResult ],
+    complex_enums: [ FlatExpansionResult ],
     errors: [
         errors::ProgramError,
         errors::ComputedScheduleError,
@@ -67,7 +65,6 @@ create_init_submodule! {
 impl_repr!(BasicBlockOwned);
 impl_repr!(CalibrationExpansion);
 impl_repr!(Calibrations);
-impl_repr!(CalibrationIdentifier);
 impl_repr!(ControlFlowGraphOwned);
 impl_repr!(FrameSet);
 impl_repr!(FlatExpansionResult);

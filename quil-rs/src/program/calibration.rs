@@ -20,14 +20,14 @@ use std::{
 
 use itertools::{Either, Itertools as _};
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::{
     expression::Expression,
     instruction::{
-        Gate, GateCalibrationDefinition, GateCalibrationIdentifier, Instruction,
-        MeasureCalibrationDefinition, MeasureCalibrationIdentifier, Measurement, Qubit, Reset,
-        ResetCalibrationDefinition, ResetCalibrationIdentifier,
+        CalibrationDefinition, CalibrationIdentifier, Gate, GateCalibrationDefinition, Instruction,
+        MeasureCalibrationDefinition, Measurement, Qubit, Reset, ResetCalibrationDefinition,
+        ResetCalibrationIdentifier,
     },
     quil::Quil,
 };
@@ -143,28 +143,6 @@ impl Calibrations {
     }
 }
 
-struct MatchedCalibration<'a> {
-    pub calibration: &'a GateCalibrationDefinition,
-    pub fixed_qubit_count: usize,
-}
-
-impl<'a> MatchedCalibration<'a> {
-    pub fn new(calibration: &'a GateCalibrationDefinition) -> Self {
-        Self {
-            calibration,
-            fixed_qubit_count: calibration
-                .identifier
-                .qubits
-                .iter()
-                .filter(|q| match q {
-                    Qubit::Fixed(_) => true,
-                    Qubit::Placeholder(_) | Qubit::Variable(_) => false,
-                })
-                .count(),
-        }
-    }
-}
-
 /// The product of expanding an instruction using a calibration.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CalibrationExpansionOutput {
@@ -256,26 +234,6 @@ impl SourceMapIndexable<CalibrationIdentifier> for CalibrationExpansion {
     fn contains(&self, other: &CalibrationIdentifier) -> bool {
         self.calibration_used() == other
     }
-}
-
-// TODO: fix docs
-/// The source of a calibration, either a [`CalibrationIdentifier`] or a
-/// [`MeasureCalibrationIdentifier`].
-#[derive(Clone, Debug, PartialEq, derive_more::From)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil._quil.program", eq, frozen, from_py_object)
-)]
-pub enum CalibrationIdentifier {
-    /// Describes a `DEFCAL` instruction
-    GateCalibration(#[from] GateCalibrationIdentifier),
-
-    /// Describes a `DEFCAL MEASURE` instruction
-    MeasureCalibration(#[from] MeasureCalibrationIdentifier),
-
-    /// Describes a `DEFCAL RESET` instruction
-    ResetCalibration(#[from] ResetCalibrationIdentifier),
 }
 
 impl Calibrations {
@@ -400,10 +358,12 @@ impl Calibrations {
                             })
                         }
 
-                        Some((
+                        Some(CalibrationDefinition {
                             instructions,
-                            CalibrationIdentifier::GateCalibration(calibration.identifier.clone()),
-                        ))
+                            identifier: CalibrationIdentifier::GateCalibration(
+                                calibration.identifier.clone(),
+                            ),
+                        })
                     }
                     None => None,
                 }
@@ -432,12 +392,12 @@ impl Calibrations {
                                 _ => {}
                             }
                         }
-                        Some((
+                        Some(CalibrationDefinition {
                             instructions,
-                            CalibrationIdentifier::MeasureCalibration(
+                            identifier: CalibrationIdentifier::MeasureCalibration(
                                 calibration.identifier.clone(),
                             ),
-                        ))
+                        })
                     }
                     None => None,
                 }
@@ -478,10 +438,10 @@ impl Calibrations {
                              identifier,
                              instructions,
                          }| {
-                            (
+                            CalibrationDefinition {
                                 instructions,
-                                CalibrationIdentifier::ResetCalibration(identifier),
-                            )
+                                identifier: CalibrationIdentifier::ResetCalibration(identifier),
+                            }
                         },
                     )
             }
@@ -503,13 +463,16 @@ impl Calibrations {
 
     fn recursively_expand_inner(
         &self,
-        expansion_result: Option<(Vec<Instruction>, CalibrationIdentifier)>,
+        expansion_result: Option<CalibrationDefinition>,
         calibration_path: &[Instruction],
         qubits_available: &HashSet<Qubit>,
         build_source_map: bool,
     ) -> Result<Option<CalibrationExpansionOutput>, ProgramError> {
         Ok(match expansion_result {
-            Some((instructions, matched_calibration)) => {
+            Some(CalibrationDefinition {
+                identifier: matched_calibration,
+                instructions,
+            }) => {
                 let mut recursively_expanded_instructions = CalibrationExpansionOutput {
                     new_instructions: Vec::new(),
                     detail: CalibrationExpansion {
@@ -720,6 +683,28 @@ impl Calibrations {
     /// 5. All fixed qubits in the calibration definition match those in the gate
     /// 6. All specified parameters in the calibration definition match those in the gate
     pub fn get_match_for_gate(&self, gate: &Gate) -> Option<&GateCalibrationDefinition> {
+        struct MatchedCalibration<'a> {
+            pub calibration: &'a GateCalibrationDefinition,
+            pub fixed_qubit_count: usize,
+        }
+
+        impl<'a> MatchedCalibration<'a> {
+            pub fn new(calibration: &'a GateCalibrationDefinition) -> Self {
+                Self {
+                    calibration,
+                    fixed_qubit_count: calibration
+                        .identifier
+                        .qubits
+                        .iter()
+                        .filter(|q| match q {
+                            Qubit::Fixed(_) => true,
+                            Qubit::Placeholder(_) | Qubit::Variable(_) => false,
+                        })
+                        .count(),
+                }
+            }
+        }
+
         let mut matched_calibration: Option<MatchedCalibration> = None;
 
         for calibration in self
@@ -765,15 +750,20 @@ impl Calibrations {
 mod tests {
     use std::str::FromStr;
 
-    use crate::program::calibration::{CalibrationIdentifier, MeasureCalibrationIdentifier};
-    use crate::program::source_map::{ExpansionResult, SourceMap, SourceMapEntry};
-    use crate::program::{InstructionIndex, Program};
-    use crate::quil::Quil;
+    use crate::{
+        instruction::{GateCalibrationIdentifier, MeasureCalibrationIdentifier},
+        program::{
+            calibration::CalibrationIdentifier,
+            source_map::{ExpansionResult, SourceMap, SourceMapEntry},
+            InstructionIndex, Program,
+        },
+        quil::Quil,
+    };
 
     use insta::assert_snapshot;
     use rstest::rstest;
 
-    use super::{CalibrationExpansion, CalibrationExpansionOutput, GateCalibrationIdentifier};
+    use super::{CalibrationExpansion, CalibrationExpansionOutput};
 
     #[rstest]
     #[case(

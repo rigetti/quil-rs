@@ -29,12 +29,12 @@ use petgraph::Graph;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::instruction::{
-    Arithmetic, ArithmeticOperand, ArithmeticOperator, Call, CircuitDefinition, Declaration,
-    DefGateSequenceExpansionError, ExternError, ExternPragmaMap, ExternSignatureMap,
-    FrameDefinition, FrameIdentifier, GateDefinition, GateError, GateSpecification, Instruction,
-    InstructionHandler, JumpWhen, Label, Matrix, MemoryReference, Move, Pragma, Qubit,
-    QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform, WaveformDefinition,
-    RESERVED_PRAGMA_EXTERN,
+    Arithmetic, ArithmeticOperand, ArithmeticOperator, CalibrationIdentifier, Call,
+    CircuitDefinition, Declaration, DefGateSequenceExpansionError, ExternError, ExternPragmaMap,
+    ExternSignatureMap, FrameDefinition, FrameIdentifier, GateDefinition, GateError,
+    GateSpecification, Instruction, InstructionHandler, JumpWhen, Label, Matrix, MemoryReference,
+    Move, Pragma, Qubit, QubitPlaceholder, ScalarType, Target, TargetPlaceholder, Vector, Waveform,
+    WaveformDefinition, RESERVED_PRAGMA_EXTERN,
 };
 use crate::parser::{lex, parse_instructions, ParseError};
 use crate::program::defgate_sequence_expansion::{
@@ -42,9 +42,7 @@ use crate::program::defgate_sequence_expansion::{
 };
 use crate::quil::Quil;
 
-pub use self::calibration::{
-    CalibrationExpansion, CalibrationExpansionOutput, CalibrationIdentifier, Calibrations,
-};
+pub use self::calibration::{CalibrationExpansion, CalibrationExpansionOutput, Calibrations};
 pub use self::calibration_set::CalibrationSet;
 pub use self::defgate_sequence_expansion::DefGateSequenceExpansion;
 pub use self::error::{
@@ -1187,14 +1185,14 @@ mod tests {
         },
         imag,
         instruction::{
-            Call, Declaration, DefGateSequence, DefaultHandler, ExternSignatureMap, Gate,
-            GateCalibrationIdentifier, GateDefinition, GateSpecification, Instruction,
-            InstructionHandler, Jump, JumpUnless, JumpWhen, Label, Matrix, MemoryReference, Qubit,
-            QubitPlaceholder, ResetCalibrationIdentifier, ScalarType, Target, TargetPlaceholder,
-            UnresolvedCallArgument, Vector, RESERVED_PRAGMA_EXTERN,
+            CalibrationIdentifier, Call, Declaration, DefGateSequence, DefaultHandler,
+            ExternSignatureMap, Gate, GateCalibrationIdentifier, GateDefinition, GateSpecification,
+            Instruction, InstructionHandler, Jump, JumpUnless, JumpWhen, Label, Matrix,
+            MemoryReference, Qubit, QubitPlaceholder, ResetCalibrationIdentifier, ScalarType,
+            Target, TargetPlaceholder, UnresolvedCallArgument, Vector, RESERVED_PRAGMA_EXTERN,
         },
         program::{
-            calibration::{CalibrationExpansion, CalibrationIdentifier},
+            calibration::CalibrationExpansion,
             source_map::{ExpansionResult, SourceMap, SourceMapEntry},
             InstructionIndex, MemoryAccesses,
         },

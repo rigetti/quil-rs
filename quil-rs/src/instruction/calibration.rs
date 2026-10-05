@@ -1,7 +1,7 @@
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::gen_stub_pyclass;
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum};
 
 use crate::{
     instruction::{
@@ -22,6 +22,89 @@ pub trait CalibrationSignature {
 
     fn signature(&self) -> Self::Signature<'_>;
     fn has_signature(&self, signature: &Self::Signature<'_>) -> bool;
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        get_all,
+        set_all,
+        subclass,
+        from_py_object
+    )
+)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
+pub struct CalibrationDefinition {
+    #[pyo3(name = "identifier")]
+    pub identifier: CalibrationIdentifier,
+    pub instructions: Vec<Instruction>,
+}
+
+pickleable_new! {
+    impl CalibrationDefinition {
+        /// Builds a new calibration definition.
+        pub fn new(
+            identifier: CalibrationIdentifier,
+            instructions: Vec<Instruction>,
+        );
+    }
+}
+
+impl Quil for CalibrationDefinition {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        let Self {
+            identifier,
+            instructions,
+        } = self;
+
+        write_calibration_definition(f, fall_back_to_debug, identifier, instructions)
+    }
+}
+
+/// Unique identifier for all supported calibration definition variants.
+#[derive(Clone, Debug, PartialEq, derive_more::From)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, from_py_object)
+)]
+pub enum CalibrationIdentifier {
+    /// Describes a `DEFCAL` instruction
+    GateCalibration(#[from] GateCalibrationIdentifier),
+
+    /// Describes a `DEFCAL MEASURE` instruction
+    MeasureCalibration(#[from] MeasureCalibrationIdentifier),
+
+    /// Describes a `DEFCAL RESET` instruction
+    ResetCalibration(#[from] ResetCalibrationIdentifier),
+}
+
+impl Quil for CalibrationIdentifier {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> crate::quil::ToQuilResult<()> {
+        match self {
+            Self::GateCalibration(gate_calibration) => {
+                gate_calibration.write(f, fall_back_to_debug)
+            }
+            Self::MeasureCalibration(measure_calibration) => {
+                measure_calibration.write(f, fall_back_to_debug)
+            }
+            Self::ResetCalibration(reset_calibration) => {
+                reset_calibration.write(f, fall_back_to_debug)
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

@@ -52,9 +52,9 @@ mod waveform;
 
 pub use self::{
     calibration::{
-        CalibrationSignature, GateCalibrationDefinition, GateCalibrationIdentifier,
-        MeasureCalibrationDefinition, MeasureCalibrationIdentifier, ResetCalibrationDefinition,
-        ResetCalibrationIdentifier,
+        CalibrationDefinition, CalibrationIdentifier, CalibrationSignature,
+        GateCalibrationDefinition, GateCalibrationIdentifier, MeasureCalibrationDefinition,
+        MeasureCalibrationIdentifier, ResetCalibrationDefinition, ResetCalibrationIdentifier,
     },
     circuit::CircuitDefinition,
     classical::{

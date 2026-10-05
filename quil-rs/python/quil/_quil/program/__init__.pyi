@@ -13,7 +13,6 @@ __all__ = [
     "BasicBlock",
     "BasicBlockScheduleError",
     "CalibrationExpansion",
-    "CalibrationIdentifier",
     "CalibrationSet",
     "ComputedScheduleError",
     "ControlFlowGraph",
@@ -81,7 +80,7 @@ class CalibrationExpansion:
     Details about the expansion of a calibration.
     """
     @property
-    def calibration_used(self) -> CalibrationIdentifier:
+    def calibration_used(self) -> instructions.CalibrationIdentifier:
         r"""
         The calibration used to expand the instruction.
         """
@@ -102,58 +101,6 @@ class CalibrationExpansion:
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
-
-class CalibrationIdentifier:
-    r"""
-    The source of a calibration, either a [`CalibrationIdentifier`] or a
-    [`MeasureCalibrationIdentifier`].
-    """
-    def __getnewargs__(self) -> builtins.tuple[
-            _quil.instructions.GateCalibrationIdentifier 
-            | _quil.instructions.MeasureCalibrationIdentifier 
-            | _quil.instructions.ResetCalibrationIdentifier
-        ]: ...
-    def __repr__(self) -> builtins.str:
-        r"""
-        Implements `__repr__` for Python in terms of the Rust
-        [`Debug`](std::fmt::Debug) implementation.
-        """
-    @typing.final
-    class GateCalibration(CalibrationIdentifier):
-        r"""
-        Describes a `DEFCAL` instruction
-        """
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> instructions.GateCalibrationIdentifier: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: instructions.GateCalibrationIdentifier) -> CalibrationIdentifier.GateCalibration: ...
-    
-    @typing.final
-    class MeasureCalibration(CalibrationIdentifier):
-        r"""
-        Describes a `DEFCAL MEASURE` instruction
-        """
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> instructions.MeasureCalibrationIdentifier: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: instructions.MeasureCalibrationIdentifier) -> CalibrationIdentifier.MeasureCalibration: ...
-    
-    @typing.final
-    class ResetCalibration(CalibrationIdentifier):
-        r"""
-        Describes a `DEFCAL RESET` instruction
-        """
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> instructions.ResetCalibrationIdentifier: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: instructions.ResetCalibrationIdentifier) -> CalibrationIdentifier.ResetCalibration: ...
-    
 
 class CalibrationSet:
     r"""
@@ -353,7 +300,7 @@ class InstructionSourceMap:
     a calibration or a sequence gate definition.
     """
     def entries(self) -> builtins.list[InstructionSourceMapEntry]: ...
-    def list_sources_for_calibration_used(self, calibration_used: CalibrationIdentifier) -> builtins.list[builtins.int]:
+    def list_sources_for_calibration_used(self, calibration_used: instructions.CalibrationIdentifier) -> builtins.list[builtins.int]:
         r"""
         Given a particular calibration (`DEFCAL`, `DEFCAL MEASURE`, or `DEFCAL RESET`),
         return the locations in the source which were expanded using that calibration.
