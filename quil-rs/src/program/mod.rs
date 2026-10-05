@@ -42,6 +42,8 @@ use crate::program::defgate_sequence_expansion::{
 };
 use crate::quil::Quil;
 
+use self::body_instructions::BodyInstructions;
+
 pub use self::calibration::{
     CalibrationExpansion, CalibrationExpansionOutput, CalibrationSource, Calibrations,
 };
@@ -56,6 +58,7 @@ pub use self::memory::{MemoryAccesses, MemoryAccessesError, MemoryRegion};
 pub use self::source_map::{ExpansionResult, SourceMap, SourceMapEntry, SourceMapIndexable};
 
 pub mod analysis;
+mod body_instructions;
 mod calibration;
 mod calibration_set;
 mod defgate_sequence_expansion;
@@ -191,7 +194,7 @@ pub struct Program {
     #[pyo3(get, set)]
     pub circuits: IndexMap<String, CircuitDefinition>,
     #[pyo3(get, set)]
-    instructions: Vec<Instruction>,
+    instructions: BodyInstructions,
     // private field used for caching operations
     #[pyo3(get)]
     pub(crate) used_qubits: HashSet<Qubit>,
@@ -217,7 +220,7 @@ impl Program {
             waveforms: self.waveforms.clone(),
             gate_definitions: self.gate_definitions.clone(),
             circuits: self.circuits.clone(),
-            instructions: Vec::new(),
+            instructions: Default::default(),
             used_qubits: HashSet::new(),
         }
     }
@@ -666,7 +669,7 @@ impl Program {
             waveforms: self.waveforms,
             gate_definitions,
             circuits: self.circuits.clone(),
-            instructions: Vec::new(),
+            instructions: Default::default(),
             used_qubits: HashSet::new(),
         };
         new_program.add_instructions(new_instructions);
@@ -709,7 +712,7 @@ impl Program {
             waveforms: self.waveforms.clone(),
             gate_definitions,
             circuits: self.circuits.clone(),
-            instructions: Vec::new(),
+            instructions: Default::default(),
             used_qubits: HashSet::new(),
         };
         new_program.add_instructions(new_instructions);
@@ -1800,7 +1803,7 @@ DEFCIRCUIT BELL2 q0 q1:
     #[test]
     fn test_from_vec_instructions() {
         let expected: Program = "NOP\nNOP".parse().expect("Should parse NOPs");
-        let p: Program = expected.instructions.clone().into();
+        let p: Program = expected.instructions.to_vec().into();
         assert_eq!(expected, p);
     }
 
