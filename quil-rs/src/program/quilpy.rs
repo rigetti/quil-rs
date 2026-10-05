@@ -5,9 +5,9 @@ use std::str::FromStr;
 use indexmap::IndexMap;
 use numpy::{Complex64, PyArray2, ToPyArray};
 use pyo3::{
-    exceptions::{PyTypeError, PyUnicodeDecodeError, PyValueError},
+    exceptions::{PyIndexError, PyTypeError, PyUnicodeDecodeError, PyValueError},
     prelude::*,
-    types::{PyBytes, PyFunction, PyRange, PyTuple},
+    types::{PyBytes, PyFunction, PyList, PyRange, PySequence, PySlice, PyTuple},
     PyErr,
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
@@ -42,6 +42,7 @@ use super::{
 create_init_submodule! {
     classes: [
         BasicBlockOwned, // Python name: BasicBlock
+        BodyInstructionsView,
         CalibrationExpansion,
         CalibrationSource,
         Calibrations, // Python: CalibrationSet
@@ -71,6 +72,8 @@ pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     m.add("InstructionIndex", py.get_type::<pyo3::types::PyInt>())?;
     m.add("Seconds", py.get_type::<pyo3::types::PyFloat>())?;
+
+    PySequence::register::<BodyInstructionsView>(py)?;
 
     Ok(())
 }
@@ -154,9 +157,16 @@ impl Program {
         self.waveforms = waveforms;
     }
 
+    /// A live, read-only view of the program's body instructions.
+    ///
+    /// Use ``list(program.body_instructions)`` for a snapshot.
+    #[gen_stub(override_return_type(
+        type_repr = "typing.Sequence[_quil.instructions.Instruction]",
+        imports = ("quil._quil", "typing"),
+    ))]
     #[getter(body_instructions)]
-    fn py_body_instructions(&self) -> Vec<Instruction> {
-        self.instructions.clone()
+    fn py_body_instructions(slf: &Bound<'_, Self>) -> BodyInstructionsView {
+        BodyInstructionsView(slf.clone().unbind())
     }
 
     /// Return a deep copy of the `Program`.
@@ -633,6 +643,138 @@ impl Program {
             .map_err(|e| PyUnicodeDecodeError::new_err_from_utf8(py, state.as_bytes(), e))?;
         *self = Self::from_str(quil)?;
         Ok(())
+    }
+}
+
+/// A live, read-only view of a ``Program``'s body instructions.
+///
+/// This is a ``collections.abc.Sequence`` that reflects later changes to the program.
+/// The program caches a Python list of converted instructions for a prefix of its body.
+/// Reading index ``i`` first converts any uncached instructions up to ``i``, and iterating
+/// converts the rest, then iterates the list directly. Later reads return the same objects
+/// until the program's body is modified other than by appending.
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyclass(
+    name = "BodyInstructionsView",
+    module = "quil._quil.program",
+    frozen,
+    sequence
+)]
+pub(crate) struct BodyInstructionsView(Py<Program>);
+
+impl BodyInstructionsView {
+    /// The cached Python object for the instruction at `index`, which must be in bounds.
+    fn item<'py>(py: Python<'py>, program: &Program, index: usize) -> PyResult<Bound<'py, PyAny>> {
+        program.instructions.py_list(py, index + 1)?.get_item(index)
+    }
+
+    fn items<'py>(
+        py: Python<'py>,
+        program: &Program,
+        indices: impl Iterator<Item = usize>,
+    ) -> PyResult<Bound<'py, PyList>> {
+        let items = indices
+            .map(|index| Self::item(py, program, index))
+            .collect::<PyResult<Vec<_>>>()?;
+        PyList::new(py, items)
+    }
+
+    /// The indices of instructions equal to `value`, compared in Rust without converting any.
+    fn matching(&self, py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<Vec<usize>> {
+        let Ok(value) = value.extract::<Instruction>() else {
+            return Ok(Vec::new());
+        };
+        let program = self.0.try_borrow(py)?;
+        Ok(program
+            .instructions
+            .iter()
+            .enumerate()
+            .filter_map(|(index, inst)| (*inst == value).then_some(index))
+            .collect())
+    }
+}
+
+/// Resolve a Python index (negatives count from the end) against `len`.
+fn resolve_index(index: isize, len: usize) -> PyResult<usize> {
+    let len_isize = isize::try_from(len)?;
+    let resolved = if index < 0 { index + len_isize } else { index };
+    usize::try_from(resolved)
+        .ok()
+        .filter(|&index| index < len)
+        .ok_or_else(|| PyIndexError::new_err("body instruction index out of range"))
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl BodyInstructionsView {
+    fn __len__(&self, py: Python<'_>) -> PyResult<usize> {
+        Ok(self.0.try_borrow(py)?.instructions.len())
+    }
+
+    #[gen_stub(override_return_type(
+        type_repr = "_quil.instructions.Instruction | builtins.list[_quil.instructions.Instruction]",
+        imports = ("quil._quil", "builtins"),
+    ))]
+    fn __getitem__<'py>(
+        &self,
+        py: Python<'py>,
+        #[gen_stub(override_type(type_repr = "builtins.int | builtins.slice", imports = ("builtins")))]
+        index: &Bound<'py, PyAny>,
+    ) -> PyResult<Bound<'py, PyAny>> {
+        let program = self.0.try_borrow(py)?;
+        let len = program.instructions.len();
+        if let Ok(slice) = index.cast::<PySlice>() {
+            let range = slice.indices(len.try_into()?)?;
+            let indices =
+                (0..range.slicelength).map(|i| (range.start + i as isize * range.step) as usize);
+            return Self::items(py, &program, indices).map(Bound::into_any);
+        }
+        let index = resolve_index(index.extract()?, len)?;
+        Self::item(py, &program, index)
+    }
+
+    /// Iterate the cached list directly, after converting any instructions not yet cached.
+    #[gen_stub(override_return_type(
+        type_repr = "typing.Iterator[_quil.instructions.Instruction]",
+        imports = ("quil._quil", "typing"),
+    ))]
+    fn __iter__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, pyo3::types::PyIterator>> {
+        let program = self.0.try_borrow(py)?;
+        program
+            .instructions
+            .py_list(py, program.instructions.len())?
+            .try_iter()
+    }
+
+    fn __contains__(&self, py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<bool> {
+        Ok(!self.matching(py, value)?.is_empty())
+    }
+
+    /// Return the index of the first instruction equal to ``value``.
+    ///
+    /// Raises ``ValueError`` if there is none.
+    fn index(&self, py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<usize> {
+        self.matching(py, value)?
+            .first()
+            .copied()
+            .ok_or_else(|| PyValueError::new_err("instruction is not in body_instructions"))
+    }
+
+    /// Return the number of instructions equal to ``value``.
+    fn count(&self, py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<usize> {
+        Ok(self.matching(py, value)?.len())
+    }
+
+    fn __eq__(&self, py: Python<'_>, other: &Bound<'_, PyAny>) -> PyResult<bool> {
+        let program = self.0.try_borrow(py)?;
+        Self::items(py, &program, 0..program.instructions.len())?.eq(other)
+    }
+
+    fn __repr__(&self, py: Python<'_>) -> PyResult<String> {
+        let program = self.0.try_borrow(py)?;
+        let list = Self::items(py, &program, 0..program.instructions.len())?;
+        Ok(format!("BodyInstructionsView({})", list.repr()?))
     }
 }
 
