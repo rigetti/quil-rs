@@ -2140,6 +2140,40 @@ impl GateModifier {
     }
 }
 
+/// Allow constructing a [`GateSpecification`] directly from the shapes of data it wraps,
+/// without requiring users to first wrap them in e.g. `GateSpecification.Matrix(...)`.
+///
+/// This accepts:
+/// - An existing `GateSpecification` (or one of its variant instances, e.g. `.Matrix(...)`).
+/// - A nested list of [`ExpressionLike`] values (interpreted as a `Matrix`).
+/// - A flat list of integers (interpreted as a `Permutation`).
+/// - A bare `PauliSum`.
+/// - A bare `DefGateSequence`.
+impl<'a, 'py> FromPyObject<'a, 'py> for GateSpecification {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(value) = obj.cast::<GateSpecification>() {
+            Ok(value.get().clone())
+        } else if let Ok(value) = obj.cast::<PauliSum>() {
+            Ok(GateSpecification::PauliSum(value.get().clone()))
+        } else if let Ok(value) = obj.cast::<DefGateSequence>() {
+            Ok(GateSpecification::Sequence(value.get().clone()))
+        } else if let Ok(matrix) = obj.extract::<Vec<Vec<ExpressionLike>>>() {
+            Ok(GateSpecification::Matrix(
+                matrix
+                    .into_iter()
+                    .map(|row| row.into_iter().map(Expression::from).collect())
+                    .collect(),
+            ))
+        } else if let Ok(permutation) = obj.extract::<Vec<u64>>() {
+            Ok(GateSpecification::Permutation(permutation))
+        } else {
+            Err(CastError::new(obj, GateSpecification::classinfo_object(obj.py())))?
+        }
+    }
+}
+
 impl_newargs!(GateSpecificationArgs = Vec<Vec<Expression>> | Vec<i64> | PauliSum | DefGateSequence);
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]

@@ -4,7 +4,6 @@ from typing import Callable, Iterator
 import pytest
 
 import quil
-from quil.expression import Expression
 from quil.instructions import (
     CalibrationDefinition,
     CalibrationIdentifier,
@@ -27,7 +26,7 @@ def qubit(request: pytest.FixtureRequest) -> Qubit:
 def _calibration(qubit: Qubit) -> CalibrationDefinition:
     return CalibrationDefinition(
         CalibrationIdentifier("MYCAL", [], [qubit], []),
-        [Delay(Expression.Number(complex(0.5)), [qubit])],
+        [Delay(0.5, [qubit])],
     )
 
 def _pulse(qubit: Qubit) -> Pulse:
