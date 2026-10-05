@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import pytest
 import numpy as np
-from quil.expression import Expression, ExpressionDesignator, quil_exp
+from quil.expression import Expression, ExpressionDesignator, Number, Pi, quil_exp
 from quil.instructions import (
     PauliGate,
     PauliSum,
@@ -33,8 +33,8 @@ class ConstrArg:
 def constr_args() -> list[ConstrArg]:
     """Get a list of non-identity `PauliTerm` constructor arguments."""
     return [
-        ConstrArg(PauliGate.X, 0, "q0", Expression.Pi(), Expression.Pi()),
-        ConstrArg(PauliGate.Y, "b", "b", -1.0, Expression.Number(-1.0)),
+        ConstrArg(PauliGate.X, 0, "q0", Pi, Pi),
+        ConstrArg(PauliGate.Y, "b", "b", -1.0, Number(-1.0)),
     ]
 
 
@@ -59,17 +59,17 @@ class TestTermConstructor:
         for op, index, qubit_str, _, _ in constr_args:
             pt = PauliTerm(op, index)
             assert pt.arguments == [(op, qubit_str)]
-            assert pt.expression == Expression.Number(1.0)
+            assert pt.expression == Number(1.0)
 
     def test_single_ident_no_index(self):
         pt = PauliTerm(PauliGate.I, None, 2.0)
         assert pt.arguments == []
-        assert pt.expression == Expression.Number(2.0)
+        assert pt.expression == Number(2.0)
 
     def test_single_ident_no_index_default_coeff(self):
         pt = PauliTerm(PauliGate.I, None)
         assert pt.arguments == []
-        assert pt.expression == Expression.Number(1.0)
+        assert pt.expression == Number(1.0)
 
     def test_list_constructor(self, constr_args: list[ConstrArg]):
         for op, index, qubit_str, coeff, expr in constr_args:
@@ -83,7 +83,7 @@ class TestTermConstructor:
             with pytest.warns(DeprecationWarning):
                 pt = PauliTerm([(op, index)])
             assert pt.arguments == [(op, qubit_str)]
-            assert pt.expression == Expression.Number(1.0)
+            assert pt.expression == Number(1.0)
 
     def test_from_list(self, constr_args: list[ConstrArg]):
         """Confirm the ``from_list`` method is equivalent to using the constructor."""
@@ -127,7 +127,7 @@ class TestTermMultiplication:
             3,
             3.0,
             3.0 + 0.0j,
-            Expression.Number(3.0),
+            Number(3.0),
             np.int8(3),
             np.int16(3),
             np.int32(3),
@@ -179,7 +179,7 @@ class TestTermPower:
     def test_expr(self, t_2_X0: PauliTerm):
         k = Expression.parse("2*pi + 1")
         # TODO: this may justify making Expression work like Instruction, as a class hierarchy.
-        exp_i_pi_k = quil_exp(1.0j * Expression.Pi() * k)
+        exp_i_pi_k = quil_exp(1.0j * Pi * k)
         a = (1 + exp_i_pi_k) / 2
         b = (1 - exp_i_pi_k) / 2
         c_pow_k = t_2_X0.expression**k

@@ -2,13 +2,13 @@ from copy import deepcopy
 
 import numpy as np
 
-from quil.expression import Expression
+from quil.expression import Number
 from quil.instructions import Gate, Qubit
 from quil.program import Program
 
 
 def test_instruction_eq():
-    pi_expr = Expression.Number(complex(np.pi, 0))
+    pi_expr = Number(complex(np.pi, 0))
 
     rx = Gate("RX", [pi_expr], [Qubit.Fixed(0)], [])
     rx_copy = deepcopy(rx)

@@ -1009,7 +1009,7 @@ mod pauli_sum_tests {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, from_py_object)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, skip_from_py_object)
 )]
 pub enum GateSpecification {
     /// A matrix of [`Expression`]s representing a unitary operation for a [`GateType::Matrix`].

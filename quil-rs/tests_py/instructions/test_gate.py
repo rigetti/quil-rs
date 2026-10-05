@@ -1,6 +1,5 @@
 import pytest
 
-from quil.expression import Expression
 from quil.instructions import (
     MeasureCalibrationDefinition,
     MeasureCalibrationIdentifier,
@@ -20,7 +19,7 @@ def test_calibration_getters():
 
     calibration = CalibrationDefinition(
         CalibrationIdentifier("MYCAL", [], [placeholder], []),
-        [Delay(Expression.Number(0.5), [placeholder])],
+        [Delay(0.5, [placeholder])],
     )
 
     assert calibration.name == "MYCAL"

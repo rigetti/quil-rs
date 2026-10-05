@@ -906,8 +906,12 @@ impl<'a, 'py> FromPyObject<'a, 'py> for Expression {
 #[pymethods]
 impl InfixExpression {
     #[new]
-    fn __new__(left: Expression, operator: InfixOperator, right: Expression) -> Self {
-        Self::new(ArcIntern::new(left), operator, ArcIntern::new(right))
+    fn __new__(left: ExpressionLike, operator: InfixOperator, right: ExpressionLike) -> Self {
+        Self::new(
+            ArcIntern::new(Expression::from(left)),
+            operator,
+            ArcIntern::new(Expression::from(right)),
+        )
     }
 
     fn __getnewargs__(&self) -> (Expression, InfixOperator, Expression) {
@@ -929,8 +933,8 @@ impl InfixExpression {
 #[pymethods]
 impl PrefixExpression {
     #[new]
-    fn __new__(operator: PrefixOperator, expression: Expression) -> Self {
-        Self::new(operator, ArcIntern::new(expression))
+    fn __new__(operator: PrefixOperator, expression: ExpressionLike) -> Self {
+        Self::new(operator, ArcIntern::new(Expression::from(expression)))
     }
 
     fn __getnewargs__(&self) -> (PrefixOperator, Expression) {
@@ -947,8 +951,8 @@ impl PrefixExpression {
 #[pymethods]
 impl FunctionCallExpression {
     #[new]
-    fn __new__(function: ExpressionFunction, expression: Expression) -> Self {
-        Self::new(function, ArcIntern::new(expression))
+    fn __new__(function: ExpressionFunction, expression: ExpressionLike) -> Self {
+        Self::new(function, ArcIntern::new(Expression::from(expression)))
     }
 
     fn __getnewargs__(&self) -> (ExpressionFunction, Expression) {

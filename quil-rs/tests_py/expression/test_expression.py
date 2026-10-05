@@ -4,11 +4,24 @@ import pytest
 import numpy as np
 
 from quil.instructions import MemoryReference, GateDefinition, GateSpecification
-from quil.expression import Expression, quil_cos, quil_sin
+from quil.expression import (
+    Address,
+    Expression,
+    FunctionCallExpression,
+    ExpressionFunction,
+    InfixExpression,
+    InfixOperator,
+    Number,
+    Parameter,
+    PrefixExpression,
+    PrefixOperator,
+    quil_cos,
+    quil_sin,
+)
 
 VarMap: TypeAlias = dict[str | MemoryReference, complex | list[complex]]
-ZERO = Expression(0)
-ONE = Expression(1)
+ZERO = Number(0)
+ONE = Number(1)
 
 class TestOperations:
     """Test performing mathematical operations on `Expression`s.
@@ -65,18 +78,43 @@ class TestOperations:
 
 
 class TestConstructor:
-    """Test extractions to `Expression` from various types."""
+    """Test flexible `ExpressionLike` conversions accepted by `Expression`-taking constructors."""
 
     def test_str(self):
-        assert Expression("x") == Expression.Variable("x")
+        """A bare `str` is interpreted as a `Parameter` (i.e. `%<name>`)."""
+        expr = PrefixExpression(PrefixOperator.MINUS, "x")
+        assert expr.expression == Parameter("x")
 
     def test_memref(self):
+        """A bare `MemoryReference` is interpreted as an `Address`."""
         memref = MemoryReference("x")
-        assert Expression(memref) == Expression.Address(memref)
+        expr = PrefixExpression(PrefixOperator.MINUS, memref)
+        assert expr.expression == Address(memref)
 
     @pytest.mark.parametrize("value", [1, 1.0, 1.0 + 0.0j])
     def test_number(self, value: int | float | complex):
-        assert Expression(value) == Expression.Number(1.0+0.0j)
+        """Bare `int`/`float`/`complex` values are interpreted as a `Number`."""
+        expr = PrefixExpression(PrefixOperator.MINUS, value)
+        assert expr.expression == Number(1.0 + 0.0j)
+
+
+class TestExpressionLikeConstructors:
+    """Check that constructors accepting `ExpressionLike` avoid requiring manual wrapping."""
+
+    def test_infix_expression(self):
+        expr = InfixExpression(1, InfixOperator.PLUS, 2)
+        assert expr.left == Number(1)
+        assert expr.right == Number(2)
+        assert complex(expr.evaluate({}, {})) == complex(3)
+
+    def test_prefix_expression(self):
+        expr = PrefixExpression(PrefixOperator.MINUS, 3.0)
+        assert expr.expression == Number(3.0)
+        assert complex(expr.evaluate({}, {})) == complex(-3.0)
+
+    def test_function_call_expression(self):
+        expr = FunctionCallExpression(ExpressionFunction.SINE, "x")
+        assert expr.expression == Parameter("x")
 
 
 def test_substitute() -> None:
@@ -112,29 +150,21 @@ def test_substitute_memref() -> None:
         assert expr.substitute(cast(VarMap, dict(y=(2,3)))) == Expression.parse(r"%x + 3")
 
 
-@pytest.mark.xfail(reason="GateSpecification.Matrix should accept ndarray as well as lists.")
 def test_gate_definition() -> None:
-    """Check that we can correctly use `Expression`s in gate definitions."""
+    """Check that `GateDefinition` accepts bare (unwrapped) matrices made of `ExpressionLike` values."""
 
-    theta = Expression.Variable('theta')
+    theta = Parameter("theta")
 
-    # TODO: make Matrix and others accept ExpressionLike and remove this shim. 
-    def ex(l): return [x if isinstance(x, Expression) else Expression.parse(str(x)) for x in l]
-
-    arr = np.array([
-        ex([1, 0, 0, 0]),
-        ex([0, 1, 0, 0]),
-        ex([0, 0, quil_cos(theta / 2), quil_sin(theta / 2) * -1.0j ]),
-        ex([0, 0, quil_sin(theta / 2) * -1.0j, quil_cos(theta / 2) ]),
-    ], dtype=object)
     crx = [
-        ex([1, 0, 0, 0]),
-        ex([0, 1, 0, 0]),
-        ex([0, 0, quil_cos(theta / 2), quil_sin(theta / 2) * -1.0j ]),
-        ex([0, 0, quil_sin(theta / 2) * -1.0j, quil_cos(theta / 2) ]),
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, quil_cos(theta / 2), quil_sin(theta / 2) * -1.0j],
+        [0, 0, quil_sin(theta / 2) * -1.0j, quil_cos(theta / 2)],
     ]
+    arr = np.array(crx, dtype=object)
 
-    from_list = GateDefinition("CRX", ["theta"], GateSpecification.Matrix(crx))
-    from_arr = GateDefinition("CRX", ["theta"], GateSpecification.Matrix(arr))
+    from_list = GateDefinition("CRX", ["theta"], crx)
+    from_arr = GateDefinition("CRX", ["theta"], arr)
     assert from_list == from_arr
+    assert isinstance(from_list.specification, GateSpecification)
 
