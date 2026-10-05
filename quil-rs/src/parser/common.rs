@@ -543,7 +543,6 @@ pub mod tests {
     use super::{parse_matrix, parse_pauli_terms, parse_permutation, parse_waveform_invocation};
 
     /// A Quil program which uses all available instructions.
-    // TODO: make defcal reset more thorough
     pub const KITCHEN_SINK_QUIL: &str = "DECLARE ro BIT[1]
 DEFGATE HADAMARD AS MATRIX:
 \t(1/sqrt(2)),(1/sqrt(2))
@@ -578,7 +577,11 @@ DEFCAL MEASURE 0 dest:
 
 DEFCAL RESET 0:
 \tDECLARE iq REAL[2]
+\tPULSE 0 \"xy\" my_waveform()
 \tCAPTURE 0 \"out\" flat(duration: 1000000, iqs: (2+3i)) iq[0]
+
+DEFCAL RESET 1:
+\tDELAY 1 \"xy\" 100000000
 
 DEFFRAME 0 \"xy\":
 \tSAMPLE-RATE: 3000
