@@ -25,11 +25,9 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen
 use crate::{
     expression::Expression,
     instruction::{
-        Capture, Delay, Fence, FrameIdentifier, Gate, GateCalibrationDefinition,
-        GateCalibrationIdentifier, Instruction, MeasureCalibrationDefinition,
-        MeasureCalibrationIdentifier, Measurement, Pulse, Qubit, RawCapture, Reset,
-        ResetCalibrationDefinition, ResetCalibrationIdentifier, SetFrequency, SetPhase, SetScale,
-        ShiftFrequency, ShiftPhase,
+        Gate, GateCalibrationDefinition, GateCalibrationIdentifier, Instruction,
+        MeasureCalibrationDefinition, MeasureCalibrationIdentifier, Measurement, Qubit, Reset,
+        ResetCalibrationDefinition, ResetCalibrationIdentifier,
     },
     quil::Quil,
 };
@@ -385,56 +383,16 @@ impl Calibrations {
                         let mut instructions = calibration.instructions.clone();
 
                         for instruction in instructions.iter_mut() {
-                            match instruction {
-                                Instruction::Gate(Gate { qubits, .. })
-                                | Instruction::Delay(Delay { qubits, .. })
-                                | Instruction::Capture(Capture {
-                                    frame: FrameIdentifier { qubits, .. },
-                                    ..
-                                })
-                                | Instruction::RawCapture(RawCapture {
-                                    frame: FrameIdentifier { qubits, .. },
-                                    ..
-                                })
-                                | Instruction::SetFrequency(SetFrequency {
-                                    frame: FrameIdentifier { qubits, .. },
-                                    ..
-                                })
-                                | Instruction::SetPhase(SetPhase {
-                                    frame: FrameIdentifier { qubits, .. },
-                                    ..
-                                })
-                                | Instruction::SetScale(SetScale {
-                                    frame: FrameIdentifier { qubits, .. },
-                                    ..
-                                })
-                                | Instruction::ShiftFrequency(ShiftFrequency {
-                                    frame: FrameIdentifier { qubits, .. },
-                                    ..
-                                })
-                                | Instruction::ShiftPhase(ShiftPhase {
-                                    frame: FrameIdentifier { qubits, .. },
-                                    ..
-                                })
-                                | Instruction::Pulse(Pulse {
-                                    frame: FrameIdentifier { qubits, .. },
-                                    ..
-                                })
-                                | Instruction::Fence(Fence { qubits }) => {
-                                    // Swap all qubits for their concrete implementations
-                                    for qubit in qubits {
-                                        match qubit {
-                                            Qubit::Variable(name) => {
-                                                if let Some(expansion) = qubit_expansions.get(name)
-                                                {
-                                                    *qubit = expansion.clone();
-                                                }
-                                            }
-                                            Qubit::Fixed(_) | Qubit::Placeholder(_) => {}
+                            // Swap all qubits for their concrete implementations
+                            for qubit in instruction.get_qubits_mut() {
+                                match qubit {
+                                    Qubit::Variable(name) => {
+                                        if let Some(expansion) = qubit_expansions.get(name) {
+                                            *qubit = expansion.clone();
                                         }
                                     }
+                                    Qubit::Fixed(_) | Qubit::Placeholder(_) => {}
                                 }
-                                _ => {}
                             }
 
                             instruction.apply_to_expressions(|expr| {

@@ -238,10 +238,8 @@ impl Program {
         ))]
         instruction: Instruction,
     ) {
-        self.used_qubits
-            .extend(instruction.get_qubits().into_iter().cloned());
-
         match instruction {
+            // Non-body instructions
             Instruction::CircuitDefinition(circuit) => {
                 self.circuits.insert(circuit.name.clone(), circuit);
             }
@@ -276,35 +274,17 @@ impl Program {
             Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => {
                 self.waveforms.insert(name, definition);
             }
-            Instruction::Gate(gate) => {
-                self.instructions.push(Instruction::Gate(gate));
-            }
-            Instruction::Measurement(measurement) => {
-                self.instructions
-                    .push(Instruction::Measurement(measurement));
-            }
-            Instruction::Reset(reset) => {
-                self.instructions.push(Instruction::Reset(reset));
-            }
-            Instruction::Delay(delay) => {
-                self.instructions.push(Instruction::Delay(delay));
-            }
-            Instruction::Fence(fence) => {
-                self.instructions.push(Instruction::Fence(fence));
-            }
-            Instruction::Capture(capture) => {
-                self.instructions.push(Instruction::Capture(capture));
-            }
-            Instruction::Pulse(pulse) => {
-                self.instructions.push(Instruction::Pulse(pulse));
-            }
+
+            // Body instructions
             Instruction::Pragma(pragma) if pragma.name == RESERVED_PRAGMA_EXTERN => {
                 self.extern_pragma_map.insert(pragma);
             }
-            Instruction::RawCapture(raw_capture) => {
-                self.instructions.push(Instruction::RawCapture(raw_capture));
+            body_instruction => {
+                self.used_qubits
+                    .extend(body_instruction.get_qubits().into_iter().cloned());
+
+                self.instructions.push(body_instruction)
             }
-            other => self.instructions.push(other),
         }
     }
 

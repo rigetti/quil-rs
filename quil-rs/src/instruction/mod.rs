@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{collections::HashSet, fmt, iter, str::FromStr};
+use std::{collections::HashSet, fmt, str::FromStr};
 
 use itertools::Itertools as _;
 use nom_locate::LocatedSpan;
@@ -674,100 +674,326 @@ impl Instruction {
     #[allow(dead_code)]
     pub fn get_qubits(&self) -> Vec<&Qubit> {
         match self {
-            Instruction::Gate(gate) => gate.qubits.iter().collect(),
-            Instruction::GateCalibrationDefinition(gate_calibration) => gate_calibration
-                .identifier
-                .qubits
+            // Definitions
+            Instruction::CircuitDefinition(CircuitDefinition {
+                instructions,
+                // We cannot convert from [`&mut String`] to [`&mut Qubit`]
+                // Otherwise, these should be included.
+                qubit_variables: _qubit_variables,
+                name: _,
+                parameters: _,
+            }) => instructions
                 .iter()
-                .chain(
-                    gate_calibration
-                        .instructions
-                        .iter()
-                        .flat_map(|inst| inst.get_qubits()),
-                )
+                .flat_map(|inst| inst.get_qubits())
                 .collect(),
-            Instruction::MeasureCalibrationDefinition(measurement) => {
-                iter::once(&measurement.identifier.qubit)
-                    .chain(
-                        measurement
-                            .instructions
-                            .iter()
-                            .flat_map(|inst| inst.get_qubits()),
-                    )
+            Instruction::GateCalibrationDefinition(GateCalibrationDefinition {
+                identifier,
+                instructions,
+            }) => {
+                let GateCalibrationIdentifier {
+                    qubits: identifier_qubits,
+                    modifiers: _,
+                    name: _,
+                    parameters: _,
+                } = identifier;
+
+                identifier_qubits
+                    .iter()
+                    .chain(instructions.iter().flat_map(|inst| inst.get_qubits()))
                     .collect()
             }
-            Instruction::Measurement(measurement) => vec![&measurement.qubit],
-            Instruction::Reset(reset) => match &reset.qubit {
-                Some(qubit) => vec![qubit],
-                None => vec![],
-            },
-            Instruction::ResetCalibrationDefinition(reset_calibration) => reset_calibration
-                .identifier
-                .qubit
-                .iter()
-                .chain(
-                    reset_calibration
-                        .instructions
-                        .iter()
-                        .flat_map(|inst| inst.get_qubits()),
-                )
-                .collect(),
-            Instruction::Delay(delay) => delay.qubits.iter().collect(),
-            Instruction::Fence(fence) => fence.qubits.iter().collect(),
-            Instruction::Capture(capture) => capture.frame.qubits.iter().collect(),
-            Instruction::Pulse(pulse) => pulse.frame.qubits.iter().collect(),
-            Instruction::RawCapture(raw_capture) => raw_capture.frame.qubits.iter().collect(),
-            _ => vec![],
+            Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
+                identifier,
+                instructions,
+            }) => {
+                let MeasureCalibrationIdentifier {
+                    qubit: identifier_qubit,
+                    name: _,
+                    target: _,
+                } = identifier;
+
+                std::iter::once(identifier_qubit)
+                    .chain(instructions.iter().flat_map(|inst| inst.get_qubits()))
+                    .collect()
+            }
+            Instruction::ResetCalibrationDefinition(ResetCalibrationDefinition {
+                identifier,
+                instructions,
+            }) => {
+                let ResetCalibrationIdentifier {
+                    qubit: identifier_qubit,
+                    name: _,
+                } = identifier;
+
+                identifier_qubit
+                    .iter()
+                    .chain(instructions.iter().flat_map(|inst| inst.get_qubits()))
+                    .collect()
+            }
+
+            // Instructions with explicit qubits
+            Instruction::Delay(Delay {
+                qubits,
+                // We cannot look up frame names
+                frame_names: _,
+                duration: _,
+            })
+            | Instruction::Fence(Fence { qubits })
+            | Instruction::Gate(Gate {
+                qubits,
+                name: _,
+                parameters: _,
+                modifiers: _,
+            }) => qubits.iter().collect(),
+            Instruction::Measurement(Measurement {
+                qubit,
+                name: _,
+                target: _,
+            }) => vec![qubit],
+            Instruction::Reset(Reset { qubit, name: _ }) => qubit.as_ref().into_iter().collect(),
+
+            // Instructions with explicit frames (which specify qubits)
+            Instruction::Capture(Capture {
+                frame,
+                blocking: _,
+                memory_reference: _,
+                waveform: _,
+            })
+            | Instruction::FrameDefinition(FrameDefinition {
+                identifier: frame,
+                attributes: _,
+            })
+            | Instruction::Pulse(Pulse {
+                frame,
+                blocking: _,
+                waveform: _,
+            })
+            | Instruction::RawCapture(RawCapture {
+                frame,
+                blocking: _,
+                duration: _,
+                memory_reference: _,
+            })
+            | Instruction::SetFrequency(SetFrequency {
+                frame,
+                frequency: _,
+            })
+            | Instruction::SetPhase(SetPhase { frame, phase: _ })
+            | Instruction::SetScale(SetScale { frame, scale: _ })
+            | Instruction::ShiftFrequency(ShiftFrequency {
+                frame,
+                frequency: _,
+            })
+            | Instruction::ShiftPhase(ShiftPhase { frame, phase: _ }) => {
+                let FrameIdentifier { qubits, name: _ } = frame;
+
+                qubits.iter().collect()
+            }
+            Instruction::SwapPhases(SwapPhases {
+                frame_1:
+                    FrameIdentifier {
+                        qubits: qubits_1,
+                        name: _,
+                    },
+                frame_2:
+                    FrameIdentifier {
+                        qubits: qubits_2,
+                        name: _,
+                    },
+            }) => qubits_1.iter().chain(qubits_2.iter()).collect(),
+
+            // Instructions that don't have qubits
+            Instruction::Arithmetic(_)
+            | Instruction::BinaryLogic(_)
+            | Instruction::Call(_)
+            | Instruction::Convert(_)
+            | Instruction::Comparison(_)
+            | Instruction::Declaration(_)
+            | Instruction::Exchange(_)
+            | Instruction::GateDefinition(_)
+            | Instruction::Halt()
+            | Instruction::Include(_)
+            | Instruction::Jump(_)
+            | Instruction::JumpUnless(_)
+            | Instruction::JumpWhen(_)
+            | Instruction::Label(_)
+            | Instruction::Load(_)
+            | Instruction::Move(_)
+            | Instruction::Nop()
+            | Instruction::Pragma(_)
+            | Instruction::Store(_)
+            | Instruction::UnaryLogic(_)
+            | Instruction::WaveformDefinition(_)
+            | Instruction::Wait() => vec![],
         }
     }
 
     /// Return mutable references to the [`Qubit`]s contained within an instruction
     pub fn get_qubits_mut(&mut self) -> Vec<&mut Qubit> {
         match self {
-            Instruction::Gate(gate) => gate.qubits.iter_mut().collect(),
-            Instruction::GateCalibrationDefinition(gate_calibration) => gate_calibration
-                .identifier
-                .qubits
+            // Definitions
+            Instruction::CircuitDefinition(CircuitDefinition {
+                instructions,
+                // We cannot convert from [`&mut String`] to [`&mut Qubit`]
+                // Otherwise, these should be included.
+                qubit_variables: _qubit_variables,
+                name: _,
+                parameters: _,
+            }) => instructions
                 .iter_mut()
-                .chain(
-                    gate_calibration
-                        .instructions
-                        .iter_mut()
-                        .flat_map(|inst| inst.get_qubits_mut()),
-                )
+                .flat_map(|inst| inst.get_qubits_mut())
                 .collect(),
-            Instruction::MeasureCalibrationDefinition(measurement) => {
-                iter::once(&mut measurement.identifier.qubit)
+            Instruction::GateCalibrationDefinition(GateCalibrationDefinition {
+                identifier,
+                instructions,
+            }) => {
+                let GateCalibrationIdentifier {
+                    qubits: identifier_qubits,
+                    modifiers: _,
+                    name: _,
+                    parameters: _,
+                } = identifier;
+
+                identifier_qubits
+                    .iter_mut()
                     .chain(
-                        measurement
-                            .instructions
+                        instructions
                             .iter_mut()
                             .flat_map(|inst| inst.get_qubits_mut()),
                     )
                     .collect()
             }
-            Instruction::Measurement(measurement) => vec![&mut measurement.qubit],
-            Instruction::Reset(reset) => match &mut reset.qubit {
-                Some(qubit) => vec![qubit],
-                None => vec![],
-            },
-            Instruction::ResetCalibrationDefinition(reset_calibration) => reset_calibration
-                .identifier
-                .qubit
-                .iter_mut()
-                .chain(
-                    reset_calibration
-                        .instructions
-                        .iter_mut()
-                        .flat_map(|inst| inst.get_qubits_mut()),
-                )
-                .collect(),
-            Instruction::Delay(delay) => delay.qubits.iter_mut().collect(),
-            Instruction::Fence(fence) => fence.qubits.iter_mut().collect(),
-            Instruction::Capture(capture) => capture.frame.qubits.iter_mut().collect(),
-            Instruction::Pulse(pulse) => pulse.frame.qubits.iter_mut().collect(),
-            Instruction::RawCapture(raw_capture) => raw_capture.frame.qubits.iter_mut().collect(),
-            _ => vec![],
+            Instruction::MeasureCalibrationDefinition(MeasureCalibrationDefinition {
+                identifier,
+                instructions,
+            }) => {
+                let MeasureCalibrationIdentifier {
+                    qubit: identifier_qubit,
+                    name: _,
+                    target: _,
+                } = identifier;
+
+                std::iter::once(identifier_qubit)
+                    .chain(
+                        instructions
+                            .iter_mut()
+                            .flat_map(|inst| inst.get_qubits_mut()),
+                    )
+                    .collect()
+            }
+            Instruction::ResetCalibrationDefinition(ResetCalibrationDefinition {
+                identifier,
+                instructions,
+            }) => {
+                let ResetCalibrationIdentifier {
+                    qubit: identifier_qubit,
+                    name: _,
+                } = identifier;
+
+                identifier_qubit
+                    .iter_mut()
+                    .chain(
+                        instructions
+                            .iter_mut()
+                            .flat_map(|inst| inst.get_qubits_mut()),
+                    )
+                    .collect()
+            }
+
+            // Instructions with explicit qubits
+            Instruction::Delay(Delay {
+                qubits,
+                // We cannot look up frame names
+                frame_names: _,
+                duration: _,
+            })
+            | Instruction::Fence(Fence { qubits })
+            | Instruction::Gate(Gate {
+                qubits,
+                name: _,
+                parameters: _,
+                modifiers: _,
+            }) => qubits.iter_mut().collect(),
+            Instruction::Measurement(Measurement {
+                qubit,
+                name: _,
+                target: _,
+            }) => vec![qubit],
+            Instruction::Reset(Reset { qubit, name: _ }) => qubit.as_mut().into_iter().collect(),
+
+            // Instructions with explicit frames (which specify qubits)
+            Instruction::Capture(Capture {
+                frame,
+                blocking: _,
+                memory_reference: _,
+                waveform: _,
+            })
+            | Instruction::FrameDefinition(FrameDefinition {
+                identifier: frame,
+                attributes: _,
+            })
+            | Instruction::Pulse(Pulse {
+                frame,
+                blocking: _,
+                waveform: _,
+            })
+            | Instruction::RawCapture(RawCapture {
+                frame,
+                blocking: _,
+                duration: _,
+                memory_reference: _,
+            })
+            | Instruction::SetFrequency(SetFrequency {
+                frame,
+                frequency: _,
+            })
+            | Instruction::SetPhase(SetPhase { frame, phase: _ })
+            | Instruction::SetScale(SetScale { frame, scale: _ })
+            | Instruction::ShiftFrequency(ShiftFrequency {
+                frame,
+                frequency: _,
+            })
+            | Instruction::ShiftPhase(ShiftPhase { frame, phase: _ }) => {
+                let FrameIdentifier { qubits, name: _ } = frame;
+
+                qubits.iter_mut().collect()
+            }
+            Instruction::SwapPhases(SwapPhases {
+                frame_1:
+                    FrameIdentifier {
+                        qubits: qubits_1,
+                        name: _,
+                    },
+                frame_2:
+                    FrameIdentifier {
+                        qubits: qubits_2,
+                        name: _,
+                    },
+            }) => qubits_1.iter_mut().chain(qubits_2.iter_mut()).collect(),
+
+            // Instructions that don't have qubits
+            Instruction::Arithmetic(_)
+            | Instruction::BinaryLogic(_)
+            | Instruction::Call(_)
+            | Instruction::Convert(_)
+            | Instruction::Comparison(_)
+            | Instruction::Declaration(_)
+            | Instruction::Exchange(_)
+            | Instruction::GateDefinition(_)
+            | Instruction::Halt()
+            | Instruction::Include(_)
+            | Instruction::Jump(_)
+            | Instruction::JumpUnless(_)
+            | Instruction::JumpWhen(_)
+            | Instruction::Label(_)
+            | Instruction::Load(_)
+            | Instruction::Move(_)
+            | Instruction::Nop()
+            | Instruction::Pragma(_)
+            | Instruction::Store(_)
+            | Instruction::UnaryLogic(_)
+            | Instruction::WaveformDefinition(_)
+            | Instruction::Wait() => vec![],
         }
     }
 
