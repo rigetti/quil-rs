@@ -42,10 +42,8 @@ use std::{
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 
-#[cfg(not(feature = "python"))]
-use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_enum, gen_stub_pymethods};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_enum};
 #[cfg(feature = "python")]
 pub(crate) mod quilpy;
 #[cfg(feature = "python")]
@@ -153,7 +151,7 @@ impl proptest::prelude::Arbitrary for Expression {
         from_py_object
     )
 )]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
+#[cfg_attr(not(feature = "python"), optipy::strip_pyo3)]
 pub struct FunctionCallExpression {
     #[pyo3(get)]
     pub function: ExpressionFunction,
@@ -197,7 +195,7 @@ impl From<FunctionCallExpression> for Expression {
         from_py_object
     )
 )]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
+#[cfg_attr(not(feature = "python"), optipy::strip_pyo3)]
 pub struct InfixExpression {
     pub left: ArcIntern<Expression>,
     #[pyo3(get)]
@@ -246,7 +244,7 @@ impl From<InfixExpression> for Expression {
         from_py_object
     )
 )]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
+#[cfg_attr(not(feature = "python"), optipy::strip_pyo3)]
 pub struct PrefixExpression {
     #[pyo3(get)]
     pub operator: PrefixOperator,
@@ -269,7 +267,7 @@ impl From<PrefixExpression> for Expression {
 }
 
 // TODO (#458): PartialEq/Eq is inconsistent with Hash.
-impl PartialEq for Expression {
+impl PartialEq for ExpressionView<'_> {
     // Implemented by hand since we can't derive with f64s hidden inside.
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -299,10 +297,23 @@ impl PartialEq for Expression {
     }
 }
 
+impl PartialEq for Expression {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_view() == other.as_view()
+    }
+}
+
 // Implemented by hand since we can't derive with f64s hidden inside.
 impl Eq for Expression {}
+impl Eq for ExpressionView<'_> {}
 
 impl Hash for Expression {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.as_view().hash(state);
+    }
+}
+
+impl Hash for ExpressionView<'_> {
     // Implemented by hand since we can't derive with f64s hidden inside.
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
@@ -768,16 +779,49 @@ pub(crate) fn format_complex(value: &Complex64) -> String {
     }
 }
 
-impl Quil for Expression {
+/// Trait for types which offer a view into an [`Expression`].
+///
+/// This makes it easier to share [`Expression`] implementations with Python bindings.
+trait AsView: std::fmt::Debug {
+    /// Return a view into the [`Expression`].
+    fn as_view(&self) -> ExpressionView<'_>;
+}
+
+/// A view into an [`Expression`], which provides borrows of each enum variants. 
+#[derive(Debug)]
+enum ExpressionView<'a> {
+    Address(&'a MemoryReference),
+    FunctionCall(&'a FunctionCallExpression),
+    Infix(&'a InfixExpression),
+    Number(Complex64),
+    Prefix(&'a PrefixExpression),
+    Variable(&'a str),
+    PiConstant,
+}
+
+impl AsView for Expression {
+    fn as_view(&self) -> ExpressionView<'_> {
+        match self {
+            Expression::Address(memory_reference) => ExpressionView::Address(memory_reference),
+            Expression::FunctionCall(function_call) => ExpressionView::FunctionCall(function_call),
+            Expression::Infix(infix) => ExpressionView::Infix(infix),
+            Expression::Number(value) => ExpressionView::Number(*value),
+            Expression::Prefix(prefix) => ExpressionView::Prefix(prefix),
+            Expression::Variable(identifier) => ExpressionView::Variable(identifier.as_str()),
+            Expression::PiConstant => ExpressionView::PiConstant,
+        }
+    }
+}
+
+impl<E: AsView> Quil for E {
     fn write(
         &self,
         f: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> Result<(), crate::quil::ToQuilError> {
-        use Expression::*;
-        match self {
-            Address(memory_reference) => memory_reference.write(f, fall_back_to_debug),
-            FunctionCall(FunctionCallExpression {
+        match self.as_view() {
+            ExpressionView::Address(memory_reference) => memory_reference.write(f, fall_back_to_debug),
+            ExpressionView::FunctionCall(FunctionCallExpression {
                 function,
                 expression,
             }) => {
@@ -786,7 +830,7 @@ impl Quil for Expression {
                 write!(f, ")")?;
                 Ok(())
             }
-            Infix(InfixExpression {
+            ExpressionView::Infix(InfixExpression {
                 left,
                 operator,
                 right,
@@ -795,16 +839,18 @@ impl Quil for Expression {
                 write!(f, "{operator}")?;
                 format_inner_expression(f, fall_back_to_debug, right)
             }
-            Number(value) => write!(f, "{}", format_complex(value)).map_err(Into::into),
-            PiConstant => write!(f, "pi").map_err(Into::into),
-            Prefix(PrefixExpression {
+            ExpressionView::Number(value) => {
+                write!(f, "{}", format_complex(&value)).map_err(Into::into)
+            },
+            ExpressionView::PiConstant => write!(f, "pi").map_err(Into::into),
+            ExpressionView::Prefix(PrefixExpression {
                 operator,
                 expression,
             }) => {
                 write!(f, "{operator}")?;
                 format_inner_expression(f, fall_back_to_debug, expression)
             }
-            Variable(identifier) => write!(f, "%{identifier}").map_err(Into::into),
+            ExpressionView::Variable(identifier) => write!(f, "%{identifier}").map_err(Into::into),
         }
     }
 }

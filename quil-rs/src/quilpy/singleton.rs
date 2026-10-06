@@ -80,7 +80,7 @@ macro_rules! py_singleton {
 
             /// Get the singleton instance of the type, creating it if necessary.
             fn get($py: Python<'_>) -> PyResult<&Bound<'_, Self>> {
-                static CELL: PyOnceLock<Py<$T>> = PyOnceLock::new();
+                static CELL: ::pyo3::sync::PyOnceLock<Py<$T>> = ::pyo3::sync::PyOnceLock::new();
                 CELL.get_or_try_init($py, || {
                     let value = $value;
                     Py::new($py, value)
@@ -117,7 +117,7 @@ macro_rules! py_singleton {
             /// Enables [`pickling`][] of singleton instances.
             ///
             /// [`pickling`]: https://docs.python.org/3/library/pickle.html#object.__reduce__
-            fn __reduce__<'py>(&self, py: Python<'py>) -> &Bound<'py, PyString> {
+            fn __reduce__<'py>(&self, py: Python<'py>) -> &::pyo3::Bound<'py, ::pyo3::types::PyString> {
                 ::pyo3::intern!(py, <$T as $crate::quilpy::singleton::PySingleton>::NAME)
             }
         }
