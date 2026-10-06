@@ -42,103 +42,24 @@ class Address(Expression):
     r"""
     A memory reference embedded in an expression, e.g. ``theta[0]``.
     
-    This corresponds to the [`Expression::Address`] variant. It's a distinct type from
-    [`MemoryReference`] (rather than making `MemoryReference` itself extend [`PyExpression`])
-    because a `pyclass` can only have a single Python base class, and `MemoryReference` is
-    independently exposed as an `Instruction`-related type.
+    This corresponds to the [`Expression::Address`] variant.
+    It's a distinct type from [`MemoryReference`] because a [`MemoryReference`] properly
+    is a kind of Quil instruction (and hence a `quil` [`Instruction`]),
+    whereas an [`Address`] is the use of a memory reference within an expression.
     """
     @property
     def memory_reference(self) -> instructions.MemoryReference:
         r"""
         The underlying memory reference, e.g. `theta[0]`.
         """
-    def __add__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __array__(self, dtype: numpy.dtype | None = None, copy: typing.Optional[builtins.bool] = None) -> numpy.ndarray:
-        r"""
-        Convert this expression into a `numpy` array.
-        
-        If `dtype` is `object`, this returns an object array containing this object.
-        Given other non-none `dtype`s, this simplifies the expression to a complex number
-        and converts the array to the target `dtype`, raising an exception if either step fails.
-        
-        If `dtype` is `None`, this attempts to simplify the expression to a complex number
-        and return an array with that value, but if simplification isn't possible,
-        this falls back to returning an object array containing this object.
-        
-        Note that the expression simplification can be slow, especially for large recursive expressions.
-        """
-    def __complex__(self) -> builtins.complex:
-        r"""
-        Simplify the expression to a complex number.
-        
-        Expression simplification can be slow, especially for large recursive expressions.
-        This will raise an error if simplification doesn't result in a complex number.
-        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __float__(self) -> builtins.float:
-        r"""
-        Simplify the expression to a float.
-        
-        Expression simplification can be slow, especially for large recursive expressions.
-        This will raise an error if simplification doesn't result in a real number.
-        """
     def __getnewargs__(self) -> tuple[instructions.MemoryReference]: ...
     def __hash__(self) -> builtins.int: ...
-    def __mul__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __neg__(self) -> Expression: ...
     def __new__(cls, memory_reference: instructions.MemoryReference) -> Address: ...
-    def __pos__(self) -> Address: ...
-    def __pow__(self, exponent: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, modulo: typing.Optional[typing.Any] = None) -> Expression:
-        r"""
-        Raise `self` to a complex power.
-        
-        Note: the `modulo` argument is not supported and will raise an error if provided.
-        """
-    def __radd__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
-        """
-    def __rmul__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __rpow__(self, base: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, modulo: typing.Optional[typing.Any] = None) -> Expression: ...
-    def __rsub__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __rtruediv__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __sub__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __truediv__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def evaluate(self, variables: typing.Optional[typing.Mapping[builtins.str, builtins.complex]] = None, memory_references: typing.Optional[typing.Mapping[builtins.str, typing.Sequence[builtins.float]]] = None, /, partial: builtins.bool = False) -> Expression  |  builtins.complex:
-        r"""
-        Evaluate an expression, expecting that it may be fully reduced to a single complex number.
-        
-        By default, if it cannot be reduced to a complex number, this raises an error;
-        pass the keyword-only parameter `partial=True` to allow partial evaluation,
-        returning an `Expression` with the applied mappings.
-        
-        The `variables` should be a mapping of variable names to complex values,
-        and `memory_references` should be a mapping of memory reference names to lists of floats.
-        If not provided, they'll default to an empty mapping.
-        """
-    def into_simplified(self) -> Expression:
-        r"""
-        Return a new expression derived from this one, simplified as much as possible.
-        """
-    def substitute(self, d: typing.Optional[typing.Mapping[builtins.str  |  instructions.MemoryReference, builtins.complex  |  typing.Sequence[builtins.complex]]] = None, /) -> Expression  |  builtins.complex:
-        r"""
-        Explicitly evaluate as much of ``expr`` as possible, using substitutions from `d`.
-        
-        This method is deprecated; use `evaluate(..., partial=True)` instead,
-        as it is more explicit and efficient.
-        
-        This supports substitution of both parameters and memory references.
-        Each memory reference must be individually assigned a value at each memory offset to be substituted.
-        
-        :param d: Numerical substitutions for parameters or memory references.
-        
-        Returns a complex number (if possible) or a partially simplified `Expression`.
-        """
-    def substitute_variables(self, variable_values: typing.Mapping[builtins.str, _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]) -> Expression:
-        r"""
-        Substitute an expression in the place of each matching variable.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -170,7 +91,7 @@ class Expression:
     match x:
         case Number(value):
             print("A number!")
-        case PiType():
+        case x if x is Pi:
             print("pi!")
         case Expression():
             print("Some other expression!")
@@ -178,30 +99,6 @@ class Expression:
             print("Not an expression!")
     ```
     """
-    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __hash__(self) -> builtins.int: ...
-    @staticmethod
-    def parse(input: builtins.str) -> Expression:
-        r"""
-        Parse an ``Expression`` from a string.
-        
-        Raises a ``ParseExpressionError`` error if the string isn't a valid Quil expression.
-        """
-
-class FunctionCallExpression(Expression):
-    r"""
-    The type of function call Quil expressions, e.g. `sin(e)`.
-    
-    Quil expressions take advantage of *structural sharing*, which is why the `expression` here is
-    wrapped in an [`ArcIntern`]; for more details, see the documentation for [`Expression`].
-    
-    Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
-    NaNs, not unequal, in contravention of the IEEE 754 spec.
-    """
-    @property
-    def expression(self) -> Expression: ...
-    @property
-    def function(self) -> ExpressionFunction: ...
     def __add__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
     def __array__(self, dtype: numpy.dtype | None = None, copy: typing.Optional[builtins.bool] = None) -> numpy.ndarray:
         r"""
@@ -232,12 +129,10 @@ class FunctionCallExpression(Expression):
         Expression simplification can be slow, especially for large recursive expressions.
         This will raise an error if simplification doesn't result in a real number.
         """
-    def __getnewargs__(self) -> tuple[ExpressionFunction, Expression]: ...
     def __hash__(self) -> builtins.int: ...
     def __mul__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
     def __neg__(self) -> Expression: ...
-    def __new__(cls, function: ExpressionFunction, expression: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> FunctionCallExpression: ...
-    def __pos__(self) -> FunctionCallExpression: ...
+    def __pos__(self) -> Expression: ...
     def __pow__(self, exponent: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, modulo: typing.Optional[typing.Any] = None) -> Expression:
         r"""
         Raise `self` to a complex power.
@@ -245,11 +140,6 @@ class FunctionCallExpression(Expression):
         Note: the `modulo` argument is not supported and will raise an error if provided.
         """
     def __radd__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __repr__(self) -> builtins.str:
-        r"""
-        Implements `__repr__` for Python in terms of the Rust
-        [`Debug`](std::fmt::Debug) implementation.
-        """
     def __rmul__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
     def __rpow__(self, base: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, modulo: typing.Optional[typing.Any] = None) -> Expression: ...
     def __rsub__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
@@ -272,6 +162,13 @@ class FunctionCallExpression(Expression):
         r"""
         Return a new expression derived from this one, simplified as much as possible.
         """
+    @staticmethod
+    def parse(input: builtins.str) -> Expression:
+        r"""
+        Parse an ``Expression`` from a string.
+        
+        Raises a ``ParseExpressionError`` error if the string isn't a valid Quil expression.
+        """
     def substitute(self, d: typing.Optional[typing.Mapping[builtins.str  |  instructions.MemoryReference, builtins.complex  |  typing.Sequence[builtins.complex]]] = None, /) -> Expression  |  builtins.complex:
         r"""
         Explicitly evaluate as much of ``expr`` as possible, using substitutions from `d`.
@@ -289,6 +186,30 @@ class FunctionCallExpression(Expression):
     def substitute_variables(self, variable_values: typing.Mapping[builtins.str, _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]) -> Expression:
         r"""
         Substitute an expression in the place of each matching variable.
+        """
+
+class FunctionCallExpression(Expression):
+    r"""
+    The type of function call Quil expressions, e.g. `sin(e)`.
+    
+    Quil expressions take advantage of *structural sharing*, which is why the `expression` here is
+    wrapped in an [`ArcIntern`]; for more details, see the documentation for [`Expression`].
+    
+    Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
+    NaNs, not unequal, in contravention of the IEEE 754 spec.
+    """
+    @property
+    def expression(self) -> Expression: ...
+    @property
+    def function(self) -> ExpressionFunction: ...
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __getnewargs__(self) -> tuple[ExpressionFunction, Expression]: ...
+    def __hash__(self) -> builtins.int: ...
+    def __new__(cls, function: ExpressionFunction, expression: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> FunctionCallExpression: ...
+    def __repr__(self) -> builtins.str:
+        r"""
+        Implements `__repr__` for Python in terms of the Rust
+        [`Debug`](std::fmt::Debug) implementation.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -310,93 +231,14 @@ class InfixExpression(Expression):
     def operator(self) -> InfixOperator: ...
     @property
     def right(self) -> Expression: ...
-    def __add__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __array__(self, dtype: numpy.dtype | None = None, copy: typing.Optional[builtins.bool] = None) -> numpy.ndarray:
-        r"""
-        Convert this expression into a `numpy` array.
-        
-        If `dtype` is `object`, this returns an object array containing this object.
-        Given other non-none `dtype`s, this simplifies the expression to a complex number
-        and converts the array to the target `dtype`, raising an exception if either step fails.
-        
-        If `dtype` is `None`, this attempts to simplify the expression to a complex number
-        and return an array with that value, but if simplification isn't possible,
-        this falls back to returning an object array containing this object.
-        
-        Note that the expression simplification can be slow, especially for large recursive expressions.
-        """
-    def __complex__(self) -> builtins.complex:
-        r"""
-        Simplify the expression to a complex number.
-        
-        Expression simplification can be slow, especially for large recursive expressions.
-        This will raise an error if simplification doesn't result in a complex number.
-        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __float__(self) -> builtins.float:
-        r"""
-        Simplify the expression to a float.
-        
-        Expression simplification can be slow, especially for large recursive expressions.
-        This will raise an error if simplification doesn't result in a real number.
-        """
     def __getnewargs__(self) -> tuple[Expression, InfixOperator, Expression]: ...
     def __hash__(self) -> builtins.int: ...
-    def __mul__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __neg__(self) -> Expression: ...
     def __new__(cls, left: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, operator: InfixOperator, right: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> InfixExpression: ...
-    def __pos__(self) -> InfixExpression: ...
-    def __pow__(self, exponent: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, modulo: typing.Optional[typing.Any] = None) -> Expression:
-        r"""
-        Raise `self` to a complex power.
-        
-        Note: the `modulo` argument is not supported and will raise an error if provided.
-        """
-    def __radd__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
-        """
-    def __rmul__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __rpow__(self, base: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, modulo: typing.Optional[typing.Any] = None) -> Expression: ...
-    def __rsub__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __rtruediv__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __sub__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __truediv__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def evaluate(self, variables: typing.Optional[typing.Mapping[builtins.str, builtins.complex]] = None, memory_references: typing.Optional[typing.Mapping[builtins.str, typing.Sequence[builtins.float]]] = None, /, partial: builtins.bool = False) -> Expression  |  builtins.complex:
-        r"""
-        Evaluate an expression, expecting that it may be fully reduced to a single complex number.
-        
-        By default, if it cannot be reduced to a complex number, this raises an error;
-        pass the keyword-only parameter `partial=True` to allow partial evaluation,
-        returning an `Expression` with the applied mappings.
-        
-        The `variables` should be a mapping of variable names to complex values,
-        and `memory_references` should be a mapping of memory reference names to lists of floats.
-        If not provided, they'll default to an empty mapping.
-        """
-    def into_simplified(self) -> Expression:
-        r"""
-        Return a new expression derived from this one, simplified as much as possible.
-        """
-    def substitute(self, d: typing.Optional[typing.Mapping[builtins.str  |  instructions.MemoryReference, builtins.complex  |  typing.Sequence[builtins.complex]]] = None, /) -> Expression  |  builtins.complex:
-        r"""
-        Explicitly evaluate as much of ``expr`` as possible, using substitutions from `d`.
-        
-        This method is deprecated; use `evaluate(..., partial=True)` instead,
-        as it is more explicit and efficient.
-        
-        This supports substitution of both parameters and memory references.
-        Each memory reference must be individually assigned a value at each memory offset to be substituted.
-        
-        :param d: Numerical substitutions for parameters or memory references.
-        
-        Returns a complex number (if possible) or a partially simplified `Expression`.
-        """
-    def substitute_variables(self, variable_values: typing.Mapping[builtins.str, _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]) -> Expression:
-        r"""
-        Substitute an expression in the place of each matching variable.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -413,93 +255,14 @@ class Number(Expression):
         r"""
         The underlying complex value.
         """
-    def __add__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __array__(self, dtype: numpy.dtype | None = None, copy: typing.Optional[builtins.bool] = None) -> numpy.ndarray:
-        r"""
-        Convert this expression into a `numpy` array.
-        
-        If `dtype` is `object`, this returns an object array containing this object.
-        Given other non-none `dtype`s, this simplifies the expression to a complex number
-        and converts the array to the target `dtype`, raising an exception if either step fails.
-        
-        If `dtype` is `None`, this attempts to simplify the expression to a complex number
-        and return an array with that value, but if simplification isn't possible,
-        this falls back to returning an object array containing this object.
-        
-        Note that the expression simplification can be slow, especially for large recursive expressions.
-        """
-    def __complex__(self) -> builtins.complex:
-        r"""
-        Simplify the expression to a complex number.
-        
-        Expression simplification can be slow, especially for large recursive expressions.
-        This will raise an error if simplification doesn't result in a complex number.
-        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __float__(self) -> builtins.float:
-        r"""
-        Simplify the expression to a float.
-        
-        Expression simplification can be slow, especially for large recursive expressions.
-        This will raise an error if simplification doesn't result in a real number.
-        """
     def __getnewargs__(self) -> tuple[builtins.complex]: ...
     def __hash__(self) -> builtins.int: ...
-    def __mul__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __neg__(self) -> Expression: ...
     def __new__(cls, value: builtins.complex) -> Number: ...
-    def __pos__(self) -> Number: ...
-    def __pow__(self, exponent: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, modulo: typing.Optional[typing.Any] = None) -> Expression:
-        r"""
-        Raise `self` to a complex power.
-        
-        Note: the `modulo` argument is not supported and will raise an error if provided.
-        """
-    def __radd__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
-        """
-    def __rmul__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __rpow__(self, base: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, modulo: typing.Optional[typing.Any] = None) -> Expression: ...
-    def __rsub__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __rtruediv__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __sub__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __truediv__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def evaluate(self, variables: typing.Optional[typing.Mapping[builtins.str, builtins.complex]] = None, memory_references: typing.Optional[typing.Mapping[builtins.str, typing.Sequence[builtins.float]]] = None, /, partial: builtins.bool = False) -> Expression  |  builtins.complex:
-        r"""
-        Evaluate an expression, expecting that it may be fully reduced to a single complex number.
-        
-        By default, if it cannot be reduced to a complex number, this raises an error;
-        pass the keyword-only parameter `partial=True` to allow partial evaluation,
-        returning an `Expression` with the applied mappings.
-        
-        The `variables` should be a mapping of variable names to complex values,
-        and `memory_references` should be a mapping of memory reference names to lists of floats.
-        If not provided, they'll default to an empty mapping.
-        """
-    def into_simplified(self) -> Expression:
-        r"""
-        Return a new expression derived from this one, simplified as much as possible.
-        """
-    def substitute(self, d: typing.Optional[typing.Mapping[builtins.str  |  instructions.MemoryReference, builtins.complex  |  typing.Sequence[builtins.complex]]] = None, /) -> Expression  |  builtins.complex:
-        r"""
-        Explicitly evaluate as much of ``expr`` as possible, using substitutions from `d`.
-        
-        This method is deprecated; use `evaluate(..., partial=True)` instead,
-        as it is more explicit and efficient.
-        
-        This supports substitution of both parameters and memory references.
-        Each memory reference must be individually assigned a value at each memory offset to be substituted.
-        
-        :param d: Numerical substitutions for parameters or memory references.
-        
-        Returns a complex number (if possible) or a partially simplified `Expression`.
-        """
-    def substitute_variables(self, variable_values: typing.Mapping[builtins.str, _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]) -> Expression:
-        r"""
-        Substitute an expression in the place of each matching variable.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -513,93 +276,14 @@ class Parameter(Expression):
     """
     @property
     def name(self) -> builtins.str: ...
-    def __add__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __array__(self, dtype: numpy.dtype | None = None, copy: typing.Optional[builtins.bool] = None) -> numpy.ndarray:
-        r"""
-        Convert this expression into a `numpy` array.
-        
-        If `dtype` is `object`, this returns an object array containing this object.
-        Given other non-none `dtype`s, this simplifies the expression to a complex number
-        and converts the array to the target `dtype`, raising an exception if either step fails.
-        
-        If `dtype` is `None`, this attempts to simplify the expression to a complex number
-        and return an array with that value, but if simplification isn't possible,
-        this falls back to returning an object array containing this object.
-        
-        Note that the expression simplification can be slow, especially for large recursive expressions.
-        """
-    def __complex__(self) -> builtins.complex:
-        r"""
-        Simplify the expression to a complex number.
-        
-        Expression simplification can be slow, especially for large recursive expressions.
-        This will raise an error if simplification doesn't result in a complex number.
-        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __float__(self) -> builtins.float:
-        r"""
-        Simplify the expression to a float.
-        
-        Expression simplification can be slow, especially for large recursive expressions.
-        This will raise an error if simplification doesn't result in a real number.
-        """
     def __getnewargs__(self) -> tuple[builtins.str]: ...
     def __hash__(self) -> builtins.int: ...
-    def __mul__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __neg__(self) -> Expression: ...
     def __new__(cls, name: builtins.str) -> Parameter: ...
-    def __pos__(self) -> Parameter: ...
-    def __pow__(self, exponent: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, modulo: typing.Optional[typing.Any] = None) -> Expression:
-        r"""
-        Raise `self` to a complex power.
-        
-        Note: the `modulo` argument is not supported and will raise an error if provided.
-        """
-    def __radd__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
-        """
-    def __rmul__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __rpow__(self, base: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, modulo: typing.Optional[typing.Any] = None) -> Expression: ...
-    def __rsub__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __rtruediv__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __sub__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __truediv__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def evaluate(self, variables: typing.Optional[typing.Mapping[builtins.str, builtins.complex]] = None, memory_references: typing.Optional[typing.Mapping[builtins.str, typing.Sequence[builtins.float]]] = None, /, partial: builtins.bool = False) -> Expression  |  builtins.complex:
-        r"""
-        Evaluate an expression, expecting that it may be fully reduced to a single complex number.
-        
-        By default, if it cannot be reduced to a complex number, this raises an error;
-        pass the keyword-only parameter `partial=True` to allow partial evaluation,
-        returning an `Expression` with the applied mappings.
-        
-        The `variables` should be a mapping of variable names to complex values,
-        and `memory_references` should be a mapping of memory reference names to lists of floats.
-        If not provided, they'll default to an empty mapping.
-        """
-    def into_simplified(self) -> Expression:
-        r"""
-        Return a new expression derived from this one, simplified as much as possible.
-        """
-    def substitute(self, d: typing.Optional[typing.Mapping[builtins.str  |  instructions.MemoryReference, builtins.complex  |  typing.Sequence[builtins.complex]]] = None, /) -> Expression  |  builtins.complex:
-        r"""
-        Explicitly evaluate as much of ``expr`` as possible, using substitutions from `d`.
-        
-        This method is deprecated; use `evaluate(..., partial=True)` instead,
-        as it is more explicit and efficient.
-        
-        This supports substitution of both parameters and memory references.
-        Each memory reference must be individually assigned a value at each memory offset to be substituted.
-        
-        :param d: Numerical substitutions for parameters or memory references.
-        
-        Returns a complex number (if possible) or a partially simplified `Expression`.
-        """
-    def substitute_variables(self, variable_values: typing.Mapping[builtins.str, _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]) -> Expression:
-        r"""
-        Substitute an expression in the place of each matching variable.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -617,51 +301,12 @@ class PiType(Expression):
     
     The singleton instance of this type is exposed in Python as ``Pi``.
     """
-    def __add__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __array__(self, dtype: numpy.dtype | None = None, copy: typing.Optional[builtins.bool] = None) -> numpy.ndarray:
-        r"""
-        Convert this expression into a `numpy` array.
-        
-        If `dtype` is `object`, this returns an object array containing this object.
-        Given other non-none `dtype`s, this simplifies the expression to a complex number
-        and converts the array to the target `dtype`, raising an exception if either step fails.
-        
-        If `dtype` is `None`, this attempts to simplify the expression to a complex number
-        and return an array with that value, but if simplification isn't possible,
-        this falls back to returning an object array containing this object.
-        
-        Note that the expression simplification can be slow, especially for large recursive expressions.
-        """
-    def __complex__(self) -> builtins.complex:
-        r"""
-        Simplify the expression to a complex number.
-        
-        Expression simplification can be slow, especially for large recursive expressions.
-        This will raise an error if simplification doesn't result in a complex number.
-        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __float__(self) -> builtins.float:
-        r"""
-        Simplify the expression to a float.
-        
-        Expression simplification can be slow, especially for large recursive expressions.
-        This will raise an error if simplification doesn't result in a real number.
-        """
     def __hash__(self) -> builtins.int: ...
-    def __mul__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __neg__(self) -> Expression: ...
     def __new__(cls) -> PiType:
         r"""
         Get a reference to the singleton instance of this type.
         """
-    def __pos__(self) -> PiType: ...
-    def __pow__(self, exponent: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, modulo: typing.Optional[typing.Any] = None) -> Expression:
-        r"""
-        Raise `self` to a complex power.
-        
-        Note: the `modulo` argument is not supported and will raise an error if provided.
-        """
-    def __radd__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
     def __reduce__(self) -> str:
         r"""
         Returns the name of the singleton instance relative its module.
@@ -674,46 +319,6 @@ class PiType(Expression):
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
-        """
-    def __rmul__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __rpow__(self, base: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, modulo: typing.Optional[typing.Any] = None) -> Expression: ...
-    def __rsub__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __rtruediv__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __sub__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __truediv__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def evaluate(self, variables: typing.Optional[typing.Mapping[builtins.str, builtins.complex]] = None, memory_references: typing.Optional[typing.Mapping[builtins.str, typing.Sequence[builtins.float]]] = None, /, partial: builtins.bool = False) -> Expression  |  builtins.complex:
-        r"""
-        Evaluate an expression, expecting that it may be fully reduced to a single complex number.
-        
-        By default, if it cannot be reduced to a complex number, this raises an error;
-        pass the keyword-only parameter `partial=True` to allow partial evaluation,
-        returning an `Expression` with the applied mappings.
-        
-        The `variables` should be a mapping of variable names to complex values,
-        and `memory_references` should be a mapping of memory reference names to lists of floats.
-        If not provided, they'll default to an empty mapping.
-        """
-    def into_simplified(self) -> Expression:
-        r"""
-        Return a new expression derived from this one, simplified as much as possible.
-        """
-    def substitute(self, d: typing.Optional[typing.Mapping[builtins.str  |  instructions.MemoryReference, builtins.complex  |  typing.Sequence[builtins.complex]]] = None, /) -> Expression  |  builtins.complex:
-        r"""
-        Explicitly evaluate as much of ``expr`` as possible, using substitutions from `d`.
-        
-        This method is deprecated; use `evaluate(..., partial=True)` instead,
-        as it is more explicit and efficient.
-        
-        This supports substitution of both parameters and memory references.
-        Each memory reference must be individually assigned a value at each memory offset to be substituted.
-        
-        :param d: Numerical substitutions for parameters or memory references.
-        
-        Returns a complex number (if possible) or a partially simplified `Expression`.
-        """
-    def substitute_variables(self, variable_values: typing.Mapping[builtins.str, _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]) -> Expression:
-        r"""
-        Substitute an expression in the place of each matching variable.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -732,93 +337,14 @@ class PrefixExpression(Expression):
     def expression(self) -> Expression: ...
     @property
     def operator(self) -> PrefixOperator: ...
-    def __add__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __array__(self, dtype: numpy.dtype | None = None, copy: typing.Optional[builtins.bool] = None) -> numpy.ndarray:
-        r"""
-        Convert this expression into a `numpy` array.
-        
-        If `dtype` is `object`, this returns an object array containing this object.
-        Given other non-none `dtype`s, this simplifies the expression to a complex number
-        and converts the array to the target `dtype`, raising an exception if either step fails.
-        
-        If `dtype` is `None`, this attempts to simplify the expression to a complex number
-        and return an array with that value, but if simplification isn't possible,
-        this falls back to returning an object array containing this object.
-        
-        Note that the expression simplification can be slow, especially for large recursive expressions.
-        """
-    def __complex__(self) -> builtins.complex:
-        r"""
-        Simplify the expression to a complex number.
-        
-        Expression simplification can be slow, especially for large recursive expressions.
-        This will raise an error if simplification doesn't result in a complex number.
-        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __float__(self) -> builtins.float:
-        r"""
-        Simplify the expression to a float.
-        
-        Expression simplification can be slow, especially for large recursive expressions.
-        This will raise an error if simplification doesn't result in a real number.
-        """
     def __getnewargs__(self) -> tuple[PrefixOperator, Expression]: ...
     def __hash__(self) -> builtins.int: ...
-    def __mul__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __neg__(self) -> Expression: ...
     def __new__(cls, operator: PrefixOperator, expression: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> PrefixExpression: ...
-    def __pos__(self) -> PrefixExpression: ...
-    def __pow__(self, exponent: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, modulo: typing.Optional[typing.Any] = None) -> Expression:
-        r"""
-        Raise `self` to a complex power.
-        
-        Note: the `modulo` argument is not supported and will raise an error if provided.
-        """
-    def __radd__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
-        """
-    def __rmul__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __rpow__(self, base: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex, modulo: typing.Optional[typing.Any] = None) -> Expression: ...
-    def __rsub__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __rtruediv__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __sub__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def __truediv__(self, other: _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex) -> Expression: ...
-    def evaluate(self, variables: typing.Optional[typing.Mapping[builtins.str, builtins.complex]] = None, memory_references: typing.Optional[typing.Mapping[builtins.str, typing.Sequence[builtins.float]]] = None, /, partial: builtins.bool = False) -> Expression  |  builtins.complex:
-        r"""
-        Evaluate an expression, expecting that it may be fully reduced to a single complex number.
-        
-        By default, if it cannot be reduced to a complex number, this raises an error;
-        pass the keyword-only parameter `partial=True` to allow partial evaluation,
-        returning an `Expression` with the applied mappings.
-        
-        The `variables` should be a mapping of variable names to complex values,
-        and `memory_references` should be a mapping of memory reference names to lists of floats.
-        If not provided, they'll default to an empty mapping.
-        """
-    def into_simplified(self) -> Expression:
-        r"""
-        Return a new expression derived from this one, simplified as much as possible.
-        """
-    def substitute(self, d: typing.Optional[typing.Mapping[builtins.str  |  instructions.MemoryReference, builtins.complex  |  typing.Sequence[builtins.complex]]] = None, /) -> Expression  |  builtins.complex:
-        r"""
-        Explicitly evaluate as much of ``expr`` as possible, using substitutions from `d`.
-        
-        This method is deprecated; use `evaluate(..., partial=True)` instead,
-        as it is more explicit and efficient.
-        
-        This supports substitution of both parameters and memory references.
-        Each memory reference must be individually assigned a value at each memory offset to be substituted.
-        
-        :param d: Numerical substitutions for parameters or memory references.
-        
-        Returns a complex number (if possible) or a partially simplified `Expression`.
-        """
-    def substitute_variables(self, variable_values: typing.Mapping[builtins.str, _quil.expression.Expression  |  instructions.MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]) -> Expression:
-        r"""
-        Substitute an expression in the place of each matching variable.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...

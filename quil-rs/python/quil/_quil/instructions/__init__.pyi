@@ -2350,7 +2350,7 @@ class PauliTerm:
     @staticmethod
     def from_compact_str(str_pauli_term: builtins.str) -> PauliTerm: ...
     @staticmethod
-    def from_list(terms_list: typing.Sequence[tuple[PauliGate, Qubit  |  builtins.int  |  builtins.str]], coefficient: _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex = ...) -> PauliTerm:
+    def from_list(terms_list: typing.Sequence[tuple[PauliGate, Qubit  |  builtins.int  |  builtins.str]], coefficient: _quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex = (1+0j)) -> PauliTerm:
         r"""
         Construct a new `PauliTerm` from a list of operators and an optional coefficient.
         

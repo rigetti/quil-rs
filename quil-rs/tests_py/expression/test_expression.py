@@ -7,6 +7,7 @@ from quil.instructions import MemoryReference, GateDefinition, GateSpecification
 from quil.expression import (
     Address,
     Expression,
+    ExpressionDesignator,
     FunctionCallExpression,
     ExpressionFunction,
     InfixExpression,
@@ -155,7 +156,7 @@ def test_gate_definition() -> None:
 
     theta = Parameter("theta")
 
-    crx = [
+    crx: list[list[ExpressionDesignator]] = [
         [1, 0, 0, 0],
         [0, 1, 0, 0],
         [0, 0, quil_cos(theta / 2), quil_sin(theta / 2) * -1.0j],

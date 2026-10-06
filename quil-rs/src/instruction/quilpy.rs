@@ -3500,7 +3500,7 @@ pyo3_stub_gen::inventory::submit! {
 #[derive(FromPyObject)]
 enum PauliExponent {
     // Expression must come before numbers, since Expression implements __complex__.
-    Expression(Expression),
+    Expression(ExpressionLike),
     Int(i64),
     Complex(Complex64),
     Variable(String),
@@ -3707,7 +3707,7 @@ impl PauliTerm {
                     py,
                     c"PauliTerm constructor with a sequence of arguments is deprecated; use `PauliTerm.from_list` instead"
                 )?;
-                Self::from_list(arguments, ExpressionLike::Expression(ONE))
+                Self::from_list(arguments, ExpressionLike::from(ONE))
             }
 
             (Some(Migrate::New(_)), None, None, None) => Err(PyValueError::new_err(
@@ -3732,7 +3732,7 @@ impl PauliTerm {
     /// Otherwise, operations on the same argument are combined via Pauli algebra rules,
     /// and the coefficient is multiplied by any resulting complex phase,
     /// and the resulting `PauliTerm` may have a different order of arguments than the input list.
-    #[pyo3(signature = (terms_list, coefficient=ExpressionLike::Expression(ONE)))]
+    #[pyo3(signature = (terms_list, coefficient=ExpressionLike::from(ONE)))]
     #[staticmethod]
     fn from_list(
         terms_list: Vec<(PauliGate, PauliArg)>,
@@ -4014,7 +4014,7 @@ impl PauliTerm {
 
             PauliExponent::Complex(n) => Expression::Number(n),
             PauliExponent::Variable(v) => Expression::Variable(v),
-            PauliExponent::Expression(expr) => expr,
+            PauliExponent::Expression(expr) => expr.into(),
         };
 
         // (-1)^k = exp(i * pi * k)
