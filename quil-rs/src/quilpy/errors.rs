@@ -7,7 +7,7 @@ use rigetti_pyo3::{create_exception, exception};
 /// These errors only apply to Python users and are not reachable directly from the Rust APIs.
 #[derive(Debug, thiserror::Error, PartialEq)]
 #[non_exhaustive]
-pub enum QuilPyValueError {
+pub(crate) enum QuilPyValueError {
     #[error("`{0}` and `{1}` are mutually exclusive")]
     MutuallyExclusive(String, String),
 }

@@ -588,16 +588,34 @@ impl AsView for Bound<'_, PiType> {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.expression", extends = PyExpression, eq, frozen, hash, from_py_object, get_all)
+    pyo3::pyclass(module = "quil._quil.expression", extends = PyExpression, eq, frozen, hash, skip_from_py_object, get_all)
 )]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub(crate) struct Parameter {
     name: String, // TODO: consider replacing this with `Py<PyString>`.
 }
 
+impl<'a, 'py> FromPyObject<'a, 'py> for Parameter {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(value) = obj.cast::<Parameter>() {
+            Ok(value.get().clone())
+        } else { 
+            Ok(Self { name: obj.extract::<String>()? })
+        }
+    }
+}
+
 impl From<Parameter> for Expression {
     fn from(val: Parameter) -> Self {
         Expression::Variable(val.name)
+    }
+}
+
+impl From<Parameter> for String {
+    fn from(val: Parameter) -> Self {
+        val.name
     }
 }
 
