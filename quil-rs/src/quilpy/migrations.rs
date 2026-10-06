@@ -89,8 +89,8 @@ macro_rules! aliased {
     (@conv [None]        |$x:ident|        ) => { |$x| Ok(Some($x)) };
     (@conv [$($d:expr)?] |$x:ident|        ) => { |$x| Ok($x) };
     (@conv [$($d:expr)?] |$x:ident| $e:expr) => { |$x| $e };
-    (@default [None]            ) => { || Ok(None) };
     (@default [|| $default:expr]) => { || $default };
+    (@default [   $default:expr]) => { || Ok($default) };
     (@default []                ) => { || Ok(Default::default()) };
 }
 

@@ -168,30 +168,49 @@ macro_rules! deprecated_param {
 /// }
 /// ```
 macro_rules! deprecated_or_new {
-    ($py: ident, new=$new_param: ident, old=$old_param: ident, |$old:ident| $if_old:expr) => {
-        $crate::quilpy::deprecations::_deprecated_or_new(
-            $py,
+    ($py: ident, new=$new_param: ident, old=$old_param: ident, default=$($default:tt)+) => {
+        $crate::quilpy::aliased!(
             $new_param,
-            $old_param,
-            |$old| $if_old,
-            $crate::quilpy::deprecations::deprecated_param_cstr!(
-                new = $new_param,
-                old = $old_param
-            ),
+            |$old_param| {
+                $crate::quilpy::deprecations::deprecated_param!(
+                    $py, new = $new_param, old = $old_param)?;
+                Ok($old_param)
+            },
+            $($default)+
+        )
+    };
+
+    (
+        $py: ident,
+        new=$new_param: ident,
+        old=|$old_param: ident| $if_old:expr
+        $(, default = $($default:tt)* )?
+    ) => {
+        $crate::quilpy::aliased!(
+            $new_param,
+            |$old_param| {
+                $crate::quilpy::deprecations::deprecated_param!(
+                    $py, new = $new_param, old = $old_param)?;
+                $if_old
+            }
+            $(, $($default)* )?
         )
     };
 
     // Use the identity function for the old parameter if no conversion is provided.
     ($py: ident, new=$new_param: ident, old=$old_param: ident) => {
-        $crate::quilpy::deprecations::_deprecated_or_new(
-            $py,
+        $crate::quilpy::aliased!(
             $new_param,
-            $old_param,
-            |old| Ok(old),
-            $crate::quilpy::deprecations::deprecated_param_cstr!(
-                new = $new_param,
-                old = $old_param
-            ),
+            |$old_param| {
+                $crate::quilpy::deprecations::deprecated_param!(
+                    $py, new = $new_param, old = $old_param)?;
+                Ok($old_param)
+            },
+            || Err($crate::quilpy::errors::ValueError::new_err(concat!(
+                "missing required parameter `",
+                stringify!($new_param),
+                "`"
+            )))
         )
     };
 

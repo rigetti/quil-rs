@@ -13,7 +13,6 @@ use pyo3::{
         PyUserWarning, PyValueError,
     },
     prelude::*,
-    sync::PyOnceLock,
     types::{IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyString, PyTuple},
     CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit,
 };
@@ -28,18 +27,10 @@ use pyo3_stub_gen::{
 use super::*;
 use crate::{
     expression::{
-        consts::{IMAGINARY_UNIT, ONE, ZERO},
-        quilpy::{quil_exp, ExpressionLike, QualifiedExpression},
-    },
-    instruction::gate::GateSignature,
-    pickleable_new,
-    quilpy::{
-        aliased, deprecated_or_new, deprecated_param,
-        errors::{self, PickleError},
-        impl_newargs, impl_to_quil, py_deprecated, singleton, IntoNewArgs, Like, Migrate, NewArgs,
-        NonZeroU64, Seq, Seq2,
-    },
-    validation::identifier::IdentifierValidationError,
+        consts::{IMAGINARY_UNIT, ONE, ZERO}, quilpy::{ExpressionLike, Parameter, QualifiedExpression, quil_exp},
+    }, instruction::gate::GateSignature, pickleable_new, quilpy::{
+        IntoNewArgs, Like, Migrate, NewArgs, NonZeroU64, Seq, Seq2, aliased, deprecated_or_new, deprecated_param, errors::{self, PickleError}, impl_newargs, impl_to_quil, py_deprecated, singleton,
+    }, validation::identifier::IdentifierValidationError,
 };
 
 use singleton::{py_singleton, PyModuleSingletonExt};
@@ -1061,6 +1052,9 @@ impl ComparisonOperand {
     }
 }
 
+// TODO: submit! type stubs overload indicating the signature is one or the other of
+// `(operator, destination, lhs, rhs)` or `(operator, target, left, right)`,
+// but that in either case, the arguments are required and shoud not be mixed.
 // TODO(migration-guide):
 // - PyQuil v4 called `Comparison` `ClassicalComparison`, with subclasses
 //   (`ClassicalEqual`, `ClassicalLessThan`, etc.) providing `operator` as a class attribute.
@@ -1070,14 +1064,14 @@ impl ComparisonOperand {
 #[pymethods]
 impl Comparison {
     #[expect(clippy::too_many_arguments)]
-    #[pyo3(signature = (operator, destination, lhs, rhs, *, target = None, left = None, right = None))]
+    #[pyo3(signature = (operator, destination=None, lhs=None, rhs=None, *, target = None, left = None, right = None))]
     #[new]
     fn __new__<'py>(
         py: Python<'py>,
         operator: ComparisonOperator,
-        destination: MemoryReferenceLike,
-        lhs: MemoryReferenceLike,
-        rhs: ComparisonOperandLike<'_>,
+        destination: Option<MemoryReferenceLike>,
+        lhs: Option<MemoryReferenceLike>,
+        rhs: Option<ComparisonOperandLike<'_>>,
         // old names for backwards compatibility
         target: Option<MemoryReferenceLike>,
         left: Option<MemoryReferenceLike>,
@@ -1325,21 +1319,24 @@ pickleable_new! {
 // which does somewhat motivate dropping their explicit representation.
 // On the other hand, it may instead be worth introducing the types back
 // in order to enable backwards compatibility, and to enable more restrictive parameter types.
+// TODO: migrate these strings now that Parameter is a thing.
+// TODO: make a formal argument qubit a thing.
+// TODO: submit! type stubs overload for the signature options (instructions is actually required,
+// but in order to allow specifying `qubits` as a kwarg instead of `qubit_variables`,
+// we need to give `qubit_variables` a default, which means `instructions` needs a default).
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl CircuitDefinition {
     // TODO(migration-guide): PyQuil v4's constructor calls `qubit_variables` just `qubits`.
-    // It also used to require the inputs were wrapped in `Parameter` and `FormalArgument`s,
-    // but here we just accept `str` instances directly.
     #[new]
-    #[pyo3(signature = (name, parameters, qubit_variables, instructions, *, qubits = None))]
+    #[pyo3(signature = (name, parameters, qubit_variables=None, instructions=Vec::new(), *, qubits = None))]
     fn __new__<'py>(
         py: Python<'py>,
         name: String,
         parameters: Vec<String>,
-        qubit_variables: Vec<String>,
+        qubit_variables: Option<Vec<String>>,
         instructions: Vec<Instruction>,
         qubits: Option<Vec<String>>,
     ) -> PyResult<Self> {
@@ -2119,6 +2116,28 @@ impl Gate {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl GateDefinition {
+    // TODO(migration-guide): document the constructor changes...
+    //
+    // TODO: Make this signature accept the old PyQuil v4 constructor signature:
+    // `(name: str, matrix: list[list[Expression]] | np.ndarray | np.matrix, parameters: list[Parameter] | None = None)`,
+    // which swaps the order of `specification` and `parameters` relative the earlier `quil` signature
+    // so that it can make the `parameters` themselves optional.
+    //
+    // TODO: submit! overrides to indicate exactly one of `specification` or `matrix` is required.
+    #[new]
+    #[pyo3(signature = (name, specification=None, parameters=None, *, matrix=None))]
+    fn __new__(
+        py: Python<'_>,
+        name: String,
+        specification: Option<GateSpecification>,
+        parameters: Option<Seq2<Parameter, String>>,
+        matrix: Option<GateSpecification>,
+    ) -> PyResult<GateDefinition> {
+        let specification = deprecated_or_new!(py, new=specification, old=matrix)?;
+        let parameters = parameters.unwrap_or_default().into();
+        Ok(Self::new(name, parameters, specification)?)
+    }
+
     #[getter(signature)]
     fn py_signature(&self) -> OwnedGateSignature {
         self.signature().into()
@@ -2729,7 +2748,8 @@ impl Reset {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl MemoryReference {
-    // PyQuil v4 uses the term `offset` instead of `index`, so this handles both.
+    // TODO(migration-guide): PyQuil v4 uses the term `offset` instead of `index`, so this handles both.
+    // TODO: submit! overrides for correct type stubs (note the default `index` is 0).
     /// Construct a new `MemoryReference`.
     ///
     /// The `declared_size` parameter is deprecated and no longer used.
@@ -2739,18 +2759,17 @@ impl MemoryReference {
     /// it'll issue a ``DeprecationWarning``.
     ///
     /// Note that `offset` is an older (deprecated) term for `index`.
-    /// New code should use `index`, but using `offset` as a keyword argument is still accepted;
-    /// if it is not `None`, it'll be used instead of `index`, regardless of how `index` is passed.
+    /// New code should use `index`, but using `offset` as a keyword argument is still accepted.
     #[new]
-    #[pyo3(signature = (name, index = 0, declared_size = None, *, offset = None))]
+    #[pyo3(signature = (name, index=None, declared_size=None, *, offset=None))]
     fn __new__(
         py: Python<'_>,
         name: String,
-        index: u64,
+        index: Option<u64>,
         declared_size: Option<NonZeroU64>,
         offset: Option<u64>,
     ) -> PyResult<Self> {
-        let index = deprecated_or_new!(py, new = index, old = offset)?;
+        let index = deprecated_or_new!(py, new=index, old=offset, default=0)?;
         if declared_size.is_some() {
             py_deprecated!(py, c"`declared_size` is deprecated and no longer used")?;
         }
@@ -3016,20 +3035,21 @@ fn frame_qubit_indices(qubits: &[Qubit]) -> PyResult<HashSet<u64>> {
 //
 // This is implemented manually (rather than with `pickleable_new!`)
 // because `nonblocking` isn't a field on the underlying struct.
+// TODO: `sumbit!` override for the `Pulse` constructor to handle the `nonblocking` parameter.
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Pulse {
     #[new]
-    #[pyo3(signature = (frame, waveform, *, blocking = true, nonblocking = None))]
+    #[pyo3(signature = (frame, waveform, *, blocking = None, nonblocking = None))]
     fn __new__(
         py: Python<'_>,
         frame: FrameIdentifier,
         waveform: WaveformInvocation,
-        blocking: bool,
+        blocking: Option<bool>,
         nonblocking: Option<bool>,
     ) -> PyResult<Self> {
-        let blocking = deprecated_or_new!(py, new = blocking, old = nonblocking, |nb| Ok(!nb))?;
+        let blocking = deprecated_or_new!(py, new = blocking, old = |nonblocking| Ok(!nonblocking), default = true)?;
         Ok(Self::new(blocking, frame, waveform))
     }
 
@@ -3064,16 +3084,16 @@ impl Pulse {
 #[pymethods]
 impl Capture {
     #[new]
-    #[pyo3(signature = (frame, kernel, memory_region, *, blocking = true, nonblocking = None))]
+    #[pyo3(signature = (frame, kernel, memory_region, *, blocking = None, nonblocking = None))]
     fn __new__(
         py: Python<'_>,
         frame: FrameIdentifier,
         kernel: WaveformInvocation,
         memory_region: MemoryReferenceLike,
-        blocking: bool,
+        blocking: Option<bool>,
         nonblocking: Option<bool>,
     ) -> PyResult<Self> {
-        let blocking = deprecated_or_new!(py, new = blocking, old = nonblocking, |nb| Ok(!nb))?;
+        let blocking = deprecated_or_new!(py, new = blocking, old = |nonblocking| Ok(!nonblocking), default = true)?;
         Ok(Self::new(blocking, frame, memory_region.into(), kernel))
     }
 
@@ -4983,10 +5003,10 @@ impl PragmaArgument {
 impl Pragma {
     /// Initialize a new PRAGMA instruction.
     #[new]
-    #[pyo3(signature = (name, args = Seq::new(), data = None, *, command = None, freeform_string = None))]
+    #[pyo3(signature = (name = None, args = Seq::new(), data = None, *, command = None, freeform_string = None))]
     fn __new__(
         py: Python<'_>,
-        name: String,
+        name: Option<String>,
         args: Seq<PragmaArgumentLike, PragmaArgument>,
         data: Option<String>,
         command: Option<String>,
@@ -4995,7 +5015,7 @@ impl Pragma {
         let name = deprecated_or_new!(py, new = name, old = command)?;
 
         let data =
-            match deprecated_or_new!(py, new = data, old = freeform_string, |old| Ok(Some(old)))? {
+            match deprecated_or_new!(py, new = data, old = |freeform_string| Ok(Some(freeform_string)), default=None)? {
                 None => None,
                 Some(s) if s.is_empty() => {
                     py_deprecated!(
@@ -5118,17 +5138,18 @@ impl QubitPlaceholder {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl RawCapture {
+    // TODO: submit! overrides
     #[new]
-    #[pyo3(signature = (frame, duration, memory_region, *, blocking = true, nonblocking = None))]
+    #[pyo3(signature = (frame, duration, memory_region, *, blocking = None, nonblocking = None))]
     fn __new__(
         py: Python<'_>,
         frame: FrameIdentifier,
         duration: ExpressionLike,
         memory_region: MemoryReferenceLike,
-        blocking: bool,
+        blocking: Option<bool>,
         nonblocking: Option<bool>,
     ) -> PyResult<Self> {
-        let blocking = deprecated_or_new!(py, new = blocking, old = nonblocking, |nb| Ok(!nb))?;
+        let blocking = deprecated_or_new!(py, new = blocking, old = |nonblocking| Ok(!nonblocking), default = true)?;
 
         Ok(Self::new(
             blocking,
@@ -5184,12 +5205,13 @@ impl RawCapture {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl SetFrequency {
+    // TODO: submit! overrides
     #[new]
-    #[pyo3(signature = (frame, frequency, *, freq = None))]
+    #[pyo3(signature = (frame, frequency = None, *, freq = None))]
     fn __new__(
         py: Python<'_>,
         frame: FrameIdentifier,
-        frequency: ExpressionLike,
+        frequency: Option<ExpressionLike>,
         freq: Option<ExpressionLike>,
     ) -> PyResult<Self> {
         let frequency = deprecated_or_new!(py, new = frequency, old = freq)?;
@@ -5222,12 +5244,13 @@ impl SetFrequency {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl ShiftFrequency {
+    // TODO: submit! overrides
     #[new]
-    #[pyo3(signature = (frame, frequency, *, freq = None))]
+    #[pyo3(signature = (frame, frequency = None, *, freq = None))]
     fn __new__(
         py: Python<'_>,
         frame: FrameIdentifier,
-        frequency: ExpressionLike,
+        frequency: Option<ExpressionLike>,
         freq: Option<ExpressionLike>,
     ) -> PyResult<Self> {
         let frequency = deprecated_or_new!(py, new = frequency, old = freq)?;
@@ -5326,14 +5349,16 @@ impl SetScale {
 #[pymethods]
 impl SwapPhases {
     // TODO(migration-guide): The signature in PyQuil v4 was `(frameA, frameB)`.
+    // TODO: submit! overrides
+    #[expect(non_snake_case)]
     #[new]
-    #[pyo3(signature = (frame_1, frame_2, *, frameA=None, frameB=None))]
+    #[pyo3(signature = (frame_1=None, frame_2=None, *, frameA=None, frameB=None))]
     fn __new__<'py>(
         py: Python<'py>,
-        frame_1: FrameIdentifier,
-        frame_2: FrameIdentifier,
-        #[expect(non_snake_case)] frameA: Option<FrameIdentifier>,
-        #[expect(non_snake_case)] frameB: Option<FrameIdentifier>,
+        frame_1: Option<FrameIdentifier>,
+        frame_2: Option<FrameIdentifier>,
+        frameA: Option<FrameIdentifier>,
+        frameB: Option<FrameIdentifier>,
     ) -> PyResult<Self> {
         let frame_1 = deprecated_or_new!(py, new = frame_1, old = frameA)?;
         let frame_2 = deprecated_or_new!(py, new = frame_2, old = frameB)?;

@@ -1096,20 +1096,18 @@ pub struct GateDefinition {
     pub specification: GateSpecification,
 }
 
-pickleable_new! {
-    impl GateDefinition {
-        pub fn new(
-            name: String,
-            parameters: Vec<String>,
-            specification: GateSpecification,
-        ) -> Result<GateDefinition, GateError> {
-            validate_user_identifier(&name)?;
-            Ok(Self {
-                name,
-                parameters,
-                specification,
-            })
-        }
+impl GateDefinition {
+    pub fn new(
+        name: String,
+        parameters: Vec<String>,
+        specification: GateSpecification,
+    ) -> Result<GateDefinition, GateError> {
+        validate_user_identifier(&name)?;
+        Ok(Self {
+            name,
+            parameters,
+            specification,
+        })
     }
 }
 
