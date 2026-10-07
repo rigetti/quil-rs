@@ -787,7 +787,7 @@ trait AsView: std::fmt::Debug {
     fn as_view(&self) -> ExpressionView<'_>;
 }
 
-/// A view into an [`Expression`], which provides borrows of each enum variants. 
+/// A view into an [`Expression`], which provides borrows of each enum variants.
 #[derive(Debug)]
 enum ExpressionView<'a> {
     Address(&'a MemoryReference),
@@ -820,7 +820,9 @@ impl<E: AsView> Quil for E {
         fall_back_to_debug: bool,
     ) -> Result<(), crate::quil::ToQuilError> {
         match self.as_view() {
-            ExpressionView::Address(memory_reference) => memory_reference.write(f, fall_back_to_debug),
+            ExpressionView::Address(memory_reference) => {
+                memory_reference.write(f, fall_back_to_debug)
+            }
             ExpressionView::FunctionCall(FunctionCallExpression {
                 function,
                 expression,
@@ -841,7 +843,7 @@ impl<E: AsView> Quil for E {
             }
             ExpressionView::Number(value) => {
                 write!(f, "{}", format_complex(&value)).map_err(Into::into)
-            },
+            }
             ExpressionView::PiConstant => write!(f, "pi").map_err(Into::into),
             ExpressionView::Prefix(PrefixExpression {
                 operator,

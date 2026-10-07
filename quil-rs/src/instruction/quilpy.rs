@@ -27,10 +27,18 @@ use pyo3_stub_gen::{
 use super::*;
 use crate::{
     expression::{
-        consts::{IMAGINARY_UNIT, ONE, ZERO}, quilpy::{ExpressionLike, Parameter, QualifiedExpression, quil_exp},
-    }, instruction::gate::GateSignature, pickleable_new, quilpy::{
-        IntoNewArgs, Migrate, NewArgs, NonZeroU64, Seq, Seq2, Via, aliased, deprecated_or_new, deprecated_param, errors::{self, PickleError}, impl_newargs, impl_stub_like, impl_to_quil, py_deprecated, singleton,
-    }, validation::identifier::IdentifierValidationError,
+        consts::{IMAGINARY_UNIT, ONE, ZERO},
+        quilpy::{quil_exp, ExpressionLike, Parameter, QualifiedExpression},
+    },
+    instruction::gate::GateSignature,
+    pickleable_new,
+    quilpy::{
+        aliased, deprecated_or_new, deprecated_param,
+        errors::{self, PickleError},
+        impl_newargs, impl_stub_like, impl_to_quil, py_deprecated, singleton, IntoNewArgs, Migrate,
+        NewArgs, NonZeroU64, Seq, Seq2, Via,
+    },
+    validation::identifier::IdentifierValidationError,
 };
 
 use singleton::{py_singleton, PyModuleSingletonExt};
@@ -2160,7 +2168,6 @@ submit! {
     }
 }
 
-
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl GateDefinition {
@@ -2183,7 +2190,7 @@ impl GateDefinition {
         parameters: Option<Seq2<Parameter, String>>,
         matrix: Option<GateSpecification>,
     ) -> PyResult<GateDefinition> {
-        let specification = deprecated_or_new!(py, new=specification, old=matrix)?;
+        let specification = deprecated_or_new!(py, new = specification, old = matrix)?;
         let parameters = parameters.unwrap_or_default().into();
         Ok(Self::new(name, parameters, specification)?)
     }
@@ -2238,7 +2245,10 @@ impl<'a, 'py> FromPyObject<'a, 'py> for GateSpecification {
         } else if let Ok(permutation) = obj.extract::<Vec<u64>>() {
             Ok(GateSpecification::Permutation(permutation))
         } else {
-            Err(CastError::new(obj, GateSpecification::classinfo_object(obj.py())))?
+            Err(CastError::new(
+                obj,
+                GateSpecification::classinfo_object(obj.py()),
+            ))?
         }
     }
 }
@@ -2819,7 +2829,7 @@ impl MemoryReference {
         declared_size: Option<NonZeroU64>,
         offset: Option<u64>,
     ) -> PyResult<Self> {
-        let index = deprecated_or_new!(py, new=index, old=offset, default=0)?;
+        let index = deprecated_or_new!(py, new = index, old = offset, default = 0)?;
         if declared_size.is_some() {
             py_deprecated!(py, c"`declared_size` is deprecated and no longer used")?;
         }
@@ -3099,7 +3109,12 @@ impl Pulse {
         blocking: Option<bool>,
         nonblocking: Option<bool>,
     ) -> PyResult<Self> {
-        let blocking = deprecated_or_new!(py, new = blocking, old = |nonblocking| Ok(!nonblocking), default = true)?;
+        let blocking = deprecated_or_new!(
+            py,
+            new = blocking,
+            old = |nonblocking| Ok(!nonblocking),
+            default = true
+        )?;
         Ok(Self::new(blocking, frame, waveform))
     }
 
@@ -3143,7 +3158,12 @@ impl Capture {
         blocking: Option<bool>,
         nonblocking: Option<bool>,
     ) -> PyResult<Self> {
-        let blocking = deprecated_or_new!(py, new = blocking, old = |nonblocking| Ok(!nonblocking), default = true)?;
+        let blocking = deprecated_or_new!(
+            py,
+            new = blocking,
+            old = |nonblocking| Ok(!nonblocking),
+            default = true
+        )?;
         Ok(Self::new(blocking, frame, memory_region.into(), kernel))
     }
 
@@ -4088,8 +4108,7 @@ impl PauliTerm {
         };
 
         // (-1)^k = exp(i * pi * k)
-        let exp_i_pi_k =
-            quil_exp((IMAGINARY_UNIT * Expression::PiConstant * expr.clone()).into());
+        let exp_i_pi_k = quil_exp((IMAGINARY_UNIT * Expression::PiConstant * expr.clone()).into());
 
         let a = (ONE + exp_i_pi_k.clone()) / Expression::Number(Complex64::from(2.0));
         let b = (ONE - exp_i_pi_k) / Expression::Number(Complex64::from(2.0));
@@ -5049,18 +5068,22 @@ impl Pragma {
     ) -> PyResult<Self> {
         let name = deprecated_or_new!(py, new = name, old = command)?;
 
-        let data =
-            match deprecated_or_new!(py, new = data, old = |freeform_string| Ok(Some(freeform_string)), default=None)? {
-                None => None,
-                Some(s) if s.is_empty() => {
-                    py_deprecated!(
-                        py,
-                        c"providing `data` as an empty string is deprecated; use `None` instead"
-                    )?;
-                    None
-                }
-                some => some,
-            };
+        let data = match deprecated_or_new!(
+            py,
+            new = data,
+            old = |freeform_string| Ok(Some(freeform_string)),
+            default = None
+        )? {
+            None => None,
+            Some(s) if s.is_empty() => {
+                py_deprecated!(
+                    py,
+                    c"providing `data` as an empty string is deprecated; use `None` instead"
+                )?;
+                None
+            }
+            some => some,
+        };
 
         Ok(Self::new(name, args.into(), data))
     }
@@ -5150,7 +5173,12 @@ impl RawCapture {
         blocking: Option<bool>,
         nonblocking: Option<bool>,
     ) -> PyResult<Self> {
-        let blocking = deprecated_or_new!(py, new = blocking, old = |nonblocking| Ok(!nonblocking), default = true)?;
+        let blocking = deprecated_or_new!(
+            py,
+            new = blocking,
+            old = |nonblocking| Ok(!nonblocking),
+            default = true
+        )?;
 
         Ok(Self::new(
             blocking,
@@ -5629,14 +5657,13 @@ impl WaveformDefinition {
     ///
     /// See `WaveformDefinition.from_waveform` to construct one directly from a `Waveform` object.
     #[new]
-    fn __new__(
-        name: String,
-        parameters: Vec<String>,
-        entries: Vec<ExpressionLike>,
-    ) -> Self {
+    fn __new__(name: String, parameters: Vec<String>, entries: Vec<ExpressionLike>) -> Self {
         Self::new(
             name,
-            Waveform::new(entries.into_iter().map(Expression::from).collect(), parameters),
+            Waveform::new(
+                entries.into_iter().map(Expression::from).collect(),
+                parameters,
+            ),
         )
     }
 
