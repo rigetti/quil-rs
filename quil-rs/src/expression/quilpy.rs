@@ -1,6 +1,6 @@
 use numpy::{PyArray, PyArrayDescr, PyArrayDescrMethods};
 use pyo3::{
-    CastError, IntoPyObjectExt, PyClass, PyTypeCheck, exceptions::{PyDeprecationWarning, PyNotImplementedError}, prelude::*, types::{PyAnyMethods, PyComplex, PyFloat, PyInt},
+    CastError, IntoPyObjectExt, PyClass, PyTypeCheck, exceptions::{PyDeprecationWarning, PyNotImplementedError, PyTypeError}, prelude::*, types::{PyAnyMethods, PyComplex, PyFloat, PyInt},
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -120,7 +120,7 @@ pub struct PyExpression;
 
 /// A type that can be converted into an [`Expression`],
 /// for use as a parameter in methods and functions exposed through Python bindings.
-#[derive(Debug, Clone, FromPyObject)]
+#[derive(Debug, Clone)]
 // Generally we don't want to return this as a Python type,
 // but the stub generator needs this when constructing default values in signatures.
 #[cfg_attr(feature = "stubs", derive(IntoPyObject))]
@@ -132,6 +132,43 @@ pub(crate) enum ExpressionLike {
     FunctionCall(FunctionCallExpression),
     Infix(InfixExpression),
     Prefix(PrefixExpression),
+}
+
+// Note: we can't rely on `#[derive(FromPyObject)]` here, since that only tries each of the
+// variants' inner types directly (e.g. `String`, `Complex64`, `MemoryReference`), with no
+// fallback for an already-constructed `PyExpression` subclass instance (e.g. a `Parameter`
+// or `Address`). That works out, incidentally, for `Number` and `PiType` instances, since
+// `Complex64`'s extraction goes through `__complex__`, which those types implement via
+// trivial evaluation -- but it does *not* work for `Parameter`/`Address` instances, which
+// have no corresponding "bare" `ExpressionLike` variant and aren't successfully evaluable to
+// a `Complex64` either. So, mirroring `Expression`'s own `FromPyObject` impl above, we try
+// casting to `PyExpression` and converting via the exhaustive `TryFrom` impl first, and only
+// fall back to the "primitive" conversions below for non-`PyExpression` Python values.
+impl<'a, 'py> FromPyObject<'a, 'py> for ExpressionLike {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(expr_obj) = obj.cast::<PyExpression>() {
+            if let Ok(expr) = Expression::try_from(std::ops::Deref::deref(&expr_obj)) {
+                return Ok(expr.into());
+            }
+        }
+
+        if let Ok(value) = obj.extract::<String>() {
+            return Ok(ExpressionLike::Variable(value));
+        }
+        if let Ok(value) = obj.extract::<Complex64>() {
+            return Ok(ExpressionLike::Number(value));
+        }
+        if let Ok(value) = obj.extract::<MemoryReference>() {
+            return Ok(ExpressionLike::MemoryReference(value));
+        }
+
+        Err(PyTypeError::new_err(format!(
+            "could not convert {} to an Expression",
+            obj.get_type().name()?
+        )))
+    }
 }
 
 impl<'a, 'py> TryFrom<&'a Bound<'py, PyExpression>> for Expression {
