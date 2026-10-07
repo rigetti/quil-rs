@@ -117,7 +117,10 @@ macro_rules! py_singleton {
             /// Enables [`pickling`][] of singleton instances.
             ///
             /// [`pickling`]: https://docs.python.org/3/library/pickle.html#object.__reduce__
-            fn __reduce__<'py>(&self, py: Python<'py>) -> &::pyo3::Bound<'py, ::pyo3::types::PyString> {
+            fn __reduce__<'py>(
+                &self,
+                py: Python<'py>,
+            ) -> &::pyo3::Bound<'py, ::pyo3::types::PyString> {
                 ::pyo3::intern!(py, <$T as $crate::quilpy::singleton::PySingleton>::NAME)
             }
         }

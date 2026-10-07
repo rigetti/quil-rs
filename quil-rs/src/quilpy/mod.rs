@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
-use pyo3::{BoundObject, CastError};
 use pyo3::types::PyType;
 use pyo3::{prelude::*, types::PyTuple, PyClass, PyTypeCheck};
+use pyo3::{BoundObject, CastError};
 use rigetti_pyo3::create_init_submodule;
 
 #[cfg(feature = "stubs")]
@@ -327,7 +327,8 @@ where
     fn extract(obj: Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
         let mut res = Vec::with_capacity(obj.len().unwrap_or(0));
         for item in obj.try_iter()? {
-            let item = item?.extract::<T>()
+            let item = item?
+                .extract::<T>()
                 .map_err(Into::into)?
                 .try_into()
                 .map_err(Into::into)?;
@@ -349,7 +350,6 @@ impl<T, U> Seq2<T, U> {
         Self(Vec::new(), PhantomData)
     }
 }
-
 
 impl<T, U> Default for Seq<T, U> {
     fn default() -> Self {
@@ -424,7 +424,6 @@ impl<T: PyStubType, U> pyo3_stub_gen::PyStubType for Seq2<T, U> {
         <Vec<T> as PyStubType>::type_output()
     }
 }
-
 
 /// Extracts as `U`, stubs like `T`.
 ///
@@ -576,7 +575,6 @@ where
         }
     }
 }
-
 
 /// A trait for stating what Python type to check against before trying to extract a Rust type.
 pub(crate) trait CastAs {
@@ -827,7 +825,7 @@ macro_rules! impl_stub_like {
         $crate::quilpy::impl_stub_like!(@initial $(#[$meta])* $vis $T = $base_ty $(| $variant_ty $(as $variant_name)? )*);
         $crate::quilpy::impl_stub_like!(@no_enum $vis $T = $base_ty $(| $variant_ty $(as $variant_name)? )*);
     };
-    
+
     (@initial $(#[$meta:meta])* $vis:vis $T:ident = $base_ty:ty $(| $variant_ty:ty $(as $variant_name:ident)? )*) => {
         $(#[$meta])*
         $vis struct $T($base_ty);
