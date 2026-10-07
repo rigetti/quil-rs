@@ -145,7 +145,7 @@ impl TryFrom<&Bound<'_, PyExpression>> for Expression {
             Ok(Expression::Variable(slf.get().name.clone()))
         } else if let Ok(slf) = value.cast::<Number>() {
             Ok(Expression::Number(slf.get().value))
-        } else if let Ok(_) = value.cast::<PiType>() {
+        } else if value.cast::<PiType>().is_ok() {
             Ok(Expression::PiConstant)
         } else if let Ok(slf) = value.cast::<Address>() {
             Ok(Expression::Address(slf.get().memory_reference.clone()))
@@ -280,7 +280,7 @@ impl AsView for &Bound<'_, PyExpression> {
             ExpressionView::Variable(&obj.get().name)
         } else if let Ok(obj) = self.cast::<Number>() {
             ExpressionView::Number(obj.get().value)
-        } else if let Ok(_) = self.cast::<PiType>() {
+        } else if self.cast::<PiType>().is_ok() {
             ExpressionView::PiConstant
         } else if let Ok(obj) = self.cast::<Address>() {
             ExpressionView::Address(&obj.get().memory_reference)
