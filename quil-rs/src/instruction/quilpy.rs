@@ -29,7 +29,7 @@ use crate::{
     expression::{
         consts::{IMAGINARY_UNIT, ONE, ZERO}, quilpy::{ExpressionLike, Parameter, QualifiedExpression, quil_exp},
     }, instruction::gate::GateSignature, pickleable_new, quilpy::{
-        IntoNewArgs, Like, Migrate, NewArgs, NonZeroU64, Seq, Seq2, aliased, deprecated_or_new, deprecated_param, errors::{self, PickleError}, impl_newargs, impl_to_quil, py_deprecated, singleton,
+        IntoNewArgs, Migrate, NewArgs, NonZeroU64, Seq, Seq2, Via, aliased, deprecated_or_new, deprecated_param, errors::{self, PickleError}, impl_newargs, impl_stub_like, impl_to_quil, py_deprecated, singleton,
     }, validation::identifier::IdentifierValidationError,
 };
 
@@ -2113,15 +2113,65 @@ impl Gate {
     }
 }
 
+#[cfg(feature = "stubs")]
+submit! {
+    gen_methods_from_python! {
+        r#"
+        import typing
+        import typing_extensions
+
+        from quil._quil import expression
+
+        class GateDefinition:
+            @typing.overload
+            def __new__(
+                cls,
+                name: builtins.str,
+                parameters: pyo3_stub_gen.RustType["Vec<Parameter>"],
+                specification: pyo3_stub_gen.RustType["GateSpecification"],
+            ) -> GateDefinition:
+                """Return a new `GateDefinition` instance with the given name, parameters, qubits, and modifiers.
+
+                This is the preferred constructor.
+                """
+
+            @typing.overload
+            def __new__(
+                cls,
+                name: builtins.str,
+                matrix: pyo3_stub_gen.RustType["Vec<Vec<ExpressionLike>>"],
+                parameters: pyo3_stub_gen.RustType["Option<Vec<Parameter>>"] = None,
+            ) -> GateDefinition:
+                """Return a new `GateDefinition` instance with the given name, parameters, qubits, and modifiers.
+
+                This constructor is deprecated.
+                """
+
+            @typing.overload
+            def __new__(
+                cls,
+                name: builtins.str,
+                *,
+                params: pyo3_stub_gen.RustType["Option<Vec<ExpressionLike>>"],
+                qubits: pyo3_stub_gen.RustType["Option<Vec<Qubit>>"] = None,
+                modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
+            ) -> GateDefinition: ...
+        "#
+    }
+}
+
+
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl GateDefinition {
     // TODO(migration-guide): document the constructor changes...
     //
-    // TODO: Make this signature accept the old PyQuil v4 constructor signature:
+    // TODO: Make this signature accept both its current signature and the old PyQuil v4 constructor signature:
     // `(name: str, matrix: list[list[Expression]] | np.ndarray | np.matrix, parameters: list[Parameter] | None = None)`,
-    // which swaps the order of `specification` and `parameters` relative the earlier `quil` signature
-    // so that it can make the `parameters` themselves optional.
+    // which uses the term `matrix` instead of `specification`,
+    // swaps the order of the last two parameters, and makes `parameters` optional.
+    // We want to accept both the old and new signatures, but we want to deprecate the old one.
+    // Right now, we only handle the deprecated `matrix` parameter.
     //
     // TODO: submit! overrides to indicate exactly one of `specification` or `matrix` is required.
     #[new]
@@ -4952,22 +5002,7 @@ impl PauliSum {
     }
 }
 
-#[derive(FromPyObject)]
-pub(crate) enum PragmaArgumentLike {
-    PragmaArgument(PragmaArgument),
-    Identifier(String),
-    Integer(u64),
-}
-
-impl From<PragmaArgumentLike> for PragmaArgument {
-    fn from(value: PragmaArgumentLike) -> Self {
-        match value {
-            PragmaArgumentLike::PragmaArgument(arg) => arg,
-            PragmaArgumentLike::Identifier(id) => PragmaArgument::Identifier(id),
-            PragmaArgumentLike::Integer(int) => PragmaArgument::Integer(int),
-        }
-    }
-}
+impl_stub_like!(pub(crate) PragmaArgumentLike = enum PragmaArgument | String as Identifier | u64 as Integer);
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -4982,7 +5017,7 @@ impl PragmaArgument {
     fn __getnewargs__<'py>(
         &self,
         py: Python<'py>,
-    ) -> PyResult<NewArgs<'py, Like<PragmaArgumentLike, Self>>> {
+    ) -> PyResult<NewArgs<'py, Via<PragmaArgumentLike, Self>>> {
         match self {
             Self::Identifier(value) => value.clone().into_newargs(py),
             Self::Integer(value) => (*value).into_newargs(py),
@@ -5047,44 +5082,10 @@ impl Pragma {
     }
 }
 
-#[derive(Debug, Clone, FromPyObject)]
-pub(crate) enum QubitLike {
-    Qubit(Qubit),
-    Placeholder(QubitPlaceholder),
-    Int(u64),
-    Str(String),
-}
-
-impl From<QubitLike> for Qubit {
-    fn from(value: QubitLike) -> Self {
-        match value {
-            QubitLike::Qubit(qubit) => qubit,
-            QubitLike::Placeholder(value) => Qubit::Placeholder(value),
-            QubitLike::Int(value) => Qubit::Fixed(value),
-            QubitLike::Str(value) => Qubit::Variable(value),
-        }
-    }
-}
-
-impl<'a, 'py> FromPyObject<'a, 'py> for Qubit {
-    type Error = PyErr;
-
-    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-        if let Ok(obj) = obj.cast::<Qubit>() {
-            Ok(obj.get().clone())
-        } else if let Ok(obj) = obj.cast::<PyInt>() {
-            Ok(Qubit::Fixed(obj.extract::<u64>()?))
-        } else if let Ok(obj) = obj.cast::<PyString>() {
-            Ok(Qubit::Variable(obj.extract::<String>()?))
-        } else if let Ok(obj) = obj.cast::<QubitPlaceholder>() {
-            Ok(Qubit::Placeholder(obj.get().clone()))
-        } else {
-            Err(PyTypeError::new_err(
-                "expected a Qubit or one of its variants",
-            ))
-        }
-    }
-}
+impl_stub_like!(
+    #[derive(Debug, Clone)]
+    pub(crate) QubitLike =
+    enum Qubit | QubitPlaceholder as Placeholder | u64 as Fixed | String as Variable);
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -5695,8 +5696,6 @@ mod stubs {
     );
     impl_stub_type!(PauliArg = Qubit | i64 | String);
     impl_stub_type!(PyMemRef<'_> = MemoryReferenceLike);
-    impl_stub_enum!(QubitLike = Qubit | i64 | String | QubitPlaceholder);
-    impl_stub_enum!(PragmaArgumentLike = PragmaArgument | String | u64);
 
     // See docs on `TargetLike` and `LabelTargetLike` for why these are separate types.
     impl_stub_enum!(TargetLike = Target | String | TargetPlaceholder | Label);

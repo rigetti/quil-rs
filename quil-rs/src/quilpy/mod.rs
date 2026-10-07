@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+use pyo3::{BoundObject, CastError};
 use pyo3::types::PyType;
 use pyo3::{prelude::*, types::PyTuple, PyClass, PyTypeCheck};
 use rigetti_pyo3::create_init_submodule;
@@ -201,6 +202,35 @@ impl pyo3_stub_gen::PyStubType for NonZeroU64 {
 
 /// Wrapper for `Vec<U>` that extracts items using `T` as [`FromPyObject`] and `From<T> for U`.
 ///
+/// # Basic Usage
+///
+/// Here's an example that uses a sequence of a Rust newtype wrapper type exposed as a `#[pyclass]`,
+/// but permits Python users to pass a sequence of existing instances or of the base type:
+///
+/// ```rust,ignore
+/// #[pyclass]
+/// struct Parameter(String);
+///
+/// #[derive(FromPyObject, IntoPyObject)]
+/// struct ParameterLike(Parameter);
+/// impl_stub_type!(ParameterLike = Parameter | String);
+/// impl From<ParameterLike> for Parameter {
+///    fn from(value: ParameterLike) -> Self {
+///        value.0
+///    }
+/// }
+///
+/// #[pyfunction]
+/// // This is stubbed as `def foo(values: Sequence[Parameter | str]) -> None: ...`
+/// fn foo(values: Seq<ParameterLike, Parameter>) {
+///     // `Into<Vec<Parameter>>` is equivalent to accessing the inner `values.0`.
+///     // No conversion happens here, because `Parameters` are extracted directly
+///     // or created from an extracted `str`s at the moment of extraction,
+///     // avoiding the intermediary `Vec<ParameterLike>`.
+///     let values: Vec<Parameter> = values.into();
+/// }
+/// ```
+///
 /// # Motivation
 ///
 /// Its main use is with [`pickleable_new!`] and syntax `field: Vec<U> as Seq<T, U>`.
@@ -235,7 +265,7 @@ impl pyo3_stub_gen::PyStubType for NonZeroU64 {
 /// you can use it with `pickleable_new!` by writing `field: Vec<T> as Seq<U, T>`,
 /// and you'll get a reasonably efficient extraction with the correct type stubs.
 ///
-/// # Usage
+/// # Other Examples
 ///
 /// For real use-cases, look for instances that accept `Vec<ExpressionLike>` or `Vec<QubitLike>`
 /// within the [`crate::instructions::quilpy`] module.
@@ -255,8 +285,7 @@ pub(crate) struct Seq<T, U>(Vec<U>, PhantomData<T>);
 
 /// This is just like [`Seq`], but does not require `U: PyClass + PyTypeCheck` to extract.
 ///
-/// This allows it to work with types that implement [`FromPyObject`]
-/// but are not [`PyClass`]es.
+/// This allows it to work with types that implement [`FromPyObject`] but are not [`PyClass`]es.
 #[derive(Debug)]
 pub(crate) struct Seq2<T, U>(Vec<U>, PhantomData<T>);
 
@@ -335,7 +364,7 @@ impl<T, U> Default for Seq2<T, U> {
 }
 
 // It's unlikely to be useful to return this type,
-// but this implementation is occassionally necessary for the stub generator to work right.
+// but this implementation is necessary for the stub generator to support it as a default argument.
 impl<'py, T, U> IntoPyObject<'py> for Seq<T, U>
 where
     U: IntoPyObject<'py>,
@@ -399,13 +428,23 @@ impl<T: PyStubType, U> pyo3_stub_gen::PyStubType for Seq2<T, U> {
 
 /// Extracts as `U`, stubs like `T`.
 ///
-/// When you use `Like<T, U>` as a parameter in a function exposed to Python,
+/// When you use `Via<T, U>` as a parameter in a function exposed to Python,
 /// the function can accept existing instances of Python objects of (Rust) type `U`,
 /// as well as Python data that can extract to `T` and convert into `U`.
+///
+/// Moreover, it generates type stubs for `T` rather than `U`.
+/// This leads to a useful idiom: if you internally need Rust type `Foo`,
+/// but you want to let Python users pass additional types that can convert into `Foo`,
+/// define a Rust type `FooLike` that implements [`FromPyObject`] and [`Into<Foo>`],
+/// implement [`PyStubType`] for `FooLike` to generate the input/output type stubs you want,
+/// and then you can use `Via<FooLike, Foo>` in your function:
+/// the stubs will show `FooLike`'s type representation,
+/// but the extraction will result in a `Via<FooLike, Foo>` instance, for which `.0` is a `Foo`.
+/// You can get at that directly with `.0`, or take advantage of the [`Into<Foo>`] implementation.
 #[derive(Debug, Copy, Clone)]
-pub(crate) struct Like<T, U>(pub U, PhantomData<T>);
+pub(crate) struct Via<T, U>(pub U, PhantomData<T>);
 
-impl<'a, 'py, T, U> FromPyObject<'a, 'py> for Like<T, U>
+impl<'a, 'py, T, U> FromPyObject<'a, 'py> for Via<T, U>
 where
     T: FromPyObject<'a, 'py> + TryInto<U>,
     U: PyClass + PyTypeCheck + ToOwned<Owned = U>,
@@ -428,14 +467,14 @@ where
 
 #[cfg(feature = "stubs")]
 impl<T, U: pyo3_stub_gen::runtime::PyRuntimeType> pyo3_stub_gen::runtime::PyRuntimeType
-    for Like<T, U>
+    for Via<T, U>
 {
     fn runtime_type_object(py: Python<'_>) -> PyResult<Bound<'_, PyAny>> {
         <U as pyo3_stub_gen::runtime::PyRuntimeType>::runtime_type_object(py)
     }
 }
 
-impl<'py, T, U> IntoPyObject<'py> for Like<T, U>
+impl<'py, T, U> IntoPyObject<'py> for Via<T, U>
 where
     U: IntoPyObject<'py>,
 {
@@ -449,7 +488,7 @@ where
 }
 
 #[cfg(feature = "stubs")]
-impl<T: PyStubType, U> pyo3_stub_gen::PyStubType for Like<T, U> {
+impl<T: PyStubType, U> pyo3_stub_gen::PyStubType for Via<T, U> {
     fn type_input() -> pyo3_stub_gen::TypeInfo {
         <T as PyStubType>::type_input()
     }
@@ -538,13 +577,76 @@ where
     }
 }
 
-/// Generate stubs for a wrapper around an enum type so that when used as an input parameter,
-/// it shows the enum type and all its variants,
-/// but if used as an output type, it just shows the variants.
+
+/// A trait for stating what Python type to check against before trying to extract a Rust type.
+pub(crate) trait CastAs {
+    type PyType: PyTypeCheck;
+}
+
+/// Wraps `T` in a type that can implement `FromPyObject`.
+pub(crate) struct CastWrap<T>(pub(crate) T);
+
+/// The errors that can be returned when attempting to use `CastWrap`.
+pub(crate) enum CastAsError<'a, 'py> {
+    Cast(pyo3::CastError<'a, 'py>),
+    Extract(PyErr),
+}
+
+impl From<CastAsError<'_, '_>> for PyErr {
+    fn from(err: CastAsError<'_, '_>) -> Self {
+        match err {
+            CastAsError::Cast(cast_err) => cast_err.into(),
+            CastAsError::Extract(pyerr) => pyerr,
+        }
+    }
+}
+
+/// Blanket implementation of `CastAs`
+/// that checks against the Python type that `T` would convert into,
+/// according to its [`IntoPyObject`] implementation.
+// If there are too many types that implement `IntoPyObject<Target = PyAny>`,
+// it might be better just to write the relevant `CastAs`s manually.
+impl<T, U> CastAs for T
+where
+    T: for<'py> IntoPyObject<'py, Target = U>,
+    U: PyTypeCheck,
+{
+    type PyType = U;
+}
+
+/// Attempts to extract `T` from a Python object.
 ///
-/// The latter is particularly useful for `__getnewargs__`.
+/// Succeeds if the object type checks to `T::PyType` and can be extracted into `T`.
+impl<'a, 'py, T: CastAs + FromPyObjectOwned<'py>> TryFrom<Borrowed<'a, 'py, PyAny>> for CastWrap<T>
+where
+    <T as CastAs>::PyType: 'a,
+{
+    type Error = CastAsError<'a, 'py>;
+
+    fn try_from(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        obj.cast::<T::PyType>()
+            .map_err(CastAsError::Cast)?
+            .extract::<T>()
+            .map_err(|pyerr| CastAsError::Extract(pyerr.into()))
+            .map(CastWrap)
+    }
+}
+
+pub(crate) trait FromLike<T> {
+    fn from_like(value: T) -> Self;
+}
+
+impl<T, U: From<T>> FromLike<T> for U {
+    fn from_like(value: T) -> Self {
+        U::from(value)
+    }
+}
+
+/// Generate stubs where the input type is all of `T1 | T2 | ...` but the output type is `T2 | ...`.
 ///
-/// The initial parameter must be the enum type.
+/// This is particularly useful for typing `__getnewargs__` for `enum`s:
+/// the input shows it'll accept the enum type and all its variants,
+/// while the output type shows it returns just one of the variants.
 macro_rules! impl_stub_enum {
     ($T:ty = $base_ty:ty $(| $variant_ty:ty)*) => {
         #[cfg(feature = "stubs")]
@@ -569,6 +671,217 @@ macro_rules! impl_stub_enum {
 }
 
 pub(crate) use impl_stub_enum;
+
+/// Generate a wrapper type around `T1` that accepts `T1 | T2 | ...` as input.
+///
+/// The stubs, when used as input type, show `T1 | T2 | ...` while the output shows only `T2 | ...`.
+/// This is useful for types that are meant for flexible inputs that coerce to an internal type.
+///
+/// # Example
+///
+/// Suppose we have a newtype wrapper around `String`s exposed to Python as a `#[pyclass]`:
+///
+/// ```rust,ignore
+/// #[derive(Debug, Clone, Eq, PartialEq)]
+/// #[gen_stub_pyclass]
+/// #[pyclass(from_py_object, eq)]
+/// struct Parameter(String);
+///
+/// #[pymethods]
+/// impl Parameter {
+///     #[new]
+///     fn new(value: String) -> Self {
+///         Self(value)
+///     }
+/// }
+///
+/// #[derive(Debug, Clone)]
+/// #[gen_stub_pyclass]
+/// #[pyclass(from_py_object)]
+/// struct Function {
+///     parameters: Vec<Parameter>,
+///     body: String,
+/// }
+///
+/// #[pymethods]
+/// impl Function {
+///     #[new]
+///     fn new(parameters: Vec<Parameter>, body: String) -> Self {
+///         Self { parameters, body }
+///     }
+///
+///     fn has_parameter(&self, parameter: Parameter) -> bool {
+///         self.parameters.iter().any(|p| p.0 == parameter.0)
+///     }
+///
+///     fn first_parameter(&self) -> Option<Parameter> {
+///         self.parameters.first().cloned()
+///     }
+/// }
+/// ```
+///
+/// For Python users, those `Function` methods are kind of annoying to use,
+/// since they'll have to wrap every string in a `Parameter` instance:
+///
+/// ```python
+/// func = Function(parameters=[Parameter("x"), Parameter("y")], body="...")
+/// assert func.has_parameter(Parameter("x"))
+/// assert not func.has_parameter(Parameter("z"))
+/// assert func.first_parameter() == Parameter("x")
+/// ```
+///
+/// We can make it easier on them by writing a [`FromPyObject`] implementation for `Parameter`
+/// that accepts both `Parameter` instances and `str`s:
+///
+/// ```rust,ignore
+/// impl<'a, 'py> FromPyObject<'a, 'py> for Parameter {
+///     type Error = PyErr;
+///     fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+///         if let Ok(param) = obj.cast::<Parameter>() {
+///             Ok(param.borrow().to_owned())
+///         } else {
+///             obj.extract::<String>().map_err(Into::into).map(Parameter)
+///         }
+///     }
+/// }
+/// ```
+///
+/// Now this is accepted:
+///
+/// ```python
+/// func = Function(parameters=["x", "y"], body="...")
+/// assert func.has_parameter("x")
+/// assert not func.has_parameter("z")
+/// assert func.first_parameter() == Parameter("x")
+/// assert func.first_parameter() != "x"  # The return type is intentionally `Parameter`.
+/// ```
+///
+/// However, in order for the above code NOT to cause type errors,
+/// we need the type stubs to show that _both_ `Parameter` and `str` are accepted,
+/// yet we still want the return type of `first_parameter` to be just `Parameter`:
+///
+/// ```python
+/// class Function:
+///     def __new__(self, parameters: Sequence[Parameter | str], body: str) -> None: ...
+///     def has_parameter(self, parameter: Parameter | str) -> bool: ...
+///     def first_parameter(self) -> Parameter: ...
+/// ```
+///
+/// Ideally, we'd be able to just implement the [`PyStubType`] for `Parameter` ourselves,
+/// but unfortunately, we need to tell the stub generator about the `Parameter` type
+/// in order to for it to correctly add stubs for its methods
+/// (we did so with `#[gen_stub_pyclass]`, but we'd have the same problem if we did it manually),
+/// and by doing so, the it'll end up with a blanket implementation of [`PyStubType`].
+///
+/// Moreover, the [`FromPyObject`] implementation for `Parameter` is pretty verbose,
+/// and by virtue of having it, we _can't_ type a function in a way
+/// that explicitly requires a `Parameter` instance but does not auto-convert `str`s.
+///
+/// To work around these issues, instead of implementing [`FromPyObject`] for `Parameter`,
+/// we can instead define a new type that explicitly states what acts "like" a `Parameter`,
+/// and then use that type in the function signatures that are meant to be more flexible.
+///
+/// We use this macro call:
+///
+/// ```rust,ignore
+/// impl_stub_like!(ParameterLike = Parameter | String);
+/// ```
+///
+/// And now our methods can be typed as follows:
+///
+/// ```rust,ignore
+/// #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+/// #[pymethods]
+/// impl Function {
+///     // Bonus: use `Seq` to extract directly into `Vec<Parameter>` while using ParameterLike!
+///     #[new]
+///     fn new(parameters: Seq<ParameterLike, Parameter>, body: String) -> Self {
+///         Self { parameters: parameters.into(), body }
+///     }
+///
+///     fn has_parameter(&self, parameter: ParameterLike) -> bool {
+///         let parameter: Parameter = parameter.into();
+///         self.parameters.iter().any(|p| p == parameter)
+///     }
+///
+///     fn first_parameter(&self) -> Option<Parameter> {
+///         self.parameters.first().cloned()
+///     }
+/// }
+/// ```
+///
+/// And we'll get the stubs we wanted from above.
+macro_rules! impl_stub_like {
+    (
+        $(#[$meta:meta])*
+        $vis:vis $T:ident = enum $base_ty:ty $(| $variant_ty:ty $(as $variant_name:ident)? )*) => {
+        $crate::quilpy::impl_stub_enum!($T = $base_ty $(| $variant_ty)*);
+        $crate::quilpy::impl_stub_like!(@initial $(#[$meta])* $vis $T = $base_ty $(| $variant_ty $(as $variant_name)? )*);
+        $crate::quilpy::impl_stub_like!(@as_enum $vis $T = $base_ty $(| $variant_ty $(as $variant_name)? )*);
+    };
+
+    (
+        $(#[$meta:meta])*
+        $vis:vis $T:ident = $base_ty:ty $(| $variant_ty:ty $(as $variant_name:ident)? )*) => {
+        $crate::quilpy::impl_stub_enum!($T = $base_ty $(| $variant_ty)*);
+        $crate::quilpy::impl_stub_like!(@initial $(#[$meta])* $vis $T = $base_ty $(| $variant_ty $(as $variant_name)? )*);
+        $crate::quilpy::impl_stub_like!(@no_enum $vis $T = $base_ty $(| $variant_ty $(as $variant_name)? )*);
+    };
+    
+    (@initial $(#[$meta:meta])* $vis:vis $T:ident = $base_ty:ty $(| $variant_ty:ty $(as $variant_name:ident)? )*) => {
+        $(#[$meta])*
+        $vis struct $T($base_ty);
+
+        impl From<$T> for $base_ty {
+            fn from(value: $T) -> Self {
+                value.0
+            }
+        }
+    };
+
+    (@as_enum $vis:vis $T:ident = $base_ty:ty $(| $variant_ty:ty $(as $variant_name:ident)? )*) => {
+        impl<'a, 'py> FromPyObject<'a, 'py> for $T {
+            type Error = PyErr;
+
+            fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+                if let Ok(obj) = obj.cast::<$base_ty>() {
+                    Ok(Self(obj.extract()?))
+                }$( else if let Ok(obj) = $crate::quilpy::CastWrap::<$variant_ty>::try_from(obj) {
+                    Ok(Self(
+                        $crate::quilpy::impl_stub_like!(@extract_name $base_ty, $variant_ty $(, $variant_name)? )(obj.0)
+                    ))
+                })* else {
+                    Err(CastError::new(obj, <$base_ty as pyo3::type_object::PyTypeCheck>::classinfo_object(obj.py())))?
+                }
+            }
+        }
+    };
+
+    (@no_enum $vis:vis $T:ident = $base_ty:ty $(| $variant_ty:ty )*) => {
+        impl<'a, 'py> FromPyObject<'a, 'py> for $T {
+            type Error = PyErr;
+
+            fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+                if let Ok(obj) = obj.cast::<$base_ty>() {
+                    Ok(Self(obj.extract()?))
+                }$( else if let Ok(obj) = $crate::quilpy::CastWrap::<$variant_ty>::try_from(obj) {
+                    Ok(Self(
+                        <$base_ty as $crate::quilpy::FromLike<$variant_ty>>::from_like(obj.0)
+                    ))
+                })* else {
+                    Err(CastError::new(obj, <$base_ty as pyo3::type_object::PyTypeCheck>::classinfo_object(obj.py())))?
+                }
+            }
+        }
+    };
+
+    // Form the variant name; allows it to be different from the type used for extraction.
+    (@extract_name $base_ty:ty, $variant_ty:ty, $variant_name:ident) => { <$base_ty>::$variant_name };
+    (@extract_name $base_ty:ty, $variant_ty:ty) => { <$base_ty>::$variant_ty };
+
+}
+
+pub(crate) use impl_stub_like;
 
 /// Add Python `to_quil` and `to_quil_or_debug` methods
 /// for types that implement [`Quil`](crate::quil::Quil).

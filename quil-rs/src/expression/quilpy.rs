@@ -1,6 +1,9 @@
 use numpy::{PyArray, PyArrayDescr, PyArrayDescrMethods};
 use pyo3::{
-    IntoPyObjectExt, PyClass, exceptions::{PyDeprecationWarning, PyNotImplementedError}, prelude::*, types::{PyAnyMethods, PyComplex, PyFloat, PyInt},
+    exceptions::{PyDeprecationWarning, PyNotImplementedError},
+    prelude::*,
+    types::{PyAnyMethods, PyComplex, PyFloat, PyInt},
+    IntoPyObjectExt, PyClass,
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -153,7 +156,9 @@ impl TryFrom<&Bound<'_, PyExpression>> for Expression {
         } else if let Ok(slf) = value.cast::<PrefixExpression>() {
             Ok(Expression::Prefix(slf.get().clone()))
         } else {
-            Err(PyNotImplementedError::new_err("unknown Expression subclass"))
+            Err(PyNotImplementedError::new_err(
+                "unknown Expression subclass",
+            ))
         }
     }
 }
@@ -345,7 +350,10 @@ impl PyExpression {
 
     /// Substitute an expression in the place of each matching variable.
     #[pyo3(name = "substitute_variables")]
-    fn py_substitute_variables(slf: &Bound<'_, Self>, variable_values: HashMap<String, ExpressionLike>) -> PyResult<Expression> {
+    fn py_substitute_variables(
+        slf: &Bound<'_, Self>,
+        variable_values: HashMap<String, ExpressionLike>,
+    ) -> PyResult<Expression> {
         Ok(Expression::try_from(slf)?.substitute_variables_impl(&variable_values))
     }
 
@@ -595,14 +603,27 @@ pub(crate) struct Parameter {
     name: String, // TODO: consider replacing this with `Py<PyString>`.
 }
 
+/// Wrapper around [`Parameter`] with type stubs that indicate it the method accepts `str`s, too.
+#[derive(Clone, Debug, Hash, PartialEq, Eq, FromPyObject)]
+#[cfg_attr(feature = "stubs", derive(IntoPyObject))]
+pub(crate) struct ParameterLike(Parameter);
+
+impl From<ParameterLike> for Parameter {
+    fn from(value: ParameterLike) -> Self {
+        value.0
+    }
+}
+
 impl<'a, 'py> FromPyObject<'a, 'py> for Parameter {
     type Error = PyErr;
 
     fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
         if let Ok(value) = obj.cast::<Parameter>() {
             Ok(value.get().clone())
-        } else { 
-            Ok(Self { name: obj.extract::<String>()? })
+        } else {
+            Ok(Self {
+                name: obj.extract::<String>()?,
+            })
         }
     }
 }
@@ -1084,11 +1105,27 @@ pub(crate) mod stubs {
 
     impl PyRuntimeType for QualifiedExpression {
         fn runtime_type_object(py: Python<'_>) -> PyResult<Bound<'_, PyAny>> {
-            Ok(py.get_type::<PyExpression>().into_any())
+            <PyExpression as PyRuntimeType>::runtime_type_object(py)
         }
     }
 
-    pyo3_stub_gen::impl_stub_type!(Expression = PyExpression);
+    impl PyStubType for ParameterLike {
+        fn type_input() -> TypeInfo {
+            <Parameter as PyStubType>::type_input() | <String as PyStubType>::type_input()
+        }
+
+        fn type_output() -> TypeInfo {
+            <Parameter as PyStubType>::type_output()
+        }
+    }
+
+    impl PyRuntimeType for ParameterLike {
+        fn runtime_type_object(py: Python<'_>) -> PyResult<Bound<'_, PyAny>> {
+            <Parameter as PyRuntimeType>::runtime_type_object(py)
+        }
+    }
+
+    impl_stub_type!(Expression = PyExpression);
     impl_stub_type!(
         ExpressionLike = QualifiedExpression | MemoryReference | String | i64 | f64 | Complex64
     );
@@ -1096,6 +1133,7 @@ pub(crate) mod stubs {
     impl_stub_type!(SubstitutionValue = Complex64 | Vec<Complex64>);
     impl_stub_type!(Evaluated = Expression | Complex64);
 
+    // Developer Note: Proper aliases MUST be added to the module in `post_init`!
     type_alias!(
         "quil._quil.expression",
         ExpressionValueDesignator = i64 | f64 | Complex64
@@ -1108,8 +1146,4 @@ pub(crate) mod stubs {
         "quil._quil.expression",
         ParameterDesignator = ExpressionLike
     );
-
-    // Note: unlike the prior `Expression` complex-enum API, `evaluate`'s more precise
-    // `partial=False -> complex` overload is not replicated here for each concrete subclass;
-    // the generated stub instead shows the broader `Expression | complex` return type.
 }
