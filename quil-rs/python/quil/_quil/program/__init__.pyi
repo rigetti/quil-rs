@@ -153,7 +153,7 @@ class CalibrationSet:
         """
     def get_match_for_gate(self, gate: instructions.Gate) -> typing.Optional[instructions.GateCalibrationDefinition]:
         r"""
-        Return the final calibration which matches the gate per the `QuilT` specification:
+        Return the final calibration which matches the gate per the Quil-T specification:
         
         A calibration matches a gate if:
         1. It has the same name

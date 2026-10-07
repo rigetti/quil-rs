@@ -18,9 +18,9 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen
 use crate::{
     instruction::{
         quilpy::OwnedGateSignature, CalibrationIdentifier, Declaration, DefaultHandler,
-        ExternPragmaMap, FrameAttributes, FrameIdentifier, Gate, GateCalibrationDefinition,
-        Instruction, MeasureCalibrationDefinition, Measurement, MemoryReference, Qubit,
-        QubitPlaceholder, Reset, ResetCalibrationDefinition, Target, TargetPlaceholder, Waveform,
+        ExternPragmaMap, FrameAttributes, FrameIdentifier, GateCalibrationDefinition, Instruction,
+        MeasureCalibrationDefinition, MemoryReference, Qubit, QubitPlaceholder,
+        ResetCalibrationDefinition, Target, TargetPlaceholder, Waveform,
     },
     quil::Quil,
     quilpy::{errors, impl_to_quil},
@@ -730,52 +730,6 @@ impl Calibrations {
         qubits_available: HashSet<Qubit>,
     ) -> Result<Option<Vec<Instruction>>> {
         self.expand(instruction, &previous_calibrations, &qubits_available)
-    }
-
-    /// Returns the last-specified [`MeasureCalibrationDefinition`] that matches the target
-    /// qubit (if any), or otherwise the last-specified one that specified no qubit.
-    ///
-    /// If multiple calibrations match the measurement, the precedence is as follows:
-    ///
-    ///   1. Match fixed qubit.
-    ///   2. Match variable qubit.
-    ///   3. Match no qubit.
-    ///
-    /// In the case of multiple calibrations with equal precedence, the last one wins.
-    #[pyo3(name = "get_match_for_measurement")]
-    fn py_get_match_for_measurement(
-        &self,
-        measurement: &Measurement,
-    ) -> Option<MeasureCalibrationDefinition> {
-        self.get_match_for_measurement(measurement).cloned()
-    }
-
-    /// Returns the last-specified [`ResetCalibrationDefinition`] that matches the target
-    /// qubit (if any), or otherwise the last-specified one that specified no qubit.
-    ///
-    /// If multiple calibrations match the measurement, the precedence is as follows:
-    ///
-    ///   1. Match fixed qubit.
-    ///   2. Match variable qubit.
-    ///
-    /// In the case of multiple calibrations with equal precedence, the last one wins.
-    #[pyo3(name = "get_match_for_reset")]
-    fn py_get_match_for_reset(&self, reset: &Reset) -> Option<ResetCalibrationDefinition> {
-        self.get_match_for_reset(reset).cloned()
-    }
-
-    /// Return the final calibration which matches the gate per the `QuilT` specification:
-    ///
-    /// A calibration matches a gate if:
-    /// 1. It has the same name
-    /// 2. It has the same modifiers
-    /// 3. It has the same qubit count (any mix of fixed & variable)
-    /// 4. It has the same parameter count (both specified and unspecified)
-    /// 5. All fixed qubits in the calibration definition match those in the gate
-    /// 6. All specified parameters in the calibration definition match those in the gate
-    #[pyo3(name = "get_match_for_gate")]
-    fn py_get_match_for_gate(&self, gate: &Gate) -> Option<GateCalibrationDefinition> {
-        self.get_match_for_gate(gate).cloned()
     }
 }
 

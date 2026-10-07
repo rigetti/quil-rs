@@ -164,6 +164,20 @@ impl Quil for GateCalibrationDefinition {
     }
 }
 
+impl From<GateCalibrationDefinition> for CalibrationDefinition {
+    fn from(definition: GateCalibrationDefinition) -> Self {
+        let GateCalibrationDefinition {
+            identifier,
+            instructions,
+        } = definition;
+
+        Self {
+            identifier: identifier.into(),
+            instructions,
+        }
+    }
+}
+
 /// Unique identifier for a gate calibration definition within a program
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
@@ -357,6 +371,20 @@ impl Quil for MeasureCalibrationDefinition {
     }
 }
 
+impl From<MeasureCalibrationDefinition> for CalibrationDefinition {
+    fn from(definition: MeasureCalibrationDefinition) -> Self {
+        let MeasureCalibrationDefinition {
+            identifier,
+            instructions,
+        } = definition;
+
+        Self {
+            identifier: identifier.into(),
+            instructions,
+        }
+    }
+}
+
 /// A unique identifier for a measurement calibration definition within a program
 #[derive(Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
@@ -487,6 +515,20 @@ impl Quil for ResetCalibrationDefinition {
         } = self;
 
         write_calibration_definition(f, fall_back_to_debug, identifier, instructions)
+    }
+}
+
+impl From<ResetCalibrationDefinition> for CalibrationDefinition {
+    fn from(definition: ResetCalibrationDefinition) -> Self {
+        let ResetCalibrationDefinition {
+            identifier,
+            instructions,
+        } = definition;
+
+        Self {
+            identifier: identifier.into(),
+            instructions,
+        }
     }
 }
 
