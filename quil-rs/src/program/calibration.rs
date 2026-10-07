@@ -12,27 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::HashMap;
-use std::iter::FusedIterator;
-use std::ops::Range;
+use std::{
+    collections::{HashMap, HashSet},
+    iter::FusedIterator,
+    ops::Range,
+};
 
-use itertools::{Either, Itertools as _};
+use itertools::Itertools as _;
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::instruction::{CalibrationIdentifier, MeasureCalibrationIdentifier};
-use crate::quil::Quil;
 use crate::{
     expression::Expression,
     instruction::{
-        CalibrationDefinition, Capture, Delay, Fence, FrameIdentifier, Gate, Instruction,
-        MeasureCalibrationDefinition, Measurement, Pulse, Qubit, RawCapture, SetFrequency,
-        SetPhase, SetScale, ShiftFrequency, ShiftPhase,
+        CalibrationDefinition, CalibrationIdentifier, Capture, Gate, GateCalibrationDefinition,
+        GateCalibrationIdentifier, Instruction, MeasureCalibrationDefinition,
+        MeasureCalibrationIdentifier, Measurement, Pragma, Qubit, Reset,
+        ResetCalibrationDefinition, ResetCalibrationIdentifier,
     },
+    quil::Quil,
 };
 
-use super::source_map::{ExpansionResult, SourceMap, SourceMapEntry, SourceMapIndexable};
-use super::{CalibrationSet, InstructionIndex, ProgramError};
+use super::{
+    source_map::{ExpansionResult, SourceMap, SourceMapEntry, SourceMapIndexable},
+    CalibrationSet, InstructionIndex, ProgramError,
+};
 
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
@@ -54,8 +58,9 @@ use optipy::strip_pyo3;
     )
 )]
 pub struct Calibrations {
-    pub calibrations: CalibrationSet<CalibrationDefinition>,
+    pub gate_calibrations: CalibrationSet<GateCalibrationDefinition>,
     pub measure_calibrations: CalibrationSet<MeasureCalibrationDefinition>,
+    pub reset_calibrations: CalibrationSet<ResetCalibrationDefinition>,
 }
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -65,23 +70,27 @@ impl Calibrations {
     /// Return the count of contained calibrations.
     #[pyo3(name = "__len__")]
     pub fn len(&self) -> usize {
-        self.calibrations.len()
+        self.gate_calibrations.len()
+            + self.measure_calibrations.len()
+            + self.reset_calibrations.len()
     }
 
     /// Return true if this contains no data.
     pub fn is_empty(&self) -> bool {
-        self.calibrations.is_empty()
+        self.gate_calibrations.is_empty()
+            && self.measure_calibrations.is_empty()
+            && self.reset_calibrations.is_empty()
     }
 
-    /// Insert a [`CalibrationDefinition`] into the set.
+    /// Insert a [`GateCalibrationDefinition`] into the set.
     ///
     /// If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
     /// exists in the set, it will be replaced and the old calibration will be returned.
-    pub fn insert_calibration(
+    pub fn insert_gate_calibration(
         &mut self,
-        calibration: CalibrationDefinition,
-    ) -> Option<CalibrationDefinition> {
-        self.calibrations.replace(calibration)
+        calibration: GateCalibrationDefinition,
+    ) -> Option<GateCalibrationDefinition> {
+        self.gate_calibrations.replace(calibration)
     }
 
     /// Insert a [`MeasureCalibrationDefinition`] into the set.
@@ -95,47 +104,285 @@ impl Calibrations {
         self.measure_calibrations.replace(calibration)
     }
 
+    /// Insert a [`ResetCalibrationDefinition`] into the set.
+    ///
+    /// If a calibration with the same [signature][crate::instruction::CalibrationSignature] already
+    /// exists in the set, it will be replaced and the old calibration will be returned.
+    pub fn insert_reset_calibration(
+        &mut self,
+        calibration: ResetCalibrationDefinition,
+    ) -> Option<ResetCalibrationDefinition> {
+        self.reset_calibrations.replace(calibration)
+    }
+
+    /// Return the final calibration which matches the gate per the Quil-T specification:
+    ///
+    /// A calibration matches a gate if:
+    /// 1. It has the same name
+    /// 2. It has the same modifiers
+    /// 3. It has the same qubit count (any mix of fixed & variable)
+    /// 4. It has the same parameter count (both specified and unspecified)
+    /// 5. All fixed qubits in the calibration definition match those in the gate
+    /// 6. All specified parameters in the calibration definition match those in the gate
+    pub fn get_match_for_gate(&self, gate: &Gate) -> Option<GateCalibrationDefinition> {
+        struct MatchedGateCalibration<'a> {
+            calibration: &'a GateCalibrationDefinition,
+            fixed_qubit_count: usize,
+        }
+
+        let Gate {
+            name: gate_name,
+            modifiers: gate_modifiers,
+            parameters: gate_parameters,
+            qubits: gate_qubits,
+        } = gate;
+
+        self.iter_gate_calibrations()
+            .filter_map(|potential_calibration| {
+                let GateCalibrationDefinition {
+                    identifier,
+                    instructions: _,
+                } = potential_calibration;
+
+                let GateCalibrationIdentifier {
+                    name: identifier_name,
+                    modifiers: identifier_modifiers,
+                    parameters: identifier_parameters,
+                    qubits: identifier_qubits,
+                } = identifier;
+
+                if !(gate_name == identifier_name
+                    && gate_modifiers == identifier_modifiers
+                    // Fast fail, will check these more throughly below.
+                    && gate_qubits.len() == identifier_qubits.len()
+                    && gate_parameters.len() == identifier_parameters.len())
+                {
+                    return None;
+                }
+
+                // Check if parameters match
+                for (gate_parameter, identifier_parameter) in
+                    // Checked lengths were equal above.
+                    gate_parameters.iter().zip(identifier_parameters)
+                {
+                    get_match_for_expression(gate_parameter, identifier_parameter)?;
+                }
+
+                let fixed_qubit_count = gate_qubits
+                    .iter()
+                    // Checked lengths were equal above.
+                    .zip(identifier_qubits)
+                    .map(|(gate_qubit, identifier_qubit)| {
+                        get_match_for_qubits(gate_qubit, identifier_qubit)
+                    })
+                    .try_fold(0usize, |acc, match_type| {
+                        match_type.map(|match_type| {
+                            acc + match match_type {
+                                MatchKind::Exact => 1,
+                                MatchKind::Wildcard => 0,
+                            }
+                        })
+                    })?;
+
+                Some(MatchedGateCalibration {
+                    calibration: potential_calibration,
+                    fixed_qubit_count,
+                })
+            })
+            // `max` returns *last* item in case of equality
+            .max_by_key(
+                |MatchedGateCalibration {
+                     fixed_qubit_count,
+                     calibration: _,
+                 }| *fixed_qubit_count,
+            )
+            .map(
+                |MatchedGateCalibration {
+                     calibration,
+                     fixed_qubit_count: _,
+                 }| calibration,
+            )
+            .cloned()
+    }
+
+    /// Returns the last-specified [`MeasureCalibrationDefinition`] that matches the target
+    /// qubit (if any), or otherwise the last-specified one that specified no qubit.
+    ///
+    /// If multiple calibrations match the measurement, the precedence is as follows:
+    ///
+    ///   1. Match fixed qubit.
+    ///   2. Match variable qubit.
+    ///   3. Match no qubit.
+    ///
+    /// In the case of multiple calibrations with equal precedence, the last one wins.
+    pub fn get_match_for_measurement(
+        &self,
+        measurement: &Measurement,
+    ) -> Option<MeasureCalibrationDefinition> {
+        let Measurement {
+            name: measure_name,
+            qubit: measure_qubit,
+            target: measure_target,
+        } = measurement;
+
+        // Find the last matching measurement calibration, but prefer an exact qubit match to a
+        // wildcard qubit match.
+        let mut matched_calibration = None;
+        for potential_calibration in self.iter_measure_calibrations().rev().filter(
+            |MeasureCalibrationDefinition {
+                 identifier,
+                 instructions: _,
+             }| {
+                let MeasureCalibrationIdentifier {
+                    name: identifier_name,
+                    target: identifier_target,
+                    qubit: _,
+                } = identifier;
+
+                measure_name == identifier_name
+                    && measure_target.is_some() == identifier_target.is_some()
+            },
+        ) {
+            match get_match_for_qubits(measure_qubit, &potential_calibration.identifier.qubit) {
+                Some(MatchKind::Exact) => {
+                    matched_calibration.replace(potential_calibration);
+                    break; // Early return
+                }
+                Some(MatchKind::Wildcard) if matched_calibration.is_none() => {
+                    matched_calibration.replace(potential_calibration);
+                    // Don't `break` in case exact match comes later.
+                }
+                _ => {}
+            }
+        }
+
+        matched_calibration.cloned()
+    }
+
+    /// Returns the last-specified [`ResetCalibrationDefinition`] that matches the target
+    /// qubit (if any), or otherwise the last-specified one that specified no qubit.
+    ///
+    /// If multiple calibrations match the measurement, the precedence is as follows:
+    ///
+    ///   1. Match fixed qubit.
+    ///   2. Match variable qubit.
+    ///
+    /// In the case of multiple calibrations with equal precedence, the last one wins.
+    pub fn get_match_for_reset(&self, reset: &Reset) -> Option<ResetCalibrationDefinition> {
+        let Reset {
+            name: reset_name,
+            qubit: reset_qubit,
+        } = reset;
+
+        // Find the last matching measurement calibration, but prefer an exact qubit match to a
+        // wildcard qubit match.
+        let mut matched_calibration = None;
+        for potential_calibration in self
+            .iter_reset_calibrations()
+            // reverse iteration to facilitate early return
+            .rev()
+            // get the calibrations with matching names
+            .filter(|calibration| &calibration.identifier.name == reset_name)
+        {
+            match get_match_for_qubits_opt(
+                reset_qubit.as_ref(),
+                potential_calibration.identifier.qubit.as_ref(),
+            ) {
+                Some(MatchKind::Exact) => {
+                    matched_calibration.replace(potential_calibration);
+                    break; // Early return
+                }
+                Some(MatchKind::Wildcard) if matched_calibration.is_none() => {
+                    matched_calibration.replace(potential_calibration);
+                    // Don't `break` in case exact match comes later.
+                }
+                _ => {}
+            }
+        }
+
+        matched_calibration.cloned()
+    }
+
     /// Append another [`CalibrationSet`] onto this one.
     ///
     /// Calibrations with conflicting [signatures][crate::instruction::CalibrationSignature] are
     /// overwritten by the ones in the given set.
     pub fn extend(&mut self, other: Calibrations) {
-        self.calibrations.extend(other.calibrations);
+        self.gate_calibrations.extend(other.gate_calibrations);
         self.measure_calibrations.extend(other.measure_calibrations);
+        self.reset_calibrations.extend(other.reset_calibrations);
     }
 
     /// Return the Quil instructions which describe the contained calibrations.
     pub fn to_instructions(&self) -> Vec<Instruction> {
-        self.iter_calibrations()
+        self.iter_gate_calibrations()
             .cloned()
-            .map(Instruction::CalibrationDefinition)
+            .map(Instruction::GateCalibrationDefinition)
             .chain(
                 self.iter_measure_calibrations()
                     .cloned()
                     .map(Instruction::MeasureCalibrationDefinition),
             )
+            .chain(
+                self.iter_reset_calibrations()
+                    .cloned()
+                    .map(Instruction::ResetCalibrationDefinition),
+            )
             .collect()
     }
 }
 
-struct MatchedCalibration<'a> {
-    pub calibration: &'a CalibrationDefinition,
-    pub fixed_qubit_count: usize,
+/// Utility for matching calibrations in order to distinguish
+/// between exact and variable/wildcard matches, since the former
+/// should be preferred.
+enum MatchKind {
+    Exact,
+    Wildcard,
 }
 
-impl<'a> MatchedCalibration<'a> {
-    pub fn new(calibration: &'a CalibrationDefinition) -> Self {
-        Self {
-            calibration,
-            fixed_qubit_count: calibration
-                .identifier
-                .qubits
-                .iter()
-                .filter(|q| match q {
-                    Qubit::Fixed(_) => true,
-                    Qubit::Placeholder(_) | Qubit::Variable(_) => false,
-                })
-                .count(),
+fn get_match_for_qubits(instruction_qubit: &Qubit, calibration_qubit: &Qubit) -> Option<MatchKind> {
+    match (instruction_qubit, calibration_qubit) {
+        // Fixed qubits match if they are equal
+        (Qubit::Fixed(instruction), Qubit::Fixed(calibration)) => {
+            (instruction == calibration).then_some(MatchKind::Exact)
+        }
+
+        // Variable qubits in calibrations match with Fixed or Variable qubits in instructions
+        (Qubit::Fixed(_) | Qubit::Variable(_), Qubit::Variable(_)) => Some(MatchKind::Wildcard),
+
+        // Placeholders never match
+        (Qubit::Placeholder(_), _) | (_, Qubit::Placeholder(_))
+        // Variable qubits in instructions don't match with fixed qubits in calibrations
+        | (Qubit::Variable(_), Qubit::Fixed(_)) => None,
+    }
+}
+
+fn get_match_for_qubits_opt(
+    instruction_qubit: Option<&Qubit>,
+    calibration_qubit: Option<&Qubit>,
+) -> Option<MatchKind> {
+    match (instruction_qubit, calibration_qubit) {
+        (None, None) => Some(MatchKind::Exact),
+
+        (Some(instruction_qubit), Some(calibration_qubit)) => {
+            get_match_for_qubits(instruction_qubit, calibration_qubit)
+        }
+
+        (None, Some(_)) | (Some(_), None) => None,
+    }
+}
+
+fn get_match_for_expression(
+    instruction_expression: &Expression,
+    calibration_expression: &Expression,
+) -> Option<MatchKind> {
+    match (instruction_expression, calibration_expression) {
+        // If the calibration is variable, it matches anything
+        (_, Expression::Variable(_)) => Some(MatchKind::Wildcard),
+
+        // Otherwise, they should be equal
+        (instruction_expression, calibration_expression) => {
+            (instruction_expression == calibration_expression).then_some(MatchKind::Exact)
         }
     }
 }
@@ -161,7 +408,7 @@ pub struct CalibrationExpansionOutput {
 pub struct CalibrationExpansion {
     /// The calibration used to expand the instruction.
     #[pyo3(get)]
-    pub(crate) calibration_used: CalibrationSource,
+    pub(crate) calibration_used: CalibrationIdentifier,
 
     /// The target instruction indices produced by the expansion.
     pub(crate) range: Range<InstructionIndex>,
@@ -206,7 +453,7 @@ impl CalibrationExpansion {
         }
     }
 
-    pub fn calibration_used(&self) -> &CalibrationSource {
+    pub fn calibration_used(&self) -> &CalibrationIdentifier {
         &self.calibration_used
     }
 
@@ -227,46 +474,18 @@ impl SourceMapIndexable<InstructionIndex> for CalibrationExpansion {
     }
 }
 
-impl SourceMapIndexable<CalibrationSource> for CalibrationExpansion {
-    fn contains(&self, other: &CalibrationSource) -> bool {
+impl SourceMapIndexable<CalibrationIdentifier> for CalibrationExpansion {
+    fn contains(&self, other: &CalibrationIdentifier) -> bool {
         self.calibration_used() == other
     }
 }
 
-/// The source of a calibration, either a [`CalibrationIdentifier`] or a
-/// [`MeasureCalibrationIdentifier`].
-#[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil._quil.program", eq, frozen, from_py_object)
-)]
-pub enum CalibrationSource {
-    /// Describes a `DEFCAL` instruction
-    Calibration(CalibrationIdentifier),
-
-    /// Describes a `DEFCAL MEASURE` instruction
-    MeasureCalibration(MeasureCalibrationIdentifier),
-}
-
-impl From<CalibrationIdentifier> for CalibrationSource {
-    fn from(value: CalibrationIdentifier) -> Self {
-        Self::Calibration(value)
-    }
-}
-
-impl From<MeasureCalibrationIdentifier> for CalibrationSource {
-    fn from(value: MeasureCalibrationIdentifier) -> Self {
-        Self::MeasureCalibration(value)
-    }
-}
-
 impl Calibrations {
-    /// Iterate over all [`CalibrationDefinition`]s in the set
-    pub fn iter_calibrations(
+    /// Iterate over all [`GateCalibrationDefinition`]s in the set
+    pub fn iter_gate_calibrations(
         &self,
-    ) -> impl DoubleEndedIterator<Item = &CalibrationDefinition> + FusedIterator {
-        self.calibrations.iter()
+    ) -> impl DoubleEndedIterator<Item = &GateCalibrationDefinition> + FusedIterator {
+        self.gate_calibrations.iter()
     }
 
     /// Iterate over all [`MeasureCalibrationDefinition`]s calibrations in the set
@@ -274,6 +493,13 @@ impl Calibrations {
         &self,
     ) -> impl DoubleEndedIterator<Item = &MeasureCalibrationDefinition> + FusedIterator {
         self.measure_calibrations.iter()
+    }
+
+    /// Iterate over all [`ResetCalibrationDefinition`]s calibrations in the set
+    pub fn iter_reset_calibrations(
+        &self,
+    ) -> impl DoubleEndedIterator<Item = &ResetCalibrationDefinition> + FusedIterator {
+        self.reset_calibrations.iter()
     }
 
     /// Given an instruction, return the instructions to which it is expanded if there is a match.
@@ -286,8 +512,9 @@ impl Calibrations {
         &self,
         instruction: &Instruction,
         previous_calibrations: &[Instruction],
+        qubits_available: &HashSet<Qubit>,
     ) -> Result<Option<Vec<Instruction>>, ProgramError> {
-        self.expand_inner(instruction, previous_calibrations, false)
+        self.expand_inner(instruction, previous_calibrations, qubits_available, false)
             .map(|expansion| expansion.map(|expansion| expansion.new_instructions))
     }
 
@@ -300,8 +527,9 @@ impl Calibrations {
         &self,
         instruction: &Instruction,
         previous_calibrations: &[Instruction],
+        qubits_available: &HashSet<Qubit>,
     ) -> Result<Option<CalibrationExpansionOutput>, ProgramError> {
-        self.expand_inner(instruction, previous_calibrations, true)
+        self.expand_inner(instruction, previous_calibrations, qubits_available, true)
     }
 
     /// Expand an instruction, returning an error if a calibration directly or indirectly
@@ -316,6 +544,7 @@ impl Calibrations {
         &self,
         instruction: &Instruction,
         previous_calibrations: &[Instruction],
+        qubits_available: &HashSet<Qubit>,
         build_source_map: bool,
     ) -> Result<Option<CalibrationExpansionOutput>, ProgramError> {
         if previous_calibrations.contains(instruction) {
@@ -323,135 +552,151 @@ impl Calibrations {
         }
         let expansion_result = match instruction {
             Instruction::Gate(gate) => {
-                let matching_calibration = self.get_match_for_gate(gate);
+                let mut matching_calibration = self.get_match_for_gate(gate);
 
-                match matching_calibration {
-                    Some(calibration) => {
-                        let mut qubit_expansions: HashMap<&String, Qubit> = HashMap::new();
-                        for (index, calibration_qubit) in
-                            calibration.identifier.qubits.iter().enumerate()
-                        {
+                if let Some(GateCalibrationDefinition {
+                    identifier,
+                    instructions,
+                }) = matching_calibration.as_mut()
+                {
+                    let Gate {
+                        parameters: gate_parameters,
+                        qubits: gate_qubits,
+                        name: _,
+                        modifiers: _,
+                    } = gate;
+
+                    let GateCalibrationIdentifier {
+                        qubits: identifier_qubits,
+                        parameters: identifier_parameters,
+                        name: _,
+                        modifiers: _,
+                    } = identifier;
+
+                    let qubit_expansions = identifier_qubits
+                        .iter()
+                        .zip(gate_qubits)
+                        .filter_map(|(calibration_qubit, gate_qubit)| {
                             if let Qubit::Variable(identifier) = calibration_qubit {
-                                qubit_expansions.insert(identifier, gate.qubits[index].clone());
+                                Some((identifier, gate_qubit.clone()))
+                            } else {
+                                None
+                            }
+                        })
+                        .collect::<HashMap<_, _>>();
+
+                    // Variables used within the calibration's definition should be replaced with the actual expressions used by the gate.
+                    // That is, `DEFCAL RX(%theta): ...` should have `%theta` replaced by `pi` throughout if it's used to expand `RX(pi)`.
+                    let variable_expansions: HashMap<String, Expression> = identifier_parameters
+                        .iter()
+                        .zip(gate_parameters)
+                        .filter_map(|(calibration_expression, gate_expression)| {
+                            if let Expression::Variable(variable_name) = calibration_expression {
+                                Some((variable_name.clone(), gate_expression.clone()))
+                            } else {
+                                None
+                            }
+                        })
+                        .collect();
+
+                    for instruction in instructions.iter_mut() {
+                        // Swap all qubits for their concrete implementations
+                        for qubit in instruction.get_qubits_mut() {
+                            match qubit {
+                                Qubit::Variable(name) => {
+                                    if let Some(expansion) = qubit_expansions.get(name) {
+                                        *qubit = expansion.clone();
+                                    }
+                                }
+                                Qubit::Fixed(_) | Qubit::Placeholder(_) => {}
                             }
                         }
 
-                        // Variables used within the calibration's definition should be replaced with the actual expressions used by the gate.
-                        // That is, `DEFCAL RX(%theta): ...` should have `%theta` replaced by `pi` throughout if it's used to expand `RX(pi)`.
-                        let variable_expansions: HashMap<String, Expression> = calibration
-                            .identifier
-                            .parameters
+                        instruction.apply_to_expressions(|expr| {
+                            *expr = expr.substitute_variables(&variable_expansions);
+                        })
+                    }
+                }
+
+                matching_calibration.map(CalibrationDefinition::from)
+            }
+            Instruction::Measurement(measurement) => {
+                let mut matching_calibration = self.get_match_for_measurement(measurement);
+
+                let Measurement {
+                    target: measure_target,
+                    name: _,
+                    qubit: _,
+                } = measurement;
+
+                if let Some((
+                    MeasureCalibrationDefinition {
+                        identifier,
+                        instructions,
+                    },
+                    measure_target,
+                )) = matching_calibration.as_mut().zip(measure_target.as_ref())
+                {
+                    let MeasureCalibrationIdentifier {
+                        target: identifer_target,
+                        name: _,
+                        qubit: _,
+                    } = &identifier;
+
+                    for instruction in instructions.iter_mut() {
+                        match instruction {
+                            Instruction::Pragma(Pragma {
+                                name,
+                                data,
+                                arguments: _,
+                            }) if name == "LOAD-MEMORY" && data == identifer_target => {
+                                data.replace(measure_target.to_quil_or_debug());
+                            }
+                            Instruction::Capture(Capture {
+                                memory_reference,
+                                blocking: _,
+                                frame: _,
+                                waveform: _,
+                            }) => *memory_reference = measure_target.clone(),
+                            _ => {}
+                        }
+                    }
+                }
+
+                matching_calibration.map(CalibrationDefinition::from)
+            }
+            Instruction::Reset(reset @ Reset { name, qubit }) => {
+                let matching_calibration = self.get_match_for_reset(reset);
+
+                // Add default expansion if global RESET
+                let matching_calibration = matching_calibration.or_else(|| {
+                    qubit.is_none().then(|| {
+                        let identifier = ResetCalibrationIdentifier {
+                            name: name.clone(),
+                            qubit: None,
+                        };
+
+                        // Expand global reset into resets on all `qubits_available`
+                        let instructions = qubits_available
                             .iter()
-                            .zip(gate.parameters.iter())
-                            .filter_map(|(calibration_expression, gate_expression)| {
-                                if let Expression::Variable(variable_name) = calibration_expression
-                                {
-                                    Some((variable_name.clone(), gate_expression.clone()))
-                                } else {
-                                    None
-                                }
+                            .cloned()
+                            .sorted()
+                            .map(|available_qubit| {
+                                Instruction::Reset(Reset {
+                                    name: name.clone(),
+                                    qubit: Some(available_qubit),
+                                })
                             })
                             .collect();
 
-                        let mut instructions = calibration.instructions.clone();
-
-                        for instruction in instructions.iter_mut() {
-                            match instruction {
-                                Instruction::Gate(Gate { qubits, .. })
-                                | Instruction::Delay(Delay { qubits, .. })
-                                | Instruction::Capture(Capture {
-                                    frame: FrameIdentifier { qubits, .. },
-                                    ..
-                                })
-                                | Instruction::RawCapture(RawCapture {
-                                    frame: FrameIdentifier { qubits, .. },
-                                    ..
-                                })
-                                | Instruction::SetFrequency(SetFrequency {
-                                    frame: FrameIdentifier { qubits, .. },
-                                    ..
-                                })
-                                | Instruction::SetPhase(SetPhase {
-                                    frame: FrameIdentifier { qubits, .. },
-                                    ..
-                                })
-                                | Instruction::SetScale(SetScale {
-                                    frame: FrameIdentifier { qubits, .. },
-                                    ..
-                                })
-                                | Instruction::ShiftFrequency(ShiftFrequency {
-                                    frame: FrameIdentifier { qubits, .. },
-                                    ..
-                                })
-                                | Instruction::ShiftPhase(ShiftPhase {
-                                    frame: FrameIdentifier { qubits, .. },
-                                    ..
-                                })
-                                | Instruction::Pulse(Pulse {
-                                    frame: FrameIdentifier { qubits, .. },
-                                    ..
-                                })
-                                | Instruction::Fence(Fence { qubits }) => {
-                                    // Swap all qubits for their concrete implementations
-                                    for qubit in qubits {
-                                        match qubit {
-                                            Qubit::Variable(name) => {
-                                                if let Some(expansion) = qubit_expansions.get(name)
-                                                {
-                                                    *qubit = expansion.clone();
-                                                }
-                                            }
-                                            Qubit::Fixed(_) | Qubit::Placeholder(_) => {}
-                                        }
-                                    }
-                                }
-                                _ => {}
-                            }
-
-                            instruction.apply_to_expressions(|expr| {
-                                *expr = expr.substitute_variables(&variable_expansions);
-                            })
-                        }
-
-                        Some((
+                        ResetCalibrationDefinition {
+                            identifier,
                             instructions,
-                            CalibrationSource::Calibration(calibration.identifier.clone()),
-                        ))
-                    }
-                    None => None,
-                }
-            }
-            Instruction::Measurement(measurement) => {
-                let matching_calibration = self.get_match_for_measurement(measurement);
-
-                match matching_calibration {
-                    Some(calibration) => {
-                        let mut instructions = calibration.instructions.clone();
-                        for instruction in instructions.iter_mut() {
-                            match instruction {
-                                Instruction::Pragma(pragma)
-                                    if pragma.name == "LOAD-MEMORY"
-                                        && pragma.data == calibration.identifier.target =>
-                                {
-                                    if let Some(target) = &measurement.target {
-                                        pragma.data = Some(target.to_quil_or_debug())
-                                    }
-                                }
-                                Instruction::Capture(capture) => {
-                                    if let Some(target) = &measurement.target {
-                                        capture.memory_reference = target.clone()
-                                    }
-                                }
-                                _ => {}
-                            }
                         }
-                        Some((
-                            instructions,
-                            CalibrationSource::MeasureCalibration(calibration.identifier.clone()),
-                        ))
-                    }
-                    None => None,
-                }
+                    })
+                });
+
+                matching_calibration.map(CalibrationDefinition::from)
             }
             _ => None,
         };
@@ -461,17 +706,26 @@ impl Calibrations {
         calibration_path.push(instruction.clone());
         calibration_path.extend_from_slice(previous_calibrations);
 
-        self.recursively_expand_inner(expansion_result, &calibration_path, build_source_map)
+        self.recursively_expand_inner(
+            expansion_result,
+            &calibration_path,
+            qubits_available,
+            build_source_map,
+        )
     }
 
     fn recursively_expand_inner(
         &self,
-        expansion_result: Option<(Vec<Instruction>, CalibrationSource)>,
+        expansion_result: Option<CalibrationDefinition>,
         calibration_path: &[Instruction],
+        qubits_available: &HashSet<Qubit>,
         build_source_map: bool,
     ) -> Result<Option<CalibrationExpansionOutput>, ProgramError> {
         Ok(match expansion_result {
-            Some((instructions, matched_calibration)) => {
+            Some(CalibrationDefinition {
+                identifier: matched_calibration,
+                instructions,
+            }) => {
                 let mut recursively_expanded_instructions = CalibrationExpansionOutput {
                     new_instructions: Vec::new(),
                     detail: CalibrationExpansion {
@@ -482,8 +736,12 @@ impl Calibrations {
                 };
 
                 for (expanded_index, instruction) in instructions.into_iter().enumerate() {
-                    let expanded_instructions =
-                        self.expand_inner(&instruction, calibration_path, build_source_map)?;
+                    let expanded_instructions = self.expand_inner(
+                        &instruction,
+                        calibration_path,
+                        qubits_available,
+                        build_source_map,
+                    )?;
                     match expanded_instructions {
                         Some(mut output) => {
                             if build_source_map {
@@ -550,113 +808,20 @@ impl Calibrations {
         })
     }
 
-    /// Returns the last-specified [`MeasureCalibrationDefinition`] that matches the target
-    /// qubit (if any), or otherwise the last-specified one that specified no qubit.
-    ///
-    /// If multiple calibrations match the measurement, the precedence is as follows:
-    ///
-    ///   1. Match fixed qubit.
-    ///   2. Match variable qubit.
-    ///   3. Match no qubit.
-    ///
-    /// In the case of multiple calibrations with equal precedence, the last one wins.
-    pub fn get_match_for_measurement(
-        &self,
-        measurement: &Measurement,
-    ) -> Option<&MeasureCalibrationDefinition> {
-        /// Utility type: when collecting from an iterator, return only the first value it produces.
-        struct First<T>(Option<T>);
-
-        impl<T> Default for First<T> {
-            fn default() -> Self {
-                Self(None)
-            }
-        }
-
-        impl<A> Extend<A> for First<A> {
-            fn extend<T: IntoIterator<Item = A>>(&mut self, iter: T) {
-                if self.0.is_none() {
-                    self.0 = iter.into_iter().next()
-                }
-            }
-        }
-
-        let Measurement {
-            name,
-            qubit,
-            target,
-        } = measurement;
-
-        // Find the last matching measurement calibration, but prefer an exact qubit match to a
-        // wildcard qubit match.
-        let (First(exact), First(wildcard)) = self
-            .iter_measure_calibrations()
-            .rev()
-            .filter_map(|calibration| {
-                let identifier = &calibration.identifier;
-
-                if !(name == &identifier.name && target.is_some() == identifier.target.is_some()) {
-                    return None;
-                }
-
-                match &identifier.qubit {
-                    fixed @ Qubit::Fixed(_) if qubit == fixed => Some((calibration, true)),
-                    Qubit::Variable(_) => Some((calibration, false)),
-                    Qubit::Fixed(_) | Qubit::Placeholder(_) => None,
-                }
-            })
-            .partition_map(|(calibration, exact)| {
-                if exact {
-                    Either::Left(calibration)
-                } else {
-                    Either::Right(calibration)
-                }
-            });
-
-        exact.or(wildcard)
-    }
-
-    /// Return the final calibration which matches the gate per the QuilT specification:
-    ///
-    /// A calibration matches a gate if:
-    /// 1. It has the same name
-    /// 2. It has the same modifiers
-    /// 3. It has the same qubit count (any mix of fixed & variable)
-    /// 4. It has the same parameter count (both specified and unspecified)
-    /// 5. All fixed qubits in the calibration definition match those in the gate
-    /// 6. All specified parameters in the calibration definition match those in the gate
-    pub fn get_match_for_gate(&self, gate: &Gate) -> Option<&CalibrationDefinition> {
-        let mut matched_calibration: Option<MatchedCalibration> = None;
-
-        for calibration in self
-            .iter_calibrations()
-            .filter(|calibration| calibration.identifier.matches(gate))
-        {
-            matched_calibration = match matched_calibration {
-                None => Some(MatchedCalibration::new(calibration)),
-                Some(previous_match) => {
-                    let potential_match = MatchedCalibration::new(calibration);
-                    if potential_match.fixed_qubit_count >= previous_match.fixed_qubit_count {
-                        Some(potential_match)
-                    } else {
-                        Some(previous_match)
-                    }
-                }
-            }
-        }
-
-        matched_calibration.map(|m| m.calibration)
-    }
-
     /// Return the Quil instructions which describe the contained calibrations, consuming the [`CalibrationSet`]
     pub fn into_instructions(self) -> Vec<Instruction> {
-        self.calibrations
+        self.gate_calibrations
             .into_iter()
-            .map(Instruction::CalibrationDefinition)
+            .map(Instruction::GateCalibrationDefinition)
             .chain(
                 self.measure_calibrations
                     .into_iter()
                     .map(Instruction::MeasureCalibrationDefinition),
+            )
+            .chain(
+                self.reset_calibrations
+                    .into_iter()
+                    .map(Instruction::ResetCalibrationDefinition),
             )
             .collect()
     }
@@ -666,15 +831,20 @@ impl Calibrations {
 mod tests {
     use std::str::FromStr;
 
-    use crate::program::calibration::{CalibrationSource, MeasureCalibrationIdentifier};
-    use crate::program::source_map::{ExpansionResult, SourceMap, SourceMapEntry};
-    use crate::program::{InstructionIndex, Program};
-    use crate::quil::Quil;
+    use crate::{
+        instruction::{GateCalibrationIdentifier, MeasureCalibrationIdentifier},
+        program::{
+            calibration::CalibrationIdentifier,
+            source_map::{ExpansionResult, SourceMap, SourceMapEntry},
+            InstructionIndex, Program,
+        },
+        quil::Quil,
+    };
 
     use insta::assert_snapshot;
     use rstest::rstest;
 
-    use super::{CalibrationExpansion, CalibrationExpansionOutput, CalibrationIdentifier};
+    use super::{CalibrationExpansion, CalibrationExpansionOutput};
 
     #[rstest]
     #[case(
@@ -731,6 +901,50 @@ mod tests {
             "DEFCAL MEASURE q:\n",
             "    PRAGMA INCORRECT_RECORD_VS_EFFECT\n",
             "MEASURE 0 ro\n",
+        ),
+    )]
+    #[case(
+        "Reset-Calibration",
+        concat!(
+            "DEFCAL RESET 0:\n",
+            "    PRAGMA INCORRECT_ORDERING\n",
+            "DEFCAL RESET 0:\n",
+            "    PRAGMA CORRECT\n",
+            "DEFCAL RESET q:\n",
+            "    PRAGMA INCORRECT_PRECEDENCE\n",
+            "DEFCAL RESET 1:\n",
+            "    PRAGMA INCORRECT_QUBIT\n",
+            "RESET 0\n",
+        ),
+    )]
+    #[case(
+        "Global-Reset-Calibration-Implicit",
+        concat!(
+            "DEFCAL RESET 0:\n",
+            "    PRAGMA ZERO\n",
+            "DEFCAL RESET 1:\n",
+            "    PRAGMA ONE\n",
+            "DEFCAL RESET 2:\n",
+            "    PRAGMA TWO\n",
+            "RESET\n",
+            "RX 0\n",
+            "RX 1\n",
+        ),
+    )]
+    #[case(
+        "Global-Reset-Calibration-Explicit",
+        concat!(
+            "DEFCAL RESET:\n",
+            "    PRAGMA CORRECT\n",
+            "DEFCAL RESET 0:\n",
+            "    PRAGMA INCORRECT_PRECEDENCE\n",
+            "DEFCAL RESET 1:\n",
+            "    PRAGMA INCORRECT_PRECEDENCE\n",
+            "DEFCAL RESET 2:\n",
+            "    PRAGMA INCORRECT_PRECEDENCE\n",
+            "RESET\n",
+            "RX 0\n",
+            "RX 1\n",
         ),
     )]
     #[case(
@@ -876,7 +1090,7 @@ X 0
         let instruction = program.instructions.last().unwrap();
         let expansion = program
             .calibrations
-            .expand_with_detail(instruction, &[])
+            .expand_with_detail(instruction, &[], program.get_used_qubits())
             .unwrap();
         let expected = CalibrationExpansionOutput {
             new_instructions: vec![
@@ -887,20 +1101,22 @@ X 0
                 crate::instruction::Instruction::Wait(),
             ],
             detail: CalibrationExpansion {
-                calibration_used: CalibrationSource::Calibration(CalibrationIdentifier {
-                    modifiers: vec![],
-                    name: "X".to_string(),
-                    parameters: vec![],
-                    qubits: vec![crate::instruction::Qubit::Fixed(0)],
-                }),
+                calibration_used: CalibrationIdentifier::GateCalibration(
+                    GateCalibrationIdentifier {
+                        modifiers: vec![],
+                        name: "X".to_string(),
+                        parameters: vec![],
+                        qubits: vec![crate::instruction::Qubit::Fixed(0)],
+                    },
+                ),
                 range: InstructionIndex(0)..InstructionIndex(5),
                 expansions: SourceMap {
                     entries: vec![
                         SourceMapEntry {
                             source_location: InstructionIndex(0),
                             target_location: ExpansionResult::Rewritten(CalibrationExpansion {
-                                calibration_used: CalibrationSource::Calibration(
-                                    CalibrationIdentifier {
+                                calibration_used: CalibrationIdentifier::GateCalibration(
+                                    GateCalibrationIdentifier {
                                         modifiers: vec![],
                                         name: "Y".to_string(),
                                         parameters: vec![],
@@ -921,8 +1137,8 @@ X 0
                                             target_location: ExpansionResult::Rewritten(
                                                 CalibrationExpansion {
                                                     calibration_used:
-                                                        CalibrationSource::Calibration(
-                                                            CalibrationIdentifier {
+                                                        CalibrationIdentifier::GateCalibration(
+                                                            GateCalibrationIdentifier {
                                                                 modifiers: vec![],
                                                                 name: "Z".to_string(),
                                                                 parameters: vec![],
@@ -951,7 +1167,7 @@ X 0
                         SourceMapEntry {
                             source_location: InstructionIndex(1),
                             target_location: ExpansionResult::Rewritten(CalibrationExpansion {
-                                calibration_used: CalibrationSource::MeasureCalibration(
+                                calibration_used: CalibrationIdentifier::MeasureCalibration(
                                     MeasureCalibrationIdentifier {
                                         name: None,
                                         qubit: crate::instruction::Qubit::Fixed(0),
@@ -972,8 +1188,8 @@ X 0
                         SourceMapEntry {
                             source_location: InstructionIndex(2),
                             target_location: ExpansionResult::Rewritten(CalibrationExpansion {
-                                calibration_used: CalibrationSource::Calibration(
-                                    CalibrationIdentifier {
+                                calibration_used: CalibrationIdentifier::GateCalibration(
+                                    GateCalibrationIdentifier {
                                         modifiers: vec![],
                                         name: "Y".to_string(),
                                         parameters: vec![],
@@ -994,8 +1210,8 @@ X 0
                                             target_location: ExpansionResult::Rewritten(
                                                 CalibrationExpansion {
                                                     calibration_used:
-                                                        CalibrationSource::Calibration(
-                                                            CalibrationIdentifier {
+                                                        CalibrationIdentifier::GateCalibration(
+                                                            GateCalibrationIdentifier {
                                                                 modifiers: vec![],
                                                                 name: "Z".to_string(),
                                                                 parameters: vec![],

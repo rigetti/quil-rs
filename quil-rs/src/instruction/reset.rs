@@ -20,12 +20,13 @@ use super::Qubit;
     )
 )]
 pub struct Reset {
+    pub name: Option<String>,
     pub qubit: Option<Qubit>,
 }
 
 pickleable_new! {
     impl Reset {
-        pub fn new(qubit: Option<Qubit>);
+        pub fn new(name: Option<String>, qubit: Option<Qubit>);
     }
 }
 
@@ -35,12 +36,19 @@ impl Quil for Reset {
         writer: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> crate::quil::ToQuilResult<()> {
-        match &self.qubit {
-            Some(qubit) => {
-                write!(writer, "RESET ")?;
-                qubit.write(writer, fall_back_to_debug)
-            }
-            None => write!(writer, "RESET").map_err(Into::into),
+        let Self { name, qubit } = self;
+
+        write!(writer, "RESET")?;
+
+        if let Some(name) = name {
+            write!(writer, "!{name}")?;
         }
+
+        if let Some(qubit) = qubit {
+            write!(writer, " ")?;
+            qubit.write(writer, fall_back_to_debug)?;
+        }
+
+        Ok(())
     }
 }
