@@ -10,7 +10,12 @@ use rigetti_pyo3::create_init_submodule;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::{expression::{Expression, quilpy::ExpressionLike}, instruction::WaveformInvocation, quilpy::{Seq2, errors}, waveform::WaveformParameterError};
+use crate::{
+    expression::{quilpy::ExpressionLike, Expression},
+    instruction::WaveformInvocation,
+    quilpy::{errors, Seq2},
+    waveform::WaveformParameterError,
+};
 
 use super::{
     builtin::{quilpy::*, BoxcarKernel, ExplicitCommonBuiltinParameters},

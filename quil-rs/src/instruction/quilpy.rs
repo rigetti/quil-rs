@@ -8,10 +8,17 @@ use indexmap::IndexMap;
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
 use pyo3::{
-    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit, exceptions::{
+    exceptions::{
         PyDeprecationWarning, PyIndexError, PyKeyError, PyNotImplementedError, PyTypeError,
         PyUserWarning, PyValueError,
-    }, prelude::*, sync::PyOnceLock, types::{IntoPyDict as _, PyComplex, PyDict, PyFloat, PyFrozenSet, PyInt, PyList, PyString, PyTuple, PyType},
+    },
+    prelude::*,
+    sync::PyOnceLock,
+    types::{
+        IntoPyDict as _, PyComplex, PyDict, PyFloat, PyFrozenSet, PyInt, PyList, PyString, PyTuple,
+        PyType,
+    },
+    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit,
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -24,10 +31,18 @@ use pyo3_stub_gen::{
 use super::*;
 use crate::{
     expression::{
-        consts::{IMAGINARY_UNIT, ONE, ZERO}, quilpy::{ExpressionLike, Parameter, PyExpression, QualifiedExpression, quil_exp},
-    }, instruction::gate::GateSignature, pickleable_new, quilpy::{
-        IntoNewArgs, Migrate, NewArgs, NonZeroU64, Seq, Seq2, Via, aliased, deprecated_or_new, deprecated_param, errors::{self, PickleError}, impl_newargs, impl_stub_like, impl_to_quil, py_deprecated, singleton,
-    }, validation::identifier::IdentifierValidationError,
+        consts::{IMAGINARY_UNIT, ONE, ZERO},
+        quilpy::{quil_exp, ExpressionLike, Parameter, PyExpression, QualifiedExpression},
+    },
+    instruction::gate::GateSignature,
+    pickleable_new,
+    quilpy::{
+        aliased, deprecated_or_new, deprecated_param,
+        errors::{self, PickleError},
+        impl_newargs, impl_stub_like, impl_to_quil, py_deprecated, singleton, IntoNewArgs, Migrate,
+        NewArgs, NonZeroU64, Seq, Seq2, Via,
+    },
+    validation::identifier::IdentifierValidationError,
 };
 
 use singleton::{py_singleton, PyModuleSingletonExt};
@@ -2272,10 +2287,7 @@ impl<'a, 'py> FromPyObject<'a, 'py> for GateSpecification {
             Ok(GateSpecification::Sequence(value.get().clone()))
         } else if let Ok(matrix) = obj.extract::<Vec<Seq2<ExpressionLike, Expression>>>() {
             Ok(GateSpecification::Matrix(
-                matrix
-                    .into_iter()
-                    .map(|row| row.into())
-                    .collect(),
+                matrix.into_iter().map(|row| row.into()).collect(),
             ))
         } else if let Ok(permutation) = obj.extract::<Vec<u64>>() {
             Ok(GateSpecification::Permutation(permutation))
@@ -3663,7 +3675,6 @@ impl<'a, 'py> FromPyObject<'a, 'py> for PauliExponent {
         )))
     }
 }
-
 
 // Do not specify `float` or `complex` in this annotation.
 // See notes in `PauliTerm::__pow__` for an explanation.

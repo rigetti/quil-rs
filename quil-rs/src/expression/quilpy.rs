@@ -1,6 +1,9 @@
 use numpy::{PyArray, PyArrayDescr, PyArrayDescrMethods};
 use pyo3::{
-    CastError, IntoPyObjectExt, PyClass, PyTypeCheck, exceptions::{PyDeprecationWarning, PyNotImplementedError}, prelude::*, types::{PyAnyMethods, PyComplex, PyFloat, PyInt},
+    exceptions::{PyDeprecationWarning, PyNotImplementedError},
+    prelude::*,
+    types::{PyAnyMethods, PyComplex, PyFloat, PyInt},
+    CastError, IntoPyObjectExt, PyClass, PyTypeCheck,
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -176,7 +179,10 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ExpressionLike {
             return Ok(ExpressionLike::MemoryReference(value.get().clone()));
         }
 
-        Err(CastError::new(obj, <PyExpression as PyTypeCheck>::classinfo_object(obj.py())))
+        Err(CastError::new(
+            obj,
+            <PyExpression as PyTypeCheck>::classinfo_object(obj.py()),
+        ))
     }
 }
 
@@ -204,10 +210,10 @@ impl<'a, 'py> TryFrom<&'a Bound<'py, PyExpression>> for Expression {
         } else if let Ok(slf) = value.cast_exact::<Address>() {
             Ok(Expression::Address(slf.get().memory_reference.clone()))
         } else {
-            Err(
-                CastError::new(value.as_any().as_borrowed(),
-                <PyExpression as PyTypeCheck>::classinfo_object(value.py()))
-            )
+            Err(CastError::new(
+                value.as_any().as_borrowed(),
+                <PyExpression as PyTypeCheck>::classinfo_object(value.py()),
+            ))
         }
     }
 }
@@ -338,7 +344,7 @@ impl AsView for ExpressionLike {
     }
 }
 
-pub(crate) trait PythonExpression : PyClass<BaseType = PyExpression> + AsView {}
+pub(crate) trait PythonExpression: PyClass<BaseType = PyExpression> + AsView {}
 
 impl<T: PyClass<BaseType = PyExpression>> AsView for &Bound<'_, T> {
     fn as_view(&self) -> ExpressionView<'_> {

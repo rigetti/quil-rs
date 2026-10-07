@@ -166,7 +166,7 @@ macro_rules! deprecated_param {
 /// }
 /// ```
 ///
-/// ## If the New Type is Different 
+/// ## If the New Type is Different
 ///
 /// This works as above, but you can provide a "closure"-like syntax to convert the old parameter.
 /// The result should be a `PyResult<T>`.
@@ -182,7 +182,7 @@ macro_rules! deprecated_param {
 /// }
 /// ```
 ///
-/// ## If the Parameter is Optional 
+/// ## If the Parameter is Optional
 ///
 /// If the parameter truly is optional/should have a default when not provided,
 /// you can provide a `default=` value or closure to return a default value.
@@ -202,7 +202,7 @@ macro_rules! deprecated_param {
 ///
 /// Using `default=0` ensures that if neither parameter is given, the macro provides `0`.
 ///
-/// This also works if the parameter truly is optional, in which case `default=None`. 
+/// This also works if the parameter truly is optional, in which case `default=None`.
 /// The result will be an `Option<T>`.
 ///
 /// ```rust,ignore
