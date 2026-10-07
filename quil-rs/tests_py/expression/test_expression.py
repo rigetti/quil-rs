@@ -3,6 +3,7 @@ from typing import TypeAlias, cast
 import pytest
 import numpy as np
 
+import quil
 from quil.instructions import MemoryReference, GateDefinition, GateSpecification
 from quil.expression import (
     Address,
@@ -168,4 +169,38 @@ def test_gate_definition() -> None:
     from_arr = GateDefinition("CRX", ["theta"], arr)
     assert from_list == from_arr
     assert isinstance(from_list.specification, GateSpecification)
+
+
+def test_gate_definition_deprecated_constructor() -> None:
+    """Check that the deprecated PyQuil v4 `(name, matrix, parameters=None)` constructor still works."""
+
+    crx: list[list[ExpressionDesignator]] = [
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+    ]
+    arr = np.array(crx, dtype=object)
+    preferred = GateDefinition("CRX", ["theta"], crx)
+
+    # Old positional order: `(name, matrix, parameters)`, with a bare list or ndarray matrix.
+    with pytest.deprecated_call():
+        assert GateDefinition("CRX", crx, ["theta"]) == preferred
+    with pytest.deprecated_call():
+        assert GateDefinition("CRX", arr, ["theta"]) == preferred
+
+    # `parameters` is optional in the deprecated form.
+    with pytest.deprecated_call():
+        assert GateDefinition("CRX", crx).parameters == []
+
+    # `matrix` is also accepted as a deprecated keyword-only alias for `specification`.
+    with pytest.deprecated_call():
+        assert GateDefinition("CRX", parameters=["theta"], matrix=crx) == preferred
+
+    # `specification`/`matrix`, and `parameters` given both positionally (new-style)
+    # and as part of the deprecated positional form, are mutually exclusive.
+    with pytest.raises(ValueError):
+        GateDefinition("CRX", crx, specification=GateSpecification.Matrix(crx))
+    with pytest.raises(quil.ValueError):
+        GateDefinition("CRX", crx, ["theta"], matrix=GateSpecification.Matrix(crx))
+    with pytest.raises(quil.ValueError):
+        GateDefinition("CRX")
 

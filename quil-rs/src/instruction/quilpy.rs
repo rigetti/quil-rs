@@ -2138,7 +2138,7 @@ submit! {
                 parameters: pyo3_stub_gen.RustType["Vec<Parameter>"],
                 specification: pyo3_stub_gen.RustType["GateSpecification"],
             ) -> GateDefinition:
-                """Return a new `GateDefinition` instance with the given name, parameters, qubits, and modifiers.
+                """Return a new `GateDefinition` instance with the given name, parameters, and specification.
 
                 This is the preferred constructor.
                 """
@@ -2150,20 +2150,10 @@ submit! {
                 matrix: pyo3_stub_gen.RustType["Vec<Vec<ExpressionLike>>"],
                 parameters: pyo3_stub_gen.RustType["Option<Vec<Parameter>>"] = None,
             ) -> GateDefinition:
-                """Return a new `GateDefinition` instance with the given name, parameters, qubits, and modifiers.
+                """Return a new `GateDefinition` instance with the given name, matrix, and parameters.
 
-                This constructor is deprecated.
+                This constructor is deprecated; use the `(name, parameters, specification)` form instead.
                 """
-
-            @typing.overload
-            def __new__(
-                cls,
-                name: builtins.str,
-                *,
-                params: pyo3_stub_gen.RustType["Option<Vec<ExpressionLike>>"],
-                qubits: pyo3_stub_gen.RustType["Option<Vec<Qubit>>"] = None,
-                modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
-            ) -> GateDefinition: ...
         "#
     }
 }
@@ -2171,25 +2161,69 @@ submit! {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl GateDefinition {
-    // TODO(migration-guide): document the constructor changes...
-    //
-    // TODO: Make this signature accept both its current signature and the old PyQuil v4 constructor signature:
+    // This signature accepts both the preferred constructor,
+    // `(name, parameters, specification)`,
+    // and the deprecated PyQuil v4 constructor signature,
     // `(name: str, matrix: list[list[Expression]] | np.ndarray | np.matrix, parameters: list[Parameter] | None = None)`,
     // which uses the term `matrix` instead of `specification`,
     // swaps the order of the last two parameters, and makes `parameters` optional.
-    // We want to accept both the old and new signatures, but we want to deprecate the old one.
-    // Right now, we only handle the deprecated `matrix` parameter.
-    //
-    // TODO: submit! overrides to indicate exactly one of `specification` or `matrix` is required.
+    // Since the two forms swap the meaning of the 2nd and 3rd positional arguments,
+    // we disambiguate them by type, via `Migrate`, rather than by position alone.
+    // `matrix` is also still accepted (deprecated) as a keyword-only alias for `specification`.
+
+    /// Construct a new `GateDefinition` instance.
+    ///
+    /// The preferred form is `GateDefinition(name, parameters, specification)`.
+    ///
+    /// The deprecated PyQuil v4 constructor, `GateDefinition(name, matrix, parameters=None)`,
+    /// is also still accepted, for backwards compatibility; using it will raise a
+    /// `DeprecationWarning`. `matrix` is also accepted as a deprecated keyword-only alias
+    /// for `specification`.
     #[new]
-    #[pyo3(signature = (name, specification=None, parameters=None, *, matrix=None))]
+    #[pyo3(signature = (name, parameters=None, specification=None, *, matrix=None))]
     fn __new__(
         py: Python<'_>,
         name: String,
-        specification: Option<GateSpecification>,
-        parameters: Option<Seq2<Parameter, String>>,
+        parameters: Option<Migrate<Seq2<Parameter, String>, GateSpecification>>,
+        specification: Option<Migrate<GateSpecification, Seq2<Parameter, String>>>,
         matrix: Option<GateSpecification>,
     ) -> PyResult<GateDefinition> {
+        let (parameters, specification) = match (parameters, specification) {
+            // Preferred constructor: `(name, parameters, specification)`.
+            (Some(Migrate::New(parameters)), Some(Migrate::New(specification))) => {
+                (Some(parameters), Some(specification))
+            }
+            (Some(Migrate::New(parameters)), None) => (Some(parameters), None),
+            (None, Some(Migrate::New(specification))) => (None, Some(specification)),
+            (None, None) => (None, None),
+
+            // Deprecated PyQuil v4 constructor: `(name, matrix, parameters=None)`.
+            (Some(Migrate::Old(matrix)), None) => {
+                py_deprecated!(
+                    py,
+                    c"GateDefinition(name, matrix, parameters) is deprecated; \
+                      use GateDefinition(name, parameters, specification) instead"
+                )?;
+                (None, Some(matrix))
+            }
+            (Some(Migrate::Old(matrix)), Some(Migrate::Old(parameters))) => {
+                py_deprecated!(
+                    py,
+                    c"GateDefinition(name, matrix, parameters) is deprecated; \
+                      use GateDefinition(name, parameters, specification) instead"
+                )?;
+                (Some(parameters), Some(matrix))
+            }
+
+            // Mismatched combinations, e.g. a `matrix`-like value paired with a `specification`,
+            // or a `parameters`-like value in both positions.
+            _ => {
+                return Err(PyValueError::new_err(
+                    "invalid combination of arguments for `GateDefinition` constructor",
+                ))
+            }
+        };
+
         let specification = deprecated_or_new!(py, new = specification, old = matrix)?;
         let parameters = parameters.unwrap_or_default().into();
         Ok(Self::new(name, parameters, specification)?)
