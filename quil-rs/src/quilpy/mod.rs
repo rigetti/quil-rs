@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
-use pyo3::types::PyType;
+use pyo3::exceptions::PyTypeError;
+use pyo3::types::{PyString, PyType};
 use pyo3::{prelude::*, types::PyTuple, PyClass, PyTypeCheck};
 use pyo3::{BoundObject, CastError};
 use rigetti_pyo3::create_init_submodule;
@@ -298,6 +299,10 @@ where
     type Error = PyErr;
 
     fn extract(obj: Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if obj.is_instance_of::<PyString>() {
+            return Err(PyTypeError::new_err("expected iterable, but not `str`"));
+        }
+
         let mut res = Vec::with_capacity(obj.len().unwrap_or(0));
         for item in obj.try_iter()? {
             let item = item?;
@@ -325,6 +330,10 @@ where
     type Error = PyErr;
 
     fn extract(obj: Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if obj.is_instance_of::<PyString>() {
+            return Err(PyTypeError::new_err("expected iterable, but not `str`"));
+        }
+
         let mut res = Vec::with_capacity(obj.len().unwrap_or(0));
         for item in obj.try_iter()? {
             let item = item?

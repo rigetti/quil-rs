@@ -1,6 +1,6 @@
 use numpy::{PyArray, PyArrayDescr, PyArrayDescrMethods};
 use pyo3::{
-    CastError, IntoPyObjectExt, PyClass, PyTypeCheck, exceptions::{PyDeprecationWarning, PyNotImplementedError, PyTypeError}, prelude::*, types::{PyAnyMethods, PyComplex, PyFloat, PyInt},
+    CastError, IntoPyObjectExt, PyClass, PyTypeCheck, exceptions::{PyDeprecationWarning, PyNotImplementedError}, prelude::*, types::{PyAnyMethods, PyComplex, PyFloat, PyInt},
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -118,15 +118,32 @@ pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
 )]
 pub struct PyExpression;
 
-/// A type that can be converted into an [`Expression`],
+/// All the things that can be converted into an [`Expression`],
 /// for use as a parameter in methods and functions exposed through Python bindings.
+///
+/// This is distinct from both [`Expression`] and [`PyExpression`]:
+///
+/// - `ExpressionLike` unifies all the things that can be taken from Python
+///   and used in a context that requires an `Expression`.
+/// - `Expression` is the Rust-specific enum responsible for actual implementation logic;
+///   it explicitly requires the input is an existing `Expression` variant,
+///   not just something that can be converted into one.
+/// - `PyExpression` is the base-class for all Python-exposed Expression types.
+///   If extracted, it has NO associated data, so it's mostly only useful for type-checking.
+///   For methods that should apply to all `Expression` variants,
+///   we can add them to the `#[pymethods] impl PyExpression` block,
+///   but must extract the `Bound<'_, PyExpression>` and use `Expression::try_from`
+///   to get the actual `Expression` variant.
+///
+// TODO: Now that `Expression` is _not_ a PyClass, can I use it as an input parameter?
+// FromPyObject is implemented manually to handle specifics around PyExpression subclassing.
 #[derive(Debug, Clone)]
 // Generally we don't want to return this as a Python type,
 // but the stub generator needs this when constructing default values in signatures.
 #[cfg_attr(feature = "stubs", derive(IntoPyObject))]
 pub(crate) enum ExpressionLike {
-    Variable(String), // Ensure this is first so we convert to variables rather than memrefs
-    PiConstant(PiType), // Ensure this is before Number so it isn't converted.
+    Variable(String),
+    PiConstant(PiType),
     Number(Complex64),
     MemoryReference(MemoryReference), // TODO: rename Address
     FunctionCall(FunctionCallExpression),
@@ -134,18 +151,8 @@ pub(crate) enum ExpressionLike {
     Prefix(PrefixExpression),
 }
 
-// Note: we can't rely on `#[derive(FromPyObject)]` here, since that only tries each of the
-// variants' inner types directly (e.g. `String`, `Complex64`, `MemoryReference`), with no
-// fallback for an already-constructed `PyExpression` subclass instance (e.g. a `Parameter`
-// or `Address`). That works out, incidentally, for `Number` and `PiType` instances, since
-// `Complex64`'s extraction goes through `__complex__`, which those types implement via
-// trivial evaluation -- but it does *not* work for `Parameter`/`Address` instances, which
-// have no corresponding "bare" `ExpressionLike` variant and aren't successfully evaluable to
-// a `Complex64` either. So, mirroring `Expression`'s own `FromPyObject` impl above, we try
-// casting to `PyExpression` and converting via the exhaustive `TryFrom` impl first, and only
-// fall back to the "primitive" conversions below for non-`PyExpression` Python values.
 impl<'a, 'py> FromPyObject<'a, 'py> for ExpressionLike {
-    type Error = PyErr;
+    type Error = CastError<'a, 'py>;
 
     fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
         if let Ok(expr_obj) = obj.cast::<PyExpression>() {
@@ -154,20 +161,22 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ExpressionLike {
             }
         }
 
-        if let Ok(value) = obj.extract::<String>() {
-            return Ok(ExpressionLike::Variable(value));
-        }
+        // Use `extract` here so we allow e.g. complex, float, int, numpy scalars.
         if let Ok(value) = obj.extract::<Complex64>() {
             return Ok(ExpressionLike::Number(value));
         }
-        if let Ok(value) = obj.extract::<MemoryReference>() {
-            return Ok(ExpressionLike::MemoryReference(value));
+
+        // Ensure this is first so we convert to variables rather than memrefs
+        if let Ok(value) = obj.extract::<String>() {
+            return Ok(ExpressionLike::Variable(value));
         }
 
-        Err(PyTypeError::new_err(format!(
-            "could not convert {} to an Expression",
-            obj.get_type().name()?
-        )))
+        // TODO: Do we need to check MemoryReference explicitly, or will it be caught by PyExpression?
+        if let Ok(value) = obj.cast::<MemoryReference>() {
+            return Ok(ExpressionLike::MemoryReference(value.get().clone()));
+        }
+
+        Err(CastError::new(obj, <PyExpression as PyTypeCheck>::classinfo_object(obj.py())))
     }
 }
 
@@ -175,20 +184,24 @@ impl<'a, 'py> TryFrom<&'a Bound<'py, PyExpression>> for Expression {
     type Error = CastError<'a, 'py>;
 
     fn try_from(value: &'a Bound<'py, PyExpression>) -> Result<Self, Self::Error> {
-        // IMPORTANT: PiType must come before Number or it'll be converted via __complex__!
-        if let Ok(slf) = value.cast::<FunctionCallExpression>() {
+        // Note: the `cast_exact` assumes we don't create new subclasses of these.
+        // They currently can't be subclassed (neither in Rust nor in Python),
+        // but there's no easy way to catch that at compile time;
+        // there are unit tests for this currently, but that's not a perfect solution.
+        // TODO(testing): Actually add unit tests that ensure these can't be subclassed.
+        if let Ok(slf) = value.cast_exact::<FunctionCallExpression>() {
             Ok(Expression::FunctionCall(slf.get().clone()))
-        } else if let Ok(slf) = value.cast::<InfixExpression>() {
+        } else if let Ok(slf) = value.cast_exact::<InfixExpression>() {
             Ok(Expression::Infix(slf.get().clone()))
-        } else if let Ok(slf) = value.cast::<PrefixExpression>() {
+        } else if let Ok(slf) = value.cast_exact::<PrefixExpression>() {
             Ok(Expression::Prefix(slf.get().clone()))
-        } else if value.cast::<PiType>().is_ok() {
+        } else if value.cast_exact::<PiType>().is_ok() {
             Ok(Expression::PiConstant)
-        } else if let Ok(slf) = value.cast::<Number>() {
+        } else if let Ok(slf) = value.cast_exact::<Number>() {
             Ok(Expression::Number(slf.get().value))
-        } else if let Ok(slf) = value.cast::<Parameter>() {
+        } else if let Ok(slf) = value.cast_exact::<Parameter>() {
             Ok(Expression::Variable(slf.get().name.clone()))
-        } else if let Ok(slf) = value.cast::<Address>() {
+        } else if let Ok(slf) = value.cast_exact::<Address>() {
             Ok(Expression::Address(slf.get().memory_reference.clone()))
         } else {
             Err(
@@ -199,8 +212,14 @@ impl<'a, 'py> TryFrom<&'a Bound<'py, PyExpression>> for Expression {
     }
 }
 
+/// [`Expression`] implements [`FromPyObject`] so it can be used within other Python-exposed types.
+///
+// TODO: Determine if this should be true:
+// Note that when used, the Python object must be a [`PyExpression`] subclass instance,
+// not just something that can be converted into an [`Expression`].
+// Use [`ExpressionLike`] if you also want that.
 impl<'a, 'py> FromPyObject<'a, 'py> for Expression {
-    type Error = PyErr;
+    type Error = CastError<'a, 'py>;
 
     fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
         if let Ok(obj) = obj.cast::<PyExpression>() {
@@ -209,6 +228,10 @@ impl<'a, 'py> FromPyObject<'a, 'py> for Expression {
             }
         }
 
+        // If the above claim should be true, this is the right thing to return immediately.
+        // Err(CastError::new(obj, <PyExpression as PyTypeCheck>::classinfo_object(obj.py())))
+
+        // Otherwise, route through ExpressionLike.
         obj.extract::<ExpressionLike>().map(Into::into)
     }
 }
@@ -315,27 +338,36 @@ impl AsView for ExpressionLike {
     }
 }
 
-impl AsView for &Bound<'_, PyExpression> {
+pub(crate) trait PythonExpression : PyClass<BaseType = PyExpression> + AsView {}
+
+impl<T: PyClass<BaseType = PyExpression>> AsView for &Bound<'_, T> {
     fn as_view(&self) -> ExpressionView<'_> {
-        if let Ok(obj) = self.cast::<Parameter>() {
-            ExpressionView::Variable(&obj.get().name)
-        } else if let Ok(obj) = self.cast::<Number>() {
-            ExpressionView::Number(obj.get().value)
-        } else if self.cast::<PiType>().is_ok() {
+        let result = if let Ok(obj) = self.cast_exact::<Parameter>() {
+            obj.get().as_view()
+        } else if self.cast_exact::<PiType>().is_ok() {
             ExpressionView::PiConstant
-        } else if let Ok(obj) = self.cast::<Address>() {
-            ExpressionView::Address(&obj.get().memory_reference)
-        } else if let Ok(obj) = self.cast::<FunctionCallExpression>() {
-            ExpressionView::FunctionCall(obj.get())
-        } else if let Ok(obj) = self.cast::<InfixExpression>() {
-            ExpressionView::Infix(obj.get())
-        } else if let Ok(obj) = self.cast::<PrefixExpression>() {
-            ExpressionView::Prefix(obj.get())
+        } else if let Ok(obj) = self.cast_exact::<Number>() {
+            obj.get().as_view()
+        } else if let Ok(obj) = self.cast_exact::<Address>() {
+            obj.get().as_view()
+        } else if let Ok(obj) = self.cast_exact::<FunctionCallExpression>() {
+            obj.get().as_view()
+        } else if let Ok(obj) = self.cast_exact::<InfixExpression>() {
+            obj.get().as_view()
+        } else if let Ok(obj) = self.cast_exact::<PrefixExpression>() {
+            obj.get().as_view()
         } else {
-            // TODO: Determine a way to prove this can't happen at compile time.
-            // That is, prove that the above covers all subclasses of `PyExpression`.
+            // There are two ways to trigger this panic:
+            // - In Python, subclass `Expression` (which we don't support) and get it here.
+            //   This will typically manifest as an exception, or else crash the interpretter;
+            //   either way, the user will see a message telling them don't subclass `Expression`.
+            // - In Rust, add a new `#[pyclass(extends = PyExpression)]`
+            //   but forget to update this implementation.
+            //   That should not be possible due to the `PythonExpression` bound.
             panic!("Unknown Expression subclass");
-        }
+        };
+
+        result
     }
 }
 
@@ -1122,6 +1154,9 @@ mod macros {
     /// for a `#[pyclass(extends = PyExpression)]`.
     macro_rules! py_expression {
         ($T:ty) => {
+            // Require that $T extends PyExpression and provides an `AsView` implementation.
+            impl PythonExpression for $T {}
+
             impl From<$T> for PyClassInitializer<$T> {
                 fn from(value: $T) -> Self {
                     PyClassInitializer::from(PyExpression).add_subclass(value)

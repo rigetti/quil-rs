@@ -218,29 +218,37 @@ def test_gate_definition_deprecated_constructor() -> None:
         [1, 0, 0, 0],
         [0, 1, 0, 0],
     ]
+    params = ["theta"]
+    name = "CRX"
     arr = np.array(crx, dtype=object)
-    preferred = GateDefinition("CRX", ["theta"], crx)
+    preferred = GateDefinition(name, params, crx)
 
     # Old positional order: `(name, matrix, parameters)`, with a bare list or ndarray matrix.
     with pytest.deprecated_call():
-        assert GateDefinition("CRX", crx, ["theta"]) == preferred
+        assert GateDefinition(name, crx, params) == preferred
     with pytest.deprecated_call():
-        assert GateDefinition("CRX", arr, ["theta"]) == preferred
+        assert GateDefinition(name, arr, params) == preferred
 
     # `parameters` is optional in the deprecated form.
     with pytest.deprecated_call():
-        assert GateDefinition("CRX", crx).parameters == []
+        assert GateDefinition(name, crx).parameters == []
 
     # `matrix` is also accepted as a deprecated keyword-only alias for `specification`.
     with pytest.deprecated_call():
-        assert GateDefinition("CRX", parameters=["theta"], matrix=crx) == preferred
+        assert GateDefinition(name, parameters=params, matrix=crx) == preferred
 
     # `specification`/`matrix`, and `parameters` given both positionally (new-style)
     # and as part of the deprecated positional form, are mutually exclusive.
-    with pytest.raises(ValueError):
-        GateDefinition("CRX", crx, specification=GateSpecification.Matrix(crx))
     with pytest.raises(quil.ValueError):
-        GateDefinition("CRX", crx, ["theta"], matrix=GateSpecification.Matrix(crx))
+        GateDefinition(name, crx, params, matrix=GateSpecification.Matrix(crx))
     with pytest.raises(quil.ValueError):
-        GateDefinition("CRX")
+        GateDefinition(name)
+
+    # These are also invalid, but specifically because the parameters imply an invalid type. 
+    with pytest.raises(TypeError):
+        GateDefinition(name, crx, specification=GateSpecification.Matrix(crx))
+    with pytest.raises(TypeError):
+        GateDefinition(name, crx, crx)
+    with pytest.raises(TypeError):
+        GateDefinition(name, params, params)
 

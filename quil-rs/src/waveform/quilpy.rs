@@ -10,7 +10,7 @@ use rigetti_pyo3::create_init_submodule;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::{instruction::WaveformInvocation, quilpy::errors, waveform::WaveformParameterError};
+use crate::{expression::{Expression, quilpy::ExpressionLike}, instruction::WaveformInvocation, quilpy::{Seq2, errors}, waveform::WaveformParameterError};
 
 use super::{
     builtin::{quilpy::*, BoxcarKernel, ExplicitCommonBuiltinParameters},
@@ -136,6 +136,15 @@ pub struct PyWaveform(pub Waveform<Pythonic>);
 fn call_on_py_any_rust<'py>(f: &Bound<'py, PyAny>, x: &PyAnyRust) -> PyResult<PyAnyRust> {
     let PyAnyRust(x) = x;
     Ok(PyAnyRust(f.call1((x,))?.unbind()))
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl crate::instruction::Waveform {
+    #[new]
+    fn __new__(matrix: Seq2<ExpressionLike, Expression>, parameters: Vec<String>) -> Self {
+        Self::new(matrix.into(), parameters)
+    }
 }
 
 /// Wrap the `try_evaluate` methods on the various waveform types to expose them to Python as

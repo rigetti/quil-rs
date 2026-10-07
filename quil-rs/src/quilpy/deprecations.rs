@@ -140,33 +140,117 @@ macro_rules! deprecated_param {
 ///
 /// The `new` parameter must be a `T`, and by default the `old` parameter must be an `Option<T>`,
 /// but you can provide a closure `Fn(U) -> PyResult<T>` to convert the `old` parameter to a `T`.
-/// If you provide such a closure, you must call this as `(new=$name, old=$old, |$old| { ... })`.
+/// If you provide such a closure, you must call this as `(new=$name, old=|$old| { ... })`.
 ///
-/// # Example
+/// If both parameters are `None`, this returns an error saying the `new` parameter is required,
+/// but you can override this by providing a `default=` as a value or `|| PyResult(...)` closure.
 ///
-/// ```ignore
-/// use pyo3::prelude::*;
-/// use quil_rs::quilpy::deprecated_or_new;
+/// # Examples
 ///
-/// #[pyfunction(signature = (new_name, *, old_name=None))]
-/// fn add_one(py: Python<'_>, new_name: i64, old_name: Option<i64>) -> PyResult<i64> {
+/// ## Migrate a Parameter to a New Name
+///
+/// - The old parameter name was permitted as positional or keyword argument.
+/// - You want to change the name when used as a keyword, but still accept it positionally.
+/// - You want to issue a deprecation warning when the old name is used.
+/// - You want to raise an error if neither parameter is provided.
+/// - You want to raise an error if both parameters are provided.
+///
+/// You'll need to both parameters as `Option<T>` with defaults set to `None`,
+/// but you should make the old parameter keyword-only, so that it can't be used positionally.
+///
+/// ```rust,ignore
+/// #[pyfunction(signature = (new_name=None, *, old_name=None))]
+/// fn add_one(py: Python<'_>, new_name: Option<i64>, old_name: Option<i64>) -> PyResult<i64> {
 ///     let value = deprecated_or_new!(py, new=new_name, old=old_name)?;
 ///     Ok(value + 1)
 /// }
 /// ```
 ///
-/// # Using a Closure to Convert the Old Parameter
+/// ## If the New Type is Different 
+///
+/// This works as above, but you can provide a "closure"-like syntax to convert the old parameter.
+/// The result should be a `PyResult<T>`.
+///
+/// ```rust,ignore
+/// use pyo3::prelude::*;
+/// use quil_rs::quilpy::deprecated_or_new;
+///
+/// #[pyfunction(signature = (new_name=None, *, old_name=None))]
+/// fn add_one(py: Python<'_>, new_name: Option<i64>, old_name: Option<u64>) -> PyResult<i64> {
+///     let value = deprecated_or_new!(py, new=new_name, old=|old_name| { i64::try_into(old) })?;
+///     Ok(value + 1)
+/// }
+/// ```
+///
+/// ## If the Parameter is Optional 
+///
+/// If the parameter truly is optional/should have a default when not provided,
+/// you can provide a `default=` value or closure to return a default value.
+/// For example, were it not for handling the migration, suppose you'd want a Python signature as
+/// `def add_one(new_name: int = 0) -> int`, then here you can write:
+///
+/// ```rust,ignore
+/// use pyo3::prelude::*;
+/// use quil_rs::quilpy::deprecated_or_new;
+///
+/// #[pyfunction(signature = (new_name=None, *, old_name=None))]
+/// fn add_one(py: Python<'_>, new_name: Option<u64>, old_name: Option<u64>) -> PyResult<i64> {
+///     let value = deprecated_or_new!(py, new=new_name, old=old_name, default=0)?;
+///     Ok(value + 1)
+/// }
+/// ```
+///
+/// Using `default=0` ensures that if neither parameter is given, the macro provides `0`.
+///
+/// This also works if the parameter truly is optional, in which case `default=None`. 
+/// The result will be an `Option<T>`.
+///
+/// ```rust,ignore
+/// use pyo3::prelude::*;
+/// use quil_rs::quilpy::deprecated_or_new;
+///
+/// #[pyfunction(signature = (new_name=None, *, old_name=None))]
+/// fn add_one(py: Python<'_>, new_name: Option<u64>, old_name: Option<u64>) -> PyResult<Option<i64>> {
+///     let value = deprecated_or_new!(py, new=new_name, old=old_name, default=None)?;
+///     Ok(value.map(|v| v + 1))
+/// }
+/// ```
+///
+/// # Type Stubs
+///
+/// Ideally, you should `submit!` Python stubs to make it clear which signatures are accepted,
+/// and that using the old parameter name is deprecated. For example:
 ///
 /// ```ignore
 /// use pyo3::prelude::*;
 /// use quil_rs::quilpy::deprecated_or_new;
 ///
-/// #[pyfunction(signature = (new_name, *, old_name=None))]
-/// fn add_one(py: Python<'_>, new_name: i64, old_name: Option<u64>) -> PyResult<i64> {
-///     let value = deprecated_or_new!(py, new=new_name, old=old_name, |old| { i64::try_into(old) })?;
-///     Ok(value + 1)
+/// #[cfg(feature = "stubs")]
+/// pyo3_stub_gen::inventory::submit! {
+///     gen_methods_from_python! {
+///         r#"
+///         import typing
+///
+///         @typing.overload
+///         def add_one(new_name: int) -> int: ...
+///
+///         @typing.overload
+///         @typing.deprecated("`old_name` is deprecated; use `new_name` instead")
+///         def add_one(*, old_name: int) -> int: ...
+///
+///         @typing.overload
+///         def add_one(new_name: int, *, old_name: int) -> typing.NoReturn: ...
+///         "#
+///     }
 /// }
 /// ```
+///
+/// # See Also
+///
+/// If you want to accept both parameters as aliases, but not issues deprecation warnings,
+/// see the [`aliased!`][crate::quilpy::aliased!] macro, which works similarly,
+/// but does not need a [`Python<'py>`][pyo3::Python] token.
+/// Under the hood, this macro is using that one.
 macro_rules! deprecated_or_new {
     ($py: ident, new=$new_param: ident, old=$old_param: ident, default=$($default:tt)+) => {
         $crate::quilpy::aliased!(
@@ -206,11 +290,9 @@ macro_rules! deprecated_or_new {
                     $py, new = $new_param, old = $old_param)?;
                 Ok($old_param)
             },
-            || Err($crate::quilpy::errors::ValueError::new_err(concat!(
-                "missing required parameter `",
-                stringify!($new_param),
-                "`"
-            )))
+            || Err(
+                $crate::quilpy::errors::ArgumentError::MissingRequired(stringify!($new_param).to_string())
+            )?
         )
     };
 

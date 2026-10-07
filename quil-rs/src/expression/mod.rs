@@ -782,14 +782,14 @@ pub(crate) fn format_complex(value: &Complex64) -> String {
 /// Trait for types which offer a view into an [`Expression`].
 ///
 /// This makes it easier to share [`Expression`] implementations with Python bindings.
-trait AsView: std::fmt::Debug {
+pub(crate) trait AsView: std::fmt::Debug {
     /// Return a view into the [`Expression`].
     fn as_view(&self) -> ExpressionView<'_>;
 }
 
 /// A view into an [`Expression`], which provides borrows of each enum variants.
 #[derive(Debug)]
-enum ExpressionView<'a> {
+pub(crate) enum ExpressionView<'a> {
     Address(&'a MemoryReference),
     FunctionCall(&'a FunctionCallExpression),
     Infix(&'a InfixExpression),

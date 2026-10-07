@@ -8,13 +8,10 @@ use indexmap::IndexMap;
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
 use pyo3::{
-    exceptions::{
+    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit, exceptions::{
         PyDeprecationWarning, PyIndexError, PyKeyError, PyNotImplementedError, PyTypeError,
         PyUserWarning, PyValueError,
-    },
-    prelude::*,
-    types::{IntoPyDict as _, PyDict, PyFrozenSet, PyInt, PyList, PyString, PyTuple},
-    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit,
+    }, prelude::*, sync::PyOnceLock, types::{IntoPyDict as _, PyComplex, PyDict, PyFloat, PyFrozenSet, PyInt, PyList, PyString, PyTuple, PyType},
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -27,18 +24,10 @@ use pyo3_stub_gen::{
 use super::*;
 use crate::{
     expression::{
-        consts::{IMAGINARY_UNIT, ONE, ZERO},
-        quilpy::{quil_exp, ExpressionLike, Parameter, QualifiedExpression},
-    },
-    instruction::gate::GateSignature,
-    pickleable_new,
-    quilpy::{
-        aliased, deprecated_or_new, deprecated_param,
-        errors::{self, PickleError},
-        impl_newargs, impl_stub_like, impl_to_quil, py_deprecated, singleton, IntoNewArgs, Migrate,
-        NewArgs, NonZeroU64, Seq, Seq2, Via,
-    },
-    validation::identifier::IdentifierValidationError,
+        consts::{IMAGINARY_UNIT, ONE, ZERO}, quilpy::{ExpressionLike, Parameter, PyExpression, QualifiedExpression, quil_exp},
+    }, instruction::gate::GateSignature, pickleable_new, quilpy::{
+        IntoNewArgs, Migrate, NewArgs, NonZeroU64, Seq, Seq2, Via, aliased, deprecated_or_new, deprecated_param, errors::{self, PickleError}, impl_newargs, impl_stub_like, impl_to_quil, py_deprecated, singleton,
+    }, validation::identifier::IdentifierValidationError,
 };
 
 use singleton::{py_singleton, PyModuleSingletonExt};
@@ -2195,7 +2184,13 @@ impl GateDefinition {
             }
             (Some(Migrate::New(parameters)), None) => (Some(parameters), None),
             (None, Some(Migrate::New(specification))) => (None, Some(specification)),
+
+            // These imply the user gave `matrix` as a keyword argument,
+            // or just left it out entirely, which are handled below with `deprecated_or_new!`.
             (None, None) => (None, None),
+            (None, Some(Migrate::Old(parameters))) => {
+                (Some(parameters), None)
+            },
 
             // Deprecated PyQuil v4 constructor: `(name, matrix, parameters=None)`.
             (Some(Migrate::Old(matrix)), None) => {
@@ -2215,11 +2210,17 @@ impl GateDefinition {
                 (Some(parameters), Some(matrix))
             }
 
-            // Mismatched combinations, e.g. a `matrix`-like value paired with a `specification`,
-            // or a `parameters`-like value in both positions.
-            _ => {
-                return Err(PyValueError::new_err(
-                    "invalid combination of arguments for `GateDefinition` constructor",
+            // If a user provided two specifications for some reason...
+            (Some(Migrate::Old(_)), Some(Migrate::New(p))) => {
+                return Err(PyTypeError::new_err(format!(
+                    "`parameters` must be a list of `Parameter`s or `str`s, not a `GateSpecification` ({p:?})",
+                )))
+            },
+
+            // If the user provided two lists of parameters...
+            (Some(Migrate::New(_)), Some(Migrate::Old(_))) => {
+                return Err(PyTypeError::new_err(
+                    "`specification` must be a `GateSpecification`",
                 ))
             }
         };
@@ -2269,11 +2270,11 @@ impl<'a, 'py> FromPyObject<'a, 'py> for GateSpecification {
             Ok(GateSpecification::PauliSum(value.get().clone()))
         } else if let Ok(value) = obj.cast::<DefGateSequence>() {
             Ok(GateSpecification::Sequence(value.get().clone()))
-        } else if let Ok(matrix) = obj.extract::<Vec<Vec<ExpressionLike>>>() {
+        } else if let Ok(matrix) = obj.extract::<Vec<Seq2<ExpressionLike, Expression>>>() {
             Ok(GateSpecification::Matrix(
                 matrix
                     .into_iter()
-                    .map(|row| row.into_iter().map(Expression::from).collect())
+                    .map(|row| row.into())
                     .collect(),
             ))
         } else if let Ok(permutation) = obj.extract::<Vec<u64>>() {
@@ -3621,14 +3622,48 @@ pyo3_stub_gen::inventory::submit! {
 /// Integer arguments are more likely, and they have a more efficient implementation,
 /// so we handle them separately from other things we can convert into an `Expression`.
 /// See the documentation on [`PauliTerm::__pow__`] for more information.
-#[derive(FromPyObject)]
 enum PauliExponent {
-    // Expression must come before numbers, since Expression implements __complex__.
     Expression(ExpressionLike),
     Int(i64),
     Complex(Complex64),
     Variable(String),
 }
+
+// Don't derive FromPyObject because we need to detect Python numbers before ExpressionLike,
+// but both will extract it, since Expression implements __complex__.
+impl<'a, 'py> FromPyObject<'a, 'py> for PauliExponent {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        // Check for numbers first, since `ExpressionLike` would extract them.
+        if let Ok(value) = obj.cast::<PyInt>() {
+            return Ok(Self::Int(value.extract()?));
+        }
+        if let Ok(value) = obj.cast::<PyFloat>() {
+            return Ok(Self::Complex(Complex64::from(value.extract::<f64>()?)));
+        }
+        if let Ok(value) = obj.cast::<PyComplex>() {
+            return Ok(Self::Complex(value.extract()?));
+        }
+
+        // Capture `str`s into `Variable`s.
+        if let Ok(value) = obj.cast::<PyString>() {
+            return Ok(Self::Variable(value.extract()?));
+        }
+
+        if let Ok(expr_obj) = obj.cast::<PyExpression>() {
+            if let Ok(expr) = Expression::try_from(std::ops::Deref::deref(&expr_obj)) {
+                return Ok(Self::Expression(expr.into()));
+            }
+        }
+
+        Err(PyTypeError::new_err(format!(
+            "could not convert {} to an Expression",
+            obj.get_type().name()?
+        )))
+    }
+}
+
 
 // Do not specify `float` or `complex` in this annotation.
 // See notes in `PauliTerm::__pow__` for an explanation.
