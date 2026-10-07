@@ -18,7 +18,7 @@ use std::{
     ops::Range,
 };
 
-use itertools::{Either, Itertools as _};
+use itertools::Itertools as _;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
@@ -125,48 +125,84 @@ impl Calibrations {
     /// 5. All fixed qubits in the calibration definition match those in the gate
     /// 6. All specified parameters in the calibration definition match those in the gate
     pub fn get_match_for_gate(&self, gate: &Gate) -> Option<GateCalibrationDefinition> {
-        struct MatchedCalibration<'a> {
-            pub calibration: &'a GateCalibrationDefinition,
-            pub fixed_qubit_count: usize,
+        struct MatchedGateCalibration<'a> {
+            calibration: &'a GateCalibrationDefinition,
+            fixed_qubit_count: usize,
         }
 
-        impl<'a> MatchedCalibration<'a> {
-            pub fn new(calibration: &'a GateCalibrationDefinition) -> Self {
-                Self {
-                    calibration,
-                    fixed_qubit_count: calibration
-                        .identifier
-                        .qubits
-                        .iter()
-                        .filter(|q| match q {
-                            Qubit::Fixed(_) => true,
-                            Qubit::Placeholder(_) | Qubit::Variable(_) => false,
+        let Gate {
+            name: gate_name,
+            modifiers: gate_modifiers,
+            parameters: gate_parameters,
+            qubits: gate_qubits,
+        } = gate;
+
+        self.iter_gate_calibrations()
+            .filter_map(|potential_calibration| {
+                let GateCalibrationDefinition {
+                    identifier,
+                    instructions: _,
+                } = potential_calibration;
+
+                let GateCalibrationIdentifier {
+                    name: identifier_name,
+                    modifiers: identifier_modifiers,
+                    parameters: identifier_parameters,
+                    qubits: identifier_qubits,
+                } = identifier;
+
+                if !(gate_name == identifier_name
+                    && gate_modifiers == identifier_modifiers
+                    // Fast fail, will check these more throughly below.
+                    && gate_qubits.len() == identifier_qubits.len()
+                    && gate_parameters.len() == identifier_parameters.len())
+                {
+                    return None;
+                }
+
+                // Check if parameters match
+                for (gate_parameter, identifier_parameter) in
+                    // Checked lengths were equal above.
+                    gate_parameters.iter().zip(identifier_parameters)
+                {
+                    get_match_for_expression(gate_parameter, identifier_parameter)?;
+                }
+
+                let fixed_qubit_count = gate_qubits
+                    .iter()
+                    // Checked lengths were equal above.
+                    .zip(identifier_qubits)
+                    .map(|(gate_qubit, identifier_qubit)| {
+                        get_match_for_qubits(gate_qubit, identifier_qubit)
+                    })
+                    .try_fold(0usize, |acc, match_type| {
+                        match_type.map(|match_type| {
+                            acc + match match_type {
+                                MatchKind::Exact => 1,
+                                MatchKind::Wildcard => 0,
+                            }
                         })
-                        .count(),
-                }
-            }
-        }
+                    })?;
 
-        let mut matched_calibration: Option<MatchedCalibration> = None;
-
-        for calibration in self
-            .iter_gate_calibrations()
-            .filter(|calibration| calibration.identifier.matches(gate))
-        {
-            matched_calibration = match matched_calibration {
-                None => Some(MatchedCalibration::new(calibration)),
-                Some(previous_match) => {
-                    let potential_match = MatchedCalibration::new(calibration);
-                    if potential_match.fixed_qubit_count >= previous_match.fixed_qubit_count {
-                        Some(potential_match)
-                    } else {
-                        Some(previous_match)
-                    }
-                }
-            }
-        }
-
-        matched_calibration.map(|m| m.calibration).cloned()
+                Some(MatchedGateCalibration {
+                    calibration: potential_calibration,
+                    fixed_qubit_count,
+                })
+            })
+            // `max` returns *last* item in case of equality
+            .max_by_key(
+                |MatchedGateCalibration {
+                     fixed_qubit_count,
+                     calibration: _,
+                 }| *fixed_qubit_count,
+            )
+            .map(
+                |MatchedGateCalibration {
+                     calibration,
+                     fixed_qubit_count: _,
+                 }| calibration,
+            )
+            .cloned()
     }
 
     /// Returns the last-specified [`MeasureCalibrationDefinition`] that matches the target
@@ -183,56 +219,44 @@ impl Calibrations {
         &self,
         measurement: &Measurement,
     ) -> Option<MeasureCalibrationDefinition> {
-        /// Utility type: when collecting from an iterator, return only the first value it produces.
-        struct First<T>(Option<T>);
-
-        impl<T> Default for First<T> {
-            fn default() -> Self {
-                Self(None)
-            }
-        }
-
-        impl<A> Extend<A> for First<A> {
-            fn extend<T: IntoIterator<Item = A>>(&mut self, iter: T) {
-                if self.0.is_none() {
-                    self.0 = iter.into_iter().next()
-                }
-            }
-        }
-
         let Measurement {
-            name,
-            qubit,
-            target,
+            name: measure_name,
+            qubit: measure_qubit,
+            target: measure_target,
         } = measurement;
 
         // Find the last matching measurement calibration, but prefer an exact qubit match to a
         // wildcard qubit match.
-        let (First(exact), First(wildcard)) = self
-            .iter_measure_calibrations()
-            .rev()
-            .filter_map(|calibration| {
-                let identifier = &calibration.identifier;
+        let mut matched_calibration = None;
+        for potential_calibration in self.iter_measure_calibrations().rev().filter(
+            |MeasureCalibrationDefinition {
+                 identifier,
+                 instructions: _,
+             }| {
+                let MeasureCalibrationIdentifier {
+                    name: identifier_name,
+                    target: identifier_target,
+                    qubit: _,
+                } = identifier;
 
-                if !(name == &identifier.name && target.is_some() == identifier.target.is_some()) {
-                    return None;
+                measure_name == identifier_name
+                    && measure_target.is_some() == identifier_target.is_some()
+            },
+        ) {
+            match get_match_for_qubits(measure_qubit, &potential_calibration.identifier.qubit) {
+                Some(MatchKind::Exact) => {
+                    matched_calibration.replace(potential_calibration);
+                    break; // Early return
                 }
+                Some(MatchKind::Wildcard) if matched_calibration.is_none() => {
+                    matched_calibration.replace(potential_calibration);
+                    // Don't `break` in case exact match comes later.
+                }
+                _ => {}
+            }
+        }
 
-                match &identifier.qubit {
-                    fixed @ Qubit::Fixed(_) if qubit == fixed => Some((calibration, true)),
-                    Qubit::Variable(_) => Some((calibration, false)),
-                    Qubit::Fixed(_) | Qubit::Placeholder(_) => None,
-                }
-            })
-            .partition_map(|(calibration, exact)| {
-                if exact {
-                    Either::Left(calibration)
-                } else {
-                    Either::Right(calibration)
-                }
-            });
-
-        exact.or(wildcard).cloned()
+        matched_calibration.cloned()
     }
 
     /// Returns the last-specified [`ResetCalibrationDefinition`] that matches the target
@@ -245,46 +269,38 @@ impl Calibrations {
     ///
     /// In the case of multiple calibrations with equal precedence, the last one wins.
     pub fn get_match_for_reset(&self, reset: &Reset) -> Option<ResetCalibrationDefinition> {
-        let Reset { name, qubit } = reset;
+        let Reset {
+            name: reset_name,
+            qubit: reset_qubit,
+        } = reset;
 
         // Find the last matching measurement calibration, but prefer an exact qubit match to a
         // wildcard qubit match.
-        let mut wildcard_match = None;
+        let mut matched_calibration = None;
         for potential_calibration in self
             .iter_reset_calibrations()
-            // get the calibrations with matching names
-            .filter(|calibration| &calibration.identifier.name == name)
             // reverse iteration to facilitate early return
             .rev()
+            // get the calibrations with matching names
+            .filter(|calibration| &calibration.identifier.name == reset_name)
         {
-            match (
-                qubit.as_ref(),
+            match get_match_for_qubits_opt(
+                reset_qubit.as_ref(),
                 potential_calibration.identifier.qubit.as_ref(),
             ) {
-                (None, None) => {
-                    return Some(potential_calibration.clone());
+                Some(MatchKind::Exact) => {
+                    matched_calibration.replace(potential_calibration);
+                    break; // Early return
                 }
-                (left @ Some(Qubit::Fixed(_)), right @ Some(Qubit::Fixed(_))) if left == right => {
-                    return Some(potential_calibration.clone());
+                Some(MatchKind::Wildcard) if matched_calibration.is_none() => {
+                    matched_calibration.replace(potential_calibration);
+                    // Don't `break` in case exact match comes later.
                 }
-
-                (Some(Qubit::Variable(_)), Some(Qubit::Variable(_)))
-                | (Some(Qubit::Fixed(_)), Some(Qubit::Variable(_))) => {
-                    if wildcard_match.is_none() {
-                        wildcard_match = Some(potential_calibration)
-                    }
-                }
-
-                (None, Some(_))
-                | (Some(_), None)
-                | (Some(Qubit::Fixed(_)), Some(Qubit::Fixed(_)))
-                | (Some(Qubit::Variable(_)), Some(Qubit::Fixed(_)))
-                | (_, Some(Qubit::Placeholder(_)))
-                | (Some(Qubit::Placeholder(_)), _) => {}
+                _ => {}
             }
         }
 
-        wildcard_match.cloned()
+        matched_calibration.cloned()
     }
 
     /// Append another [`CalibrationSet`] onto this one.
@@ -313,6 +329,61 @@ impl Calibrations {
                     .map(Instruction::ResetCalibrationDefinition),
             )
             .collect()
+    }
+}
+
+/// Utility for matching calibrations in order to distinguish
+/// between exact and variable/wildcard matches, since the former
+/// should be preferred.
+enum MatchKind {
+    Exact,
+    Wildcard,
+}
+
+fn get_match_for_qubits(instruction_qubit: &Qubit, calibration_qubit: &Qubit) -> Option<MatchKind> {
+    match (instruction_qubit, calibration_qubit) {
+        // Fixed qubits match if they are equal
+        (Qubit::Fixed(instruction), Qubit::Fixed(calibration)) => {
+            (instruction == calibration).then_some(MatchKind::Exact)
+        }
+
+        // Variable qubits in calibrations match with Fixed or Variable qubits in instructions
+        (Qubit::Fixed(_) | Qubit::Variable(_), Qubit::Variable(_)) => Some(MatchKind::Wildcard),
+
+        // Placeholders never match
+        (Qubit::Placeholder(_), _) | (_, Qubit::Placeholder(_))
+        // Variable qubits in instructions don't match with fixed qubits in calibrations
+        | (Qubit::Variable(_), Qubit::Fixed(_)) => None,
+    }
+}
+
+fn get_match_for_qubits_opt(
+    instruction_qubit: Option<&Qubit>,
+    calibration_qubit: Option<&Qubit>,
+) -> Option<MatchKind> {
+    match (instruction_qubit, calibration_qubit) {
+        (None, None) => Some(MatchKind::Exact),
+
+        (Some(instruction_qubit), Some(calibration_qubit)) => {
+            get_match_for_qubits(instruction_qubit, calibration_qubit)
+        }
+
+        (None, Some(_)) | (Some(_), None) => None,
+    }
+}
+
+fn get_match_for_expression(
+    instruction_expression: &Expression,
+    calibration_expression: &Expression,
+) -> Option<MatchKind> {
+    match (instruction_expression, calibration_expression) {
+        // If the calibration is variable, it matches anything
+        (_, Expression::Variable(_)) => Some(MatchKind::Wildcard),
+
+        // Otherwise, they should be equal
+        (instruction_expression, calibration_expression) => {
+            (instruction_expression == calibration_expression).then_some(MatchKind::Exact)
+        }
     }
 }
 
