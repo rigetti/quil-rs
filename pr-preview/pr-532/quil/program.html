@@ -65,10 +65,10 @@
                                 <a class="variable" href="#CalibrationExpansion.expansions">expansions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationExpansion.range">range</a>
+                                <a class="variable" href="#CalibrationExpansion.calibration_used">calibration_used</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationExpansion.calibration_used">calibration_used</a>
+                                <a class="variable" href="#CalibrationExpansion.range">range</a>
                         </li>
                 </ul>
 
@@ -242,10 +242,10 @@
                                 <a class="function" href="#OwnedDefGateSequenceExpansion.expansions">expansions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#OwnedDefGateSequenceExpansion.source_signature">source_signature</a>
+                                <a class="variable" href="#OwnedDefGateSequenceExpansion.range">range</a>
                         </li>
                         <li>
-                                <a class="variable" href="#OwnedDefGateSequenceExpansion.range">range</a>
+                                <a class="variable" href="#OwnedDefGateSequenceExpansion.source_signature">source_signature</a>
                         </li>
                 </ul>
 
@@ -253,6 +253,24 @@
             <li>
                     <a class="class" href="#Program">Program</a>
                             <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#Program.clone_without_body_instructions">clone_without_body_instructions</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Program.add_instruction">add_instruction</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Program.dagger">dagger</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Program.expand_calibrations">expand_calibrations</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Program.resolve_placeholders">resolve_placeholders</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Program.to_instructions">to_instructions</a>
+                        </li>
                         <li>
                                 <a class="function" href="#Program.parse">parse</a>
                         </li>
@@ -296,43 +314,28 @@
                                 <a class="function" href="#Program.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="function" href="#Program.clone_without_body_instructions">clone_without_body_instructions</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Program.add_instruction">add_instruction</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Program.dagger">dagger</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Program.expand_calibrations">expand_calibrations</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Program.resolve_placeholders">resolve_placeholders</a>
-                        </li>
-                        <li>
-                                <a class="function" href="#Program.to_instructions">to_instructions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.declarations">declarations</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.used_qubits">used_qubits</a>
+                                <a class="variable" href="#Program.circuits">circuits</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.pragma_extern_map">pragma_extern_map</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.instructions">instructions</a>
+                                <a class="variable" href="#Program.used_qubits">used_qubits</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.waveforms">waveforms</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.frames">frames</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.calibrations">calibrations</a>
+                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.waveforms">waveforms</a>
+                                <a class="variable" href="#Program.declarations">declarations</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.calibrations">calibrations</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
@@ -341,10 +344,7 @@
                                 <a class="variable" href="#Program.memory_regions">memory_regions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.circuits">circuits</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.body_instructions">body_instructions</a>
+                                <a class="variable" href="#Program.instructions">instructions</a>
                         </li>
                 </ul>
 
@@ -603,6 +603,19 @@ for it to be counted in the depth.</li>
 
 
                             </div>
+                            <div id="CalibrationExpansion.calibration_used" class="classattr">
+                                <div class="attr variable">
+            <span class="name">calibration_used</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationExpansion.calibration_used"></a>
+    
+            <div class="docstring"><p>The calibration used to expand the instruction.</p>
+</div>
+
+
+                            </div>
                             <div id="CalibrationExpansion.range" class="classattr">
                                 <div class="attr variable">
             <span class="name">range</span>
@@ -613,19 +626,6 @@ for it to be counted in the depth.</li>
     
             <div class="docstring"><p>The range of instructions in the expanded list
 which were generated by this expansion.</p>
-</div>
-
-
-                            </div>
-                            <div id="CalibrationExpansion.calibration_used" class="classattr">
-                                <div class="attr variable">
-            <span class="name">calibration_used</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationExpansion.calibration_used"></a>
-    
-            <div class="docstring"><p>The calibration used to expand the instruction.</p>
 </div>
 
 
@@ -1420,19 +1420,6 @@ define an owned type here.</p>
 
 
                             </div>
-                            <div id="OwnedDefGateSequenceExpansion.source_signature" class="classattr">
-                                <div class="attr variable">
-            <span class="name">source_signature</span>
-
-        
-    </div>
-    <a class="headerlink" href="#OwnedDefGateSequenceExpansion.source_signature"></a>
-    
-            <div class="docstring"><p>The signature of the sequence gate definition which was used to expand the instruction.</p>
-</div>
-
-
-                            </div>
                             <div id="OwnedDefGateSequenceExpansion.range" class="classattr">
                                 <div class="attr variable">
             <span class="name">range</span>
@@ -1442,6 +1429,19 @@ define an owned type here.</p>
     <a class="headerlink" href="#OwnedDefGateSequenceExpansion.range"></a>
     
             <div class="docstring"><p>The range of instructions in the expanded list which were generated by this expansion.</p>
+</div>
+
+
+                            </div>
+                            <div id="OwnedDefGateSequenceExpansion.source_signature" class="classattr">
+                                <div class="attr variable">
+            <span class="name">source_signature</span>
+
+        
+    </div>
+    <a class="headerlink" href="#OwnedDefGateSequenceExpansion.source_signature"></a>
+    
+            <div class="docstring"><p>The signature of the sequence gate definition which was used to expand the instruction.</p>
 </div>
 
 
@@ -1536,6 +1536,117 @@ and frame definitions.</p>
 </div>
 
 
+                            <div id="Program.clone_without_body_instructions" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">clone_without_body_instructions</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.clone_without_body_instructions"></a>
+    
+            <div class="docstring"><p>Like <code>Clone</code>, but does not clone the body instructions.</p>
+</div>
+
+
+                            </div>
+                            <div id="Program.add_instruction" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">add_instruction</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">instruction</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.add_instruction"></a>
+    
+            <div class="docstring"><p>Add an instruction to the end of the program.</p>
+
+<p>Note, parsing extern signatures is deferred here to maintain infallibility
+of [<code>Program::add_instruction</code>]. This means that invalid <code>PRAGMA EXTERN</code>
+instructions are still added to the [<code>Program::extern_pragma_map</code>];
+duplicate <code>PRAGMA EXTERN</code> names are overwritten.</p>
+</div>
+
+
+                            </div>
+                            <div id="Program.dagger" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">dagger</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.dagger"></a>
+    
+            <div class="docstring"><p>Creates a new conjugate transpose of the [<code><a href="#Program">Program</a></code>] by reversing the order of gate
+instructions and applying the DAGGER modifier to each.</p>
+
+<h1 id="errors">Errors</h1>
+
+<p>Errors if any of the instructions in the program are not [<code>Instruction::Gate</code>]</p>
+</div>
+
+
+                            </div>
+                            <div id="Program.expand_calibrations" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">expand_calibrations</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.expand_calibrations"></a>
+    
+            <div class="docstring"><p>Expand any instructions in the program which have a matching calibration,
+leaving the others unchanged.
+Return the expanded copy of the program.</p>
+
+<p>Returns an error if any instruction expands into itself.</p>
+
+<p>See [<code>Program::expand_calibrations_with_source_map</code>] for a version that returns a source mapping.</p>
+</div>
+
+
+                            </div>
+                            <div id="Program.resolve_placeholders" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">resolve_placeholders</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.resolve_placeholders"></a>
+    
+            <div class="docstring"><p>Resolve [<code>TargetPlaceholder</code>]s and [<code>QubitPlaceholder</code>]s within the program using default
+resolvers.</p>
+
+<p>See <a href="Self::resolve_placeholders_with_custom_resolvers"><code>resolve_placeholders_with_custom_resolvers</code></a>,
+<a href="Self::default_target_resolver"><code>default_target_resolver</code></a>,
+and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></a> for more information.</p>
+</div>
+
+
+                            </div>
+                            <div id="Program.to_instructions" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">to_instructions</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.to_instructions"></a>
+    
+            <div class="docstring"><p>Return a copy of all of the instructions which constitute this [<code><a href="#Program">Program</a></code>].</p>
+</div>
+
+
+                            </div>
                             <div id="Program.parse" class="classattr">
                                 <div class="attr function">
             
@@ -1876,135 +1987,13 @@ and definitions which are executed; effectively, perform dead code removal.</p>
 
 
                             </div>
-                            <div id="Program.clone_without_body_instructions" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">clone_without_body_instructions</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.clone_without_body_instructions"></a>
-    
-            <div class="docstring"><p>Like <code>Clone</code>, but does not clone the body instructions.</p>
-</div>
-
-
-                            </div>
-                            <div id="Program.add_instruction" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">add_instruction</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">instruction</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.add_instruction"></a>
-    
-            <div class="docstring"><p>Add an instruction to the end of the program.</p>
-
-<p>Note, parsing extern signatures is deferred here to maintain infallibility
-of [<code>Program::add_instruction</code>]. This means that invalid <code>PRAGMA EXTERN</code>
-instructions are still added to the [<code>Program::extern_pragma_map</code>];
-duplicate <code>PRAGMA EXTERN</code> names are overwritten.</p>
-</div>
-
-
-                            </div>
-                            <div id="Program.dagger" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">dagger</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.dagger"></a>
-    
-            <div class="docstring"><p>Creates a new conjugate transpose of the [<code><a href="#Program">Program</a></code>] by reversing the order of gate
-instructions and applying the DAGGER modifier to each.</p>
-
-<h1 id="errors">Errors</h1>
-
-<p>Errors if any of the instructions in the program are not [<code>Instruction::Gate</code>]</p>
-</div>
-
-
-                            </div>
-                            <div id="Program.expand_calibrations" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">expand_calibrations</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.expand_calibrations"></a>
-    
-            <div class="docstring"><p>Expand any instructions in the program which have a matching calibration,
-leaving the others unchanged.
-Return the expanded copy of the program.</p>
-
-<p>Returns an error if any instruction expands into itself.</p>
-
-<p>See [<code>Program::expand_calibrations_with_source_map</code>] for a version that returns a source mapping.</p>
-</div>
-
-
-                            </div>
-                            <div id="Program.resolve_placeholders" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">resolve_placeholders</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.resolve_placeholders"></a>
-    
-            <div class="docstring"><p>Resolve [<code>TargetPlaceholder</code>]s and [<code>QubitPlaceholder</code>]s within the program using default
-resolvers.</p>
-
-<p>See <a href="Self::resolve_placeholders_with_custom_resolvers"><code>resolve_placeholders_with_custom_resolvers</code></a>,
-<a href="Self::default_target_resolver"><code>default_target_resolver</code></a>,
-and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></a> for more information.</p>
-</div>
-
-
-                            </div>
-                            <div id="Program.to_instructions" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">to_instructions</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.to_instructions"></a>
-    
-            <div class="docstring"><p>Return a copy of all of the instructions which constitute this [<code><a href="#Program">Program</a></code>].</p>
-</div>
-
-
-                            </div>
-                            <div id="Program.declarations" class="classattr">
+                            <div id="Program.circuits" class="classattr">
                                 <div class="attr variable">
-            <span class="name">declarations</span>
+            <span class="name">circuits</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.declarations"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.used_qubits" class="classattr">
-                                <div class="attr variable">
-            <span class="name">used_qubits</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.used_qubits"></a>
+    <a class="headerlink" href="#Program.circuits"></a>
     
     
 
@@ -2020,13 +2009,24 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
     
 
                             </div>
-                            <div id="Program.instructions" class="classattr">
+                            <div id="Program.used_qubits" class="classattr">
                                 <div class="attr variable">
-            <span class="name">instructions</span>
+            <span class="name">used_qubits</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.instructions"></a>
+    <a class="headerlink" href="#Program.used_qubits"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.waveforms" class="classattr">
+                                <div class="attr variable">
+            <span class="name">waveforms</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.waveforms"></a>
     
     
 
@@ -2042,6 +2042,28 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
     
 
                             </div>
+                            <div id="Program.body_instructions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">body_instructions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.body_instructions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.declarations" class="classattr">
+                                <div class="attr variable">
+            <span class="name">declarations</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.declarations"></a>
+    
+    
+
+                            </div>
                             <div id="Program.calibrations" class="classattr">
                                 <div class="attr variable">
             <span class="name">calibrations</span>
@@ -2049,17 +2071,6 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
         
     </div>
     <a class="headerlink" href="#Program.calibrations"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.waveforms" class="classattr">
-                                <div class="attr variable">
-            <span class="name">waveforms</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.waveforms"></a>
     
     
 
@@ -2086,24 +2097,13 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
     
 
                             </div>
-                            <div id="Program.circuits" class="classattr">
+                            <div id="Program.instructions" class="classattr">
                                 <div class="attr variable">
-            <span class="name">circuits</span>
+            <span class="name">instructions</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.circuits"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.body_instructions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">body_instructions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.body_instructions"></a>
+    <a class="headerlink" href="#Program.instructions"></a>
     
     
 
