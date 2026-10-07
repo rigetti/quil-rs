@@ -2,10 +2,8 @@ use indexmap::IndexMap;
 
 #[cfg(feature = "python")]
 use crate::instruction::quilpy::PyInstruction;
-#[cfg(not(feature = "python"))]
-use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use pyo3_stub_gen::derive::gen_stub_pyclass;
 
 use crate::{
     expression::Expression,
@@ -33,11 +31,7 @@ pub struct Waveform {
     pub parameters: Vec<String>,
 }
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg_attr(feature = "python", pyo3::pymethods)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl Waveform {
-    #[new]
     pub fn new(matrix: Vec<Expression>, parameters: Vec<String>) -> Self {
         Self { matrix, parameters }
     }

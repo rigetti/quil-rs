@@ -4,7 +4,7 @@ use pyo3::prelude::*;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::PyStubType;
 
-use crate::quilpy::errors::QuilPyValueError;
+use crate::quilpy::errors::ArgumentError;
 
 /// Accept one of two mutually exclusive parameters, converting them to a single type.
 ///
@@ -112,7 +112,7 @@ pub(crate) fn aliased_impl<A, B, R>(
         (None, Some(b)) => b_to_r(b),
         (None, None) => default(),
         (Some(_), Some(_)) => {
-            Err(QuilPyValueError::MutuallyExclusive(name_a.to_string(), name_b.to_string()).into())
+            Err(ArgumentError::MutuallyExclusive(name_a.to_string(), name_b.to_string()).into())
         }
     }
 }

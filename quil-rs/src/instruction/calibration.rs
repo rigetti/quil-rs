@@ -8,7 +8,6 @@ use crate::{
         write_expression_parameter_string, write_instruction_block, Expression, GateModifier,
         Instruction, Qubit,
     },
-    pickleable_new,
     quil::{Quil, INDENT},
     validation::identifier::{validate_identifier, IdentifierValidationError},
 };

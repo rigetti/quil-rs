@@ -5,7 +5,6 @@ use crate::{
         write_expression_parameter_string, write_parameter_string, write_qubits, DefGateSequence,
         Qubit,
     },
-    pickleable_new,
     quil::{write_join_quil, Quil, INDENT},
     real,
     validation::identifier::{
