@@ -1320,21 +1320,29 @@ class GateDefinition(Instruction):
     @typing.overload
     def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Parameter], specification: GateSpecification) -> GateDefinition:
         r"""
-        Return a new `GateDefinition` instance with the given name, parameters, qubits, and modifiers.
+        Return a new `GateDefinition` instance with the given name, parameters, and specification.
         
         This is the preferred constructor.
         """
     @typing.overload
     def __new__(cls, name: builtins.str, matrix: typing.Sequence[typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]], parameters: typing.Optional[typing.Sequence[expression.Parameter]] = None) -> GateDefinition:
         r"""
-        Return a new `GateDefinition` instance with the given name, parameters, qubits, and modifiers.
+        Return a new `GateDefinition` instance with the given name, matrix, and parameters.
         
-        This constructor is deprecated.
+        This constructor is deprecated; use the `(name, parameters, specification)` form instead.
         """
     @typing.overload
-    def __new__(cls, name: builtins.str, *, params: typing.Optional[typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]], qubits: typing.Optional[typing.Sequence[Qubit]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> GateDefinition: ...
-    @typing.overload
-    def __new__(cls, name: builtins.str, specification: typing.Optional[GateSpecification] = None, parameters: typing.Optional[typing.Sequence[expression.Parameter]] = None, *, matrix: typing.Optional[GateSpecification] = None) -> GateDefinition: ...
+    def __new__(cls, name: builtins.str, parameters: typing.Optional[typing.Sequence[expression.Parameter]  |  GateSpecification] = None, specification: typing.Optional[GateSpecification  |  typing.Sequence[expression.Parameter]] = None, *, matrix: typing.Optional[GateSpecification] = None) -> GateDefinition:
+        r"""
+        Construct a new `GateDefinition` instance.
+        
+        The preferred form is `GateDefinition(name, parameters, specification)`.
+        
+        The deprecated PyQuil v4 constructor, `GateDefinition(name, matrix, parameters=None)`,
+        is also still accepted, for backwards compatibility; using it will raise a
+        `DeprecationWarning`. `matrix` is also accepted as a deprecated keyword-only alias
+        for `specification`.
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
