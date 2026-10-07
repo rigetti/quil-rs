@@ -15,7 +15,7 @@ use crate::quil::{Quil, ToQuilError};
         frozen,
         hash,
         ord,
-        skip_from_py_object
+        from_py_object
     )
 )]
 pub enum Qubit {
