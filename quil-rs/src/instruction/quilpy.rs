@@ -1137,7 +1137,7 @@ submit! {
                 cls,
                 name: builtins.str,
                 parameters: pyo3_stub_gen.RustType["Vec<ExpressionLike>"],
-                qubits: pyo3_stub_gen.RustType["Vec<Qubit>"],
+                qubits: pyo3_stub_gen.RustType["Vec<QubitLike>"],
                 instrs: pyo3_stub_gen.RustType["Vec<Instruction>"],
                 modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
             ) -> CalibrationDefinition:
@@ -1984,7 +1984,7 @@ submit! {
                 cls,
                 name: builtins.str,
                 parameters: pyo3_stub_gen.RustType["Vec<ExpressionLike>"],
-                qubits: pyo3_stub_gen.RustType["Option<Vec<Qubit>>"] = None,
+                qubits: pyo3_stub_gen.RustType["Option<Vec<QubitLike>>"] = None,
                 modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
             ) -> Gate: ...
 
@@ -1993,7 +1993,7 @@ submit! {
                 cls,
                 name: builtins.str,
                 *,
-                qubits: pyo3_stub_gen.RustType["Vec<Qubit>"],
+                qubits: pyo3_stub_gen.RustType["Vec<QubitLike>"],
                 parameters: pyo3_stub_gen.RustType["Option<Vec<ExpressionLike>>"] = None,
                 modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
             ) -> Gate: ...
@@ -2004,7 +2004,7 @@ submit! {
                 name: builtins.str,
                 *,
                 params: pyo3_stub_gen.RustType["Option<Vec<ExpressionLike>>"],
-                qubits: pyo3_stub_gen.RustType["Option<Vec<Qubit>>"] = None,
+                qubits: pyo3_stub_gen.RustType["Option<Vec<QubitLike>>"] = None,
                 modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
             ) -> Gate: ...
         "#
@@ -2746,8 +2746,8 @@ impl MeasureCalibrationIdentifier {
     // `__getnewargs_ex__` is consistent with `__new__`!
     #[pyo3(signature = (qubit, target, *, name = None))]
     #[new]
-    fn __new__(qubit: Qubit, target: Option<String>, name: Option<String>) -> Self {
-        Self::new(name, qubit, target)
+    fn __new__(qubit: QubitLike, target: Option<String>, name: Option<String>) -> Self {
+        Self::new(name, qubit.into(), target)
     }
 
     fn __getnewargs_ex__(&self) -> ((Qubit, Option<String>), HashMap<String, Option<String>>) {
@@ -3493,13 +3493,13 @@ impl<'a, 'py> FromPyObject<'a, 'py> for PauliGate {
 /// Technically, we only accept `Qubit::Variable` and `Qubit::Fixed` (or `str` and `int`),
 /// but this wraps `Qubit` and raises a type error if the input is `Qubit::Placeholder`.
 #[derive(FromPyObject)]
-struct PauliArg(Qubit);
+struct PauliArg(QubitLike);
 
 impl TryFrom<PauliArg> for String {
     type Error = PyErr;
 
     fn try_from(value: PauliArg) -> Result<Self, Self::Error> {
-        match value.0 {
+        match Qubit::from(value.0) {
             Qubit::Variable(v) => Ok(v),
             Qubit::Fixed(v) => Ok(format!("q{v}")),
             Qubit::Placeholder(_) => Err(PyTypeError::new_err(
@@ -5771,9 +5771,6 @@ mod stubs {
         "quil._quil.instructions",
         MemoryReferenceDesignator = MemoryReferenceLike
     );
-    type_alias!(
-        "quil._quil.instructions",
-        QubitDesignator = Qubit | QubitLike
-    );
+    type_alias!("quil._quil.instructions", QubitDesignator = QubitLike);
     type_alias!("quil._quil.instructions", PauliTargetDesignator = PauliArg);
 }

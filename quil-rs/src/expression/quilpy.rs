@@ -1,9 +1,6 @@
 use numpy::{PyArray, PyArrayDescr, PyArrayDescrMethods};
 use pyo3::{
-    exceptions::{PyDeprecationWarning, PyNotImplementedError},
-    prelude::*,
-    types::{PyAnyMethods, PyComplex, PyFloat, PyInt},
-    IntoPyObjectExt, PyClass,
+    CastError, IntoPyObjectExt, PyClass, PyTypeCheck, exceptions::{PyDeprecationWarning, PyNotImplementedError}, prelude::*, types::{PyAnyMethods, PyComplex, PyFloat, PyInt},
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -129,36 +126,38 @@ pub struct PyExpression;
 #[cfg_attr(feature = "stubs", derive(IntoPyObject))]
 pub(crate) enum ExpressionLike {
     Variable(String), // Ensure this is first so we convert to variables rather than memrefs
+    PiConstant(PiType), // Ensure this is before Number so it isn't converted.
     Number(Complex64),
-    PiConstant(PiType),
     MemoryReference(MemoryReference), // TODO: rename Address
     FunctionCall(FunctionCallExpression),
     Infix(InfixExpression),
     Prefix(PrefixExpression),
 }
 
-impl TryFrom<&Bound<'_, PyExpression>> for Expression {
-    type Error = PyErr;
+impl<'a, 'py> TryFrom<&'a Bound<'py, PyExpression>> for Expression {
+    type Error = CastError<'a, 'py>;
 
-    fn try_from(value: &Bound<'_, PyExpression>) -> Result<Self, Self::Error> {
-        if let Ok(slf) = value.cast::<Parameter>() {
-            Ok(Expression::Variable(slf.get().name.clone()))
-        } else if let Ok(slf) = value.cast::<Number>() {
-            Ok(Expression::Number(slf.get().value))
-        } else if value.cast::<PiType>().is_ok() {
-            Ok(Expression::PiConstant)
-        } else if let Ok(slf) = value.cast::<Address>() {
-            Ok(Expression::Address(slf.get().memory_reference.clone()))
-        } else if let Ok(slf) = value.cast::<FunctionCallExpression>() {
+    fn try_from(value: &'a Bound<'py, PyExpression>) -> Result<Self, Self::Error> {
+        // IMPORTANT: PiType must come before Number or it'll be converted via __complex__!
+        if let Ok(slf) = value.cast::<FunctionCallExpression>() {
             Ok(Expression::FunctionCall(slf.get().clone()))
         } else if let Ok(slf) = value.cast::<InfixExpression>() {
             Ok(Expression::Infix(slf.get().clone()))
         } else if let Ok(slf) = value.cast::<PrefixExpression>() {
             Ok(Expression::Prefix(slf.get().clone()))
+        } else if value.cast::<PiType>().is_ok() {
+            Ok(Expression::PiConstant)
+        } else if let Ok(slf) = value.cast::<Number>() {
+            Ok(Expression::Number(slf.get().value))
+        } else if let Ok(slf) = value.cast::<Parameter>() {
+            Ok(Expression::Variable(slf.get().name.clone()))
+        } else if let Ok(slf) = value.cast::<Address>() {
+            Ok(Expression::Address(slf.get().memory_reference.clone()))
         } else {
-            Err(PyNotImplementedError::new_err(
-                "unknown Expression subclass",
-            ))
+            Err(
+                CastError::new(value.as_any().as_borrowed(),
+                <PyExpression as PyTypeCheck>::classinfo_object(value.py()))
+            )
         }
     }
 }
@@ -167,6 +166,12 @@ impl<'a, 'py> FromPyObject<'a, 'py> for Expression {
     type Error = PyErr;
 
     fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(obj) = obj.cast::<PyExpression>() {
+            if let Ok(obj) = Expression::try_from(std::ops::Deref::deref(&obj)) {
+                return Ok(obj);
+            }
+        }
+
         obj.extract::<ExpressionLike>().map(Into::into)
     }
 }
@@ -234,7 +239,6 @@ impl_repr!(PrefixOperator);
 impl_repr!(Address);
 impl_repr!(Number);
 impl_repr!(Parameter);
-impl_repr!(PiType);
 
 impl_to_quil!(
     FunctionCallExpression,
@@ -302,6 +306,12 @@ impl AsView for &Bound<'_, PyExpression> {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl PyExpression {
+    #[new]
+    #[pyo3(signature = (arg, /))]
+    fn __new__(arg: ExpressionLike) -> Expression {
+        arg.into()
+    }
+
     /// Parse an ``Expression`` from a string.
     ///
     /// Raises a ``ParseExpressionError`` error if the string isn't a valid Quil expression.
@@ -570,6 +580,18 @@ py_singleton!(PiType, "Pi", |py| {
 
 #[cfg(feature = "stubs")]
 pyo3_stub_gen::module_variable!("quil._quil.expression", "Pi", PiType);
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl PiType {
+    fn __str__(&self) -> &'static str {
+        "pi"
+    }
+
+    fn __repr__(&self) -> &'static str {
+        "Pi"
+    }
+}
 
 impl From<PiType> for Expression {
     fn from(_: PiType) -> Self {

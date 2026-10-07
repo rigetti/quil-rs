@@ -15,6 +15,7 @@ from quil.expression import (
     InfixOperator,
     Number,
     Parameter,
+    Pi,
     PrefixExpression,
     PrefixOperator,
     quil_cos,
@@ -24,6 +25,45 @@ from quil.expression import (
 VarMap: TypeAlias = dict[str | MemoryReference, complex | list[complex]]
 ZERO = Number(0)
 ONE = Number(1)
+
+class TestConstruction:
+    """Test constructing `Expression`s from various `ExpressionLike` values."""
+
+    def test_pi(self) -> None:
+        assert Expression(Pi) == Pi == Expression.parse("pi")
+        assert isinstance(Pi, Expression)
+
+    def test_number(self) -> None:
+        assert isinstance(Number(1), Expression)
+        assert isinstance(Number(1.0), Expression)
+        assert isinstance(Number(1.0 + 0.0j), Expression)
+
+    def test_parameter(self) -> None:
+        assert isinstance(Parameter("x"), Expression)
+        assert isinstance(Parameter("y"), Expression)
+
+    def test_address(self) -> None:
+        assert isinstance(Address(MemoryReference("x")), Expression)
+        assert isinstance(Address(MemoryReference("y")), Expression)
+
+    def test_infix_expression(self) -> None:
+        expr = InfixExpression(Number(1), InfixOperator.PLUS, Number(2))
+        assert isinstance(expr, Expression)
+        assert expr.left == Number(1)
+        assert expr.right == Number(2)
+        assert expr.operator == InfixOperator.PLUS
+
+    def test_prefix_expression(self) -> None:
+        expr = PrefixExpression(PrefixOperator.MINUS, Number(3))
+        assert isinstance(expr, Expression)
+        assert expr.expression == Number(3)
+        assert expr.operator == PrefixOperator.MINUS
+
+    def test_function_call_expression(self) -> None:
+        expr = FunctionCallExpression(ExpressionFunction.SINE, Parameter("x"))
+        assert isinstance(expr, Expression)
+        assert expr.function == ExpressionFunction.SINE
+        assert expr.expression == Parameter("x")
 
 class TestOperations:
     """Test performing mathematical operations on `Expression`s.
