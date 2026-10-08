@@ -13,9 +13,9 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyfunction, gen_stub_pyme
 use super::*;
 use crate::{
     pickleable_new,
+    quil::Quil,
     quilpy::{
         errors::{self, ValueError},
-        impl_to_quil,
         singleton::{py_singleton, PyModuleSingletonExt},
     },
 };
@@ -186,6 +186,39 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ExpressionLike {
     }
 }
 
+/// Extract an [`ExpressionView`] from a Python object, which must be a [`PyExpression`] subclass,
+/// and more specifically, a subclass that this crate knows about.
+impl<'a, 'py> FromPyObject<'a, 'py> for ExpressionView<'a> {
+    type Error = CastError<'a, 'py>;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(obj) = obj.cast_exact::<Parameter>() {
+            Ok(obj.get().as_view())
+        } else if obj.cast_exact::<PiType>().is_ok() {
+            Ok(ExpressionView::PiConstant)
+        } else if let Ok(obj) = obj.cast_exact::<Number>() {
+            Ok(obj.get().as_view())
+        } else if let Ok(obj) = obj.cast_exact::<Address>() {
+            Ok(obj.get().as_view())
+        } else if let Ok(obj) = obj.cast_exact::<FunctionCallExpression>() {
+            Ok(obj.get().as_view())
+        } else if let Ok(obj) = obj.cast_exact::<InfixExpression>() {
+            Ok(obj.get().as_view())
+        } else if let Ok(obj) = obj.cast_exact::<PrefixExpression>() {
+            Ok(obj.get().as_view())
+        } else {
+            // It's possible to get here if:
+            // - A Python user subclasses `Expression` (which we don't support).
+            // - A Rust developer adds a new `#[pyclass(extends = PyExpression)]`
+            //   but forgets to update this implementation.
+            Err(CastError::new(
+                obj,
+                <PyExpression as PyTypeCheck>::classinfo_object(obj.py()),
+            ))
+        }
+    }
+}
+
 impl<'a, 'py> TryFrom<&'a Bound<'py, PyExpression>> for Expression {
     type Error = CastError<'a, 'py>;
 
@@ -224,6 +257,11 @@ impl<'a, 'py> TryFrom<&'a Bound<'py, PyExpression>> for Expression {
 // Note that when used, the Python object must be a [`PyExpression`] subclass instance,
 // not just something that can be converted into an [`Expression`].
 // Use [`ExpressionLike`] if you also want that.
+// Currently, we _do_ convert other if they can be, and maybe that is the right way to go?
+// It means that we don't have an easy way (in Rust) to explicitly say
+// "this Python-exposed function requires an existing (Py)Expression instance",
+// but perhaps we don't have any reason for that.
+// Should we even have `ExpressionLike`?
 impl<'a, 'py> FromPyObject<'a, 'py> for Expression {
     type Error = CastError<'a, 'py>;
 
@@ -297,31 +335,21 @@ impl<'py> IntoPyObject<'py> for Expression {
 }
 
 impl_repr!(ExpressionFunction);
-impl_repr!(FunctionCallExpression);
-impl_repr!(InfixExpression);
 impl_repr!(InfixOperator);
-impl_repr!(PrefixExpression);
 impl_repr!(PrefixOperator);
-impl_repr!(Address);
-impl_repr!(Number);
-impl_repr!(Parameter);
 
-impl_to_quil!(
-    FunctionCallExpression,
-    InfixExpression,
-    PrefixExpression,
-    Address,
-    Number,
-    Parameter,
-    PiType,
-);
-
+// These all inherit `to_quil`, `to_quil_or_debug`, and `__repr__` from `PyExpression`.
 py_expression!(Address);
 py_expression!(FunctionCallExpression);
 py_expression!(InfixExpression);
 py_expression!(Number);
 py_expression!(Parameter);
+// PyType is implemented as a singleton and implemented manually.
 py_expression!(PrefixExpression);
+
+// TODO: We likely could take a similar approach with Instruction subclasses.
+// The main advantage is that those methods show up on the base class.
+// It's unclear how impactful this is on performance, but that might be worth benchmarking.
 
 /// Convert a bound `#[pyclass]` into a `numpy` object array holding just that instance.
 fn to_obj_array<'py, T: PyClass>(obj: &Bound<'py, T>) -> Bound<'py, PyAny> {
@@ -344,9 +372,8 @@ impl AsView for ExpressionLike {
     }
 }
 
-pub(crate) trait PythonExpression: PyClass<BaseType = PyExpression> + AsView {}
-
-impl<T: PyClass<BaseType = PyExpression>> AsView for &Bound<'_, T> {
+/*
+impl<T: PyClass<BaseType = PyExpression>> AsView for Bound<'_, T> {
     fn as_view(&self) -> ExpressionView<'_> {
         let result = if let Ok(obj) = self.cast_exact::<Parameter>() {
             obj.get().as_view()
@@ -376,6 +403,7 @@ impl<T: PyClass<BaseType = PyExpression>> AsView for &Bound<'_, T> {
         result
     }
 }
+*/
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -393,6 +421,24 @@ impl PyExpression {
     #[staticmethod]
     fn parse(input: &str) -> PyResult<Expression> {
         Ok(Expression::from_str(input)?)
+    }
+
+    // TODO: Benchmark if it's faster to have these implemented on the individual subclasses.
+    // I suspect doing it that way may be better for performance
+    // because it certainly avoids constructing the actual `Expression` enum.
+    fn to_quil(slf: &Bound<'_, Self>) -> PyResult<String> {
+        Ok(slf
+            .as_borrowed()
+            .extract::<ExpressionView<'_>>()?
+            .to_quil()?)
+    }
+
+    fn to_quil_or_debug(slf: &Bound<'_, Self>) -> PyResult<String> {
+        Ok(Expression::try_from(slf)?.to_quil_or_debug())
+    }
+
+    fn __repr__(slf: &Bound<'_, Self>) -> PyResult<String> {
+        Ok(format!("{:?}", Expression::try_from(slf)?))
     }
 
     /// Return a new expression derived from this one, simplified as much as possible.
@@ -1161,27 +1207,28 @@ pub(crate) fn quil_sqrt(expression: ExpressionLike) -> Expression {
     ))
 }
 
+// Used to require that T extends PyExpression and provides an `AsView` implementation.
+struct PyExpr<T>(pub T);
+impl<T> From<PyExpr<T>> for pyo3::PyClassInitializer<T>
+where
+    T: pyo3::PyClass<BaseType = PyExpression> + AsView,
+{
+    fn from(value: PyExpr<T>) -> Self {
+        pyo3::PyClassInitializer::from(super::PyExpression).add_subclass(value.0)
+    }
+}
+
 mod macros {
-    /// Implement [`IntoPyObject`] and `From<$T> for PyClassInitializer<$T>`
-    /// for a `#[pyclass(extends = PyExpression)]`.
+    /// Implement [`IntoPyObject`] for a `#[pyclass(extends = PyExpression)]`.
     macro_rules! py_expression {
         ($T:ty) => {
-            // Require that $T extends PyExpression and provides an `AsView` implementation.
-            impl PythonExpression for $T {}
-
-            impl From<$T> for PyClassInitializer<$T> {
-                fn from(value: $T) -> Self {
-                    PyClassInitializer::from(PyExpression).add_subclass(value)
-                }
-            }
-
-            impl<'py> IntoPyObject<'py> for $T {
+            impl<'py> pyo3::IntoPyObject<'py> for $T {
                 type Target = Self;
                 type Output = Bound<'py, Self::Target>;
                 type Error = PyErr;
 
                 fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
-                    Ok(Py::new(py, PyClassInitializer::from(self))?.into_bound(py))
+                    Ok(Py::new(py, PyClassInitializer::from(PyExpr(self)))?.into_bound(py))
                 }
             }
         };

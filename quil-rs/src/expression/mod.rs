@@ -86,14 +86,14 @@ pub enum EvaluationError {
 // Developer note: This enum is no longer exposed directly as a PyO3 "complex enum".
 // Instead, each variant has a corresponding Python-exposed type that extends `PyExpression`
 // (see `quilpy.rs` for the Python bindings), mirroring the `Instruction`/`PyInstruction`
-// pattern. This allows Python users to directly use and subclass e.g. `Number` or `Address`
-// without needing to go through a wrapping `Expression.Number(...)` constructor/accessor.
+// pattern. This allows Python users to directly use it and its subclasses more fluently.
 #[derive(Clone, Debug)]
 pub enum Expression {
     Address(MemoryReference),
     FunctionCall(FunctionCallExpression),
     Infix(InfixExpression),
     Number(Complex64),
+    // TODO(migration-guide): PiConstant in Rust is a Unit variant again.
     PiConstant,
     Prefix(PrefixExpression),
     Variable(String),
@@ -707,9 +707,7 @@ impl Expression {
             other => other.clone(),
         }
     }
-}
 
-impl Expression {
     /// If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
     /// that number. Otherwise, error with an evaluation error of a descriptive type.
     pub fn to_real(&self) -> Result<f64, EvaluationError> {
@@ -813,13 +811,23 @@ impl AsView for Expression {
     }
 }
 
-impl<E: AsView> Quil for E {
+impl Quil for Expression {
     fn write(
         &self,
         f: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> Result<(), crate::quil::ToQuilError> {
-        match self.as_view() {
+        self.as_view().write(f, fall_back_to_debug)
+    }
+}
+
+impl Quil for ExpressionView<'_> {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> Result<(), crate::quil::ToQuilError> {
+        match self {
             ExpressionView::Address(memory_reference) => {
                 memory_reference.write(f, fall_back_to_debug)
             }
@@ -842,7 +850,7 @@ impl<E: AsView> Quil for E {
                 format_inner_expression(f, fall_back_to_debug, right)
             }
             ExpressionView::Number(value) => {
-                write!(f, "{}", format_complex(&value)).map_err(Into::into)
+                write!(f, "{}", format_complex(value)).map_err(Into::into)
             }
             ExpressionView::PiConstant => write!(f, "pi").map_err(Into::into),
             ExpressionView::Prefix(PrefixExpression {
@@ -1035,7 +1043,7 @@ pub mod interned {
     use super::*;
 
     macro_rules! atoms {
-        ($($func:ident: $ctor:ident($($typ:ty)?)),+ $(,)?) => {
+        ($($func:ident: $ctor:ident$(($typ:ty))?),+ $(,)?) => {
             $(
                 #[doc = concat!(
                     "A wrapper around [`Expression::",
@@ -1132,7 +1140,7 @@ pub mod interned {
         address: Address(MemoryReference),
         function_call_expr: FunctionCall(FunctionCallExpression),
         infix_expr: Infix(InfixExpression),
-        pi: PiConstant(),
+        pi: PiConstant,
         number: Number(Complex64),
         prefix_expr: Prefix(PrefixExpression),
         variable: Variable(String),
