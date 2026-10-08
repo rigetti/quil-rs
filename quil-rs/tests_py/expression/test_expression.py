@@ -1,7 +1,9 @@
+from collections.abc import Sequence
 from typing import TypeAlias, cast
 
 import pytest
 import numpy as np
+import numpy.typing as npt
 
 import quil
 from quil.instructions import MemoryReference, GateDefinition, GateSpecification
@@ -206,7 +208,8 @@ def test_gate_definition() -> None:
     arr = np.array(crx, dtype=object)
 
     from_list = GateDefinition("CRX", ["theta"], crx)
-    from_arr = GateDefinition("CRX", ["theta"], arr)
+    # TODO: Figure out a way to satisfy Pyright that `arr` is a 2D array of `ExpressionLike` values.
+    from_arr = GateDefinition("CRX", ["theta"], arr) # pyright: ignore[reportArgumentType,reportCallIssue]
     assert from_list == from_arr
     assert isinstance(from_list.specification, GateSpecification)
 
@@ -214,41 +217,44 @@ def test_gate_definition() -> None:
 def test_gate_definition_deprecated_constructor() -> None:
     """Check that the deprecated PyQuil v4 `(name, matrix, parameters=None)` constructor still works."""
 
-    crx: list[list[ExpressionDesignator]] = [
+    matrix_spec: list[list[ExpressionDesignator]] = [
         [1, 0, 0, 0],
         [0, 1, 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1],
     ]
-    params = ["theta"]
-    name = "CRX"
-    arr = np.array(crx, dtype=object)
-    preferred = GateDefinition(name, params, crx)
+    params = ["theta", "beta"]
+    name = "MY_GATE"
+
+    arr = np.array(matrix_spec, dtype=object)
+    preferred = GateDefinition(name, params, matrix_spec)
 
     # Old positional order: `(name, matrix, parameters)`, with a bare list or ndarray matrix.
     with pytest.deprecated_call():
-        assert GateDefinition(name, crx, params) == preferred
+        assert GateDefinition(name, matrix_spec, params) == preferred
     with pytest.deprecated_call():
-        assert GateDefinition(name, arr, params) == preferred
+        assert GateDefinition(name, arr, params) == preferred  # pyright: ignore[reportArgumentType,reportCallIssue]
 
     # `parameters` is optional in the deprecated form.
     with pytest.deprecated_call():
-        assert GateDefinition(name, crx).parameters == []
+        assert GateDefinition(name, matrix_spec).parameters == []
 
     # `matrix` is also accepted as a deprecated keyword-only alias for `specification`.
     with pytest.deprecated_call():
-        assert GateDefinition(name, parameters=params, matrix=crx) == preferred
+        assert GateDefinition(name, parameters=params, matrix=matrix_spec) == preferred
 
     # `specification`/`matrix`, and `parameters` given both positionally (new-style)
     # and as part of the deprecated positional form, are mutually exclusive.
     with pytest.raises(quil.ValueError):
-        GateDefinition(name, crx, params, matrix=GateSpecification.Matrix(crx))
+        GateDefinition(name, matrix_spec, params, matrix=GateSpecification.Matrix(matrix_spec)) # type:ignore
     with pytest.raises(quil.ValueError):
         GateDefinition(name)
 
-    # These are also invalid, but specifically because the parameters imply an invalid type. 
+    # These are also invalid, but specifically because the parameters imply an invalid type.
     with pytest.raises(TypeError):
-        GateDefinition(name, crx, specification=GateSpecification.Matrix(crx))
+        GateDefinition(name, matrix_spec, specification=GateSpecification.Matrix(matrix_spec)) # type:ignore
     with pytest.raises(TypeError):
-        GateDefinition(name, crx, crx)
+        GateDefinition(name, matrix_spec, matrix_spec) # type:ignore
     with pytest.raises(TypeError):
         GateDefinition(name, params, params)
 

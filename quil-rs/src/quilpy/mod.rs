@@ -452,6 +452,12 @@ impl<T: PyStubType, U> pyo3_stub_gen::PyStubType for Seq2<T, U> {
 #[derive(Debug, Copy, Clone)]
 pub(crate) struct Via<T, U>(pub U, PhantomData<T>);
 
+impl<T, U> Via<T, U> {
+    pub(crate) fn into_inner(self) -> U {
+        self.0
+    }
+}
+
 impl<'a, 'py, T, U> FromPyObject<'a, 'py> for Via<T, U>
 where
     T: FromPyObject<'a, 'py> + TryInto<U>,
