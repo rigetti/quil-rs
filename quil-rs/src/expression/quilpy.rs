@@ -711,6 +711,12 @@ impl From<ParameterLike> for Parameter {
     }
 }
 
+impl From<ParameterLike> for String {
+    fn from(value: ParameterLike) -> Self {
+        value.0.name
+    }
+}
+
 impl<'a, 'py> FromPyObject<'a, 'py> for Parameter {
     type Error = PyErr;
 

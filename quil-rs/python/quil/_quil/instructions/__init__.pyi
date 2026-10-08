@@ -1318,21 +1318,21 @@ class GateDefinition(Instruction):
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __hash__(self) -> builtins.int: ...
     @typing.overload
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Parameter], specification: GateSpecification) -> GateDefinition:
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Parameter  |  builtins.str], specification: GateSpecification  |  PauliSum  |  DefGateSequence  |  typing.Sequence[typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]]  |  typing.Sequence[builtins.int]) -> GateDefinition:
         r"""
         Return a new `GateDefinition` instance with the given name, parameters, and specification.
         
         This is the preferred constructor.
         """
     @typing.overload
-    def __new__(cls, name: builtins.str, matrix: typing.Sequence[typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]], parameters: typing.Optional[typing.Sequence[expression.Parameter]] = None) -> GateDefinition:
+    def __new__(cls, name: builtins.str, matrix: GateSpecification  |  PauliSum  |  DefGateSequence  |  typing.Sequence[typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]]  |  typing.Sequence[builtins.int], parameters: typing.Optional[typing.Sequence[expression.Parameter  |  builtins.str]] = None) -> GateDefinition:
         r"""
         Return a new `GateDefinition` instance with the given name, matrix, and parameters.
         
         This constructor is deprecated; use the `(name, parameters, specification)` form instead.
         """
     @typing.overload
-    def __new__(cls, name: builtins.str, parameters: typing.Optional[typing.Sequence[expression.Parameter]  |  GateSpecification] = None, specification: typing.Optional[GateSpecification  |  typing.Sequence[expression.Parameter]] = None, *, matrix: typing.Optional[GateSpecification] = None) -> GateDefinition:
+    def __new__(cls, name: builtins.str, parameters: typing.Optional[typing.Sequence[expression.Parameter  |  builtins.str]  |  GateSpecification] = None, specification: typing.Optional[GateSpecification  |  typing.Sequence[expression.Parameter  |  builtins.str]] = None, *, matrix: typing.Optional[GateSpecification  |  PauliSum  |  DefGateSequence  |  typing.Sequence[typing.Sequence[_quil.expression.Expression  |  MemoryReference  |  builtins.str  |  builtins.int  |  builtins.float  |  builtins.complex]]  |  typing.Sequence[builtins.int]] = None) -> GateDefinition:
         r"""
         Construct a new `GateDefinition` instance.
         

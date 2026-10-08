@@ -32,15 +32,17 @@ use super::*;
 use crate::{
     expression::{
         consts::{IMAGINARY_UNIT, ONE, ZERO},
-        quilpy::{quil_exp, ExpressionLike, Parameter, PyExpression, QualifiedExpression},
+        quilpy::{
+            quil_exp, ExpressionLike, Parameter, ParameterLike, PyExpression, QualifiedExpression,
+        },
     },
     instruction::gate::GateSignature,
     pickleable_new,
     quilpy::{
         aliased, deprecated_or_new, deprecated_param,
         errors::{self, PickleError},
-        impl_newargs, impl_stub_like, impl_to_quil, py_deprecated, singleton, IntoNewArgs, Migrate,
-        NewArgs, NonZeroU64, Seq, Seq2, Via,
+        impl_newargs, impl_stub_enum, impl_stub_like, impl_to_quil, py_deprecated, singleton,
+        FromLike, IntoNewArgs, Migrate, NewArgs, NonZeroU64, Seq, Seq2, Via,
     },
     validation::identifier::IdentifierValidationError,
 };
@@ -2139,20 +2141,21 @@ submit! {
             def __new__(
                 cls,
                 name: builtins.str,
-                parameters: pyo3_stub_gen.RustType["Vec<Parameter>"],
-                specification: pyo3_stub_gen.RustType["GateSpecification"],
+                parameters: pyo3_stub_gen.RustType["Vec<ParameterLike>"],
+                specification: pyo3_stub_gen.RustType["GateSpecificationLike"],
             ) -> GateDefinition:
                 """Return a new `GateDefinition` instance with the given name, parameters, and specification.
 
                 This is the preferred constructor.
                 """
 
+            @typing_extensions.deprecated("This constructor is deprecated; use the `(name, parameters, specification)` form instead.")
             @typing.overload
             def __new__(
                 cls,
                 name: builtins.str,
-                matrix: pyo3_stub_gen.RustType["Vec<Vec<ExpressionLike>>"],
-                parameters: pyo3_stub_gen.RustType["Option<Vec<Parameter>>"] = None,
+                matrix: pyo3_stub_gen.RustType["GateSpecificationLike"],
+                parameters: pyo3_stub_gen.RustType["Option<Vec<ParameterLike>>"] = None,
             ) -> GateDefinition:
                 """Return a new `GateDefinition` instance with the given name, matrix, and parameters.
 
@@ -2188,9 +2191,9 @@ impl GateDefinition {
     fn __new__(
         py: Python<'_>,
         name: String,
-        parameters: Option<Migrate<Seq2<Parameter, String>, GateSpecification>>,
-        specification: Option<Migrate<GateSpecification, Seq2<Parameter, String>>>,
-        matrix: Option<GateSpecification>,
+        parameters: Option<Migrate<Seq2<ParameterLike, String>, GateSpecification>>,
+        specification: Option<Migrate<GateSpecification, Seq2<ParameterLike, String>>>,
+        matrix: Option<Via<GateSpecificationLike, GateSpecification>>,
     ) -> PyResult<GateDefinition> {
         let (parameters, specification) = match (parameters, specification) {
             // Preferred constructor: `(name, parameters, specification)`.
@@ -2240,6 +2243,7 @@ impl GateDefinition {
             }
         };
 
+        let matrix = matrix.map(Via::into_inner);
         let specification = deprecated_or_new!(py, new = specification, old = matrix)?;
         let parameters = parameters.unwrap_or_default().into();
         Ok(Self::new(name, parameters, specification)?)
@@ -2265,6 +2269,9 @@ impl GateModifier {
         }
     }
 }
+
+// TODO: This whole implementation around `GateSpecification` is a bit of a mess.
+// It would maybe be nicer afterall to have separate subclasses for the different kinds.
 
 /// Allow constructing a [`GateSpecification`] directly from the shapes of data it wraps,
 /// without requiring users to first wrap them in e.g. `GateSpecification.Matrix(...)`.
@@ -2297,6 +2304,17 @@ impl<'a, 'py> FromPyObject<'a, 'py> for GateSpecification {
                 GateSpecification::classinfo_object(obj.py()),
             ))?
         }
+    }
+}
+
+#[derive(FromPyObject)]
+struct GateSpecificationLike(GateSpecification);
+impl_stub_enum!(GateSpecificationLike =
+    GateSpecification | PauliSum | DefGateSequence | Vec<Seq2<ExpressionLike, Expression>> | Vec<u64>);
+
+impl From<GateSpecificationLike> for GateSpecification {
+    fn from(value: GateSpecificationLike) -> Self {
+        value.0
     }
 }
 
