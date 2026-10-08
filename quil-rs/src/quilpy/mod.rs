@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
 
 use pyo3::exceptions::PyTypeError;
-use pyo3::types::{PyString, PyType};
+use pyo3::types::{DerefToPyAny, PyString, PyType};
 use pyo3::{prelude::*, types::PyTuple, PyClass, PyTypeCheck};
-use pyo3::{BoundObject, CastError};
+use pyo3::{BoundObject, CastError, PyTypeInfo};
 use rigetti_pyo3::create_init_submodule;
 
 #[cfg(feature = "stubs")]
@@ -512,6 +512,21 @@ impl<T: PyStubType, U> pyo3_stub_gen::PyStubType for Via<T, U> {
     }
 }
 
+/// Generate a new ZST that stubs as the union of the given types.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// impl_newargs!(MyNewArgs = Type1 | Type2 | Type3);
+/// ```
+///
+/// Expands to:
+///
+/// ```rust,ignore
+/// pub(crate) struct MyNewArgs;
+/// #[cfg(feature = "stubs")]
+/// pyo3_stub_gen::impl_stub_type!(MyNewArgs = Type1 | Type2 | Type3);
+/// ```
 macro_rules! impl_newargs {
     ($name:ident = $($typ:ty)|+) => {
         pub(crate) struct $name;
@@ -521,6 +536,24 @@ macro_rules! impl_newargs {
 }
 pub(crate) use impl_newargs;
 
+/// A trait that makes it simple to implement `__getnewargs__`.
+///
+/// Every type that implements [`IntoPyObject`] implements this trait,
+/// so you can write a `__getnewargs__` method for an enum that looks like this:
+///
+/// ```rust,ignore
+/// impl_getnewargs!(MyNewArgs = Variant1 | Variant2 | ...);
+/// #[pymethods]
+/// impl MyEnum {
+///     fn __getnewargs__(&self, py: Python<'py>) -> PyResult<NewArgs<'py, MyNewArgs>> {
+///         match self {
+///             MyEnum::Variant1(v) => v.clone().into_newargs(py),
+///             MyEnum::Variant2(v) => v.clone().into_newargs(py),
+///             // ...
+///         }
+///     }
+/// }
+/// ```
 pub(crate) trait IntoNewArgs<'py, T> {
     fn into_newargs(self, py: Python<'py>) -> PyResult<NewArgs<'py, T>>;
 }
@@ -614,18 +647,38 @@ impl From<CastAsError<'_, '_>> for PyErr {
     }
 }
 
-/// Blanket implementation of `CastAs`
-/// that checks against the Python type that `T` would convert into,
-/// according to its [`IntoPyObject`] implementation.
-// If there are too many types that implement `IntoPyObject<Target = PyAny>`,
-// it might be better just to write the relevant `CastAs`s manually.
-impl<T, U> CastAs for T
-where
-    T: for<'py> IntoPyObject<'py, Target = U>,
-    U: PyTypeCheck,
-{
+/// Blanket implementation of `CastAs` that sets `PyType = T` if `T` is [`IntoPyObject::Target`].
+///
+/// This avoids [`IntoPyObject::Target`] of [`PyAny`], by using [`DerefToPyAny`] as a bound,
+/// since it's specifically NOT implemented for [`PyAny`] itself,
+/// but is implemented fo basically every other Python object.
+///
+/// Note that if [`CastAs::PyType`] is [`PyAny`], then the `cast` will always succeed.
+/// Since the point of [`CastAs`] is to avoid the [cost of of an `extract` chain][extract-cost],
+/// using it as `PyType` would be counterproductive
+/// (though not necessarily incorrect, just as inefficient as not using `CastAs` at all).
+///
+/// [extract-cost]: https://pyo3.rs/v0.29.3/performance.html#extract-versus-cast
+impl<T: for<'py> IntoPyObject<'py, Target = U>, U: DerefToPyAny + PyTypeInfo> CastAs for T {
     type PyType = U;
 }
+
+macro_rules! impl_cast_as {
+    ($($PyType:ty),* $(,)?) => {
+        $(
+        impl<T: for<'py> IntoPyObject<'py, Target = $PyType>> CastAs for T {
+            type PyType = $PyType;
+        }
+        )*
+    };
+}
+
+impl_cast_as!(
+    // pyo3::types::PyInt,
+    // pyo3::types::PyString,
+    // pyo3::types::PyFloat,
+    // pyo3::types::PyComplex,
+);
 
 /// Attempts to extract `T` from a Python object.
 ///

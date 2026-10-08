@@ -13,10 +13,8 @@ use pyo3::{
         PyUserWarning, PyValueError,
     },
     prelude::*,
-    sync::PyOnceLock,
     types::{
         IntoPyDict as _, PyComplex, PyDict, PyFloat, PyFrozenSet, PyInt, PyList, PyString, PyTuple,
-        PyType,
     },
     CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyVisit,
 };
@@ -32,22 +30,19 @@ use super::*;
 use crate::{
     expression::{
         consts::{IMAGINARY_UNIT, ONE, ZERO},
-        quilpy::{
-            quil_exp, ExpressionLike, Parameter, ParameterLike, PyExpression, QualifiedExpression,
-        },
+        quilpy::{quil_exp, ExpressionLike, ParameterLike, PyExpression, QualifiedExpression},
     },
     instruction::gate::GateSignature,
     pickleable_new,
     quilpy::{
         aliased, deprecated_or_new, deprecated_param,
         errors::{self, PickleError},
-        impl_newargs, impl_stub_enum, impl_stub_like, impl_to_quil, py_deprecated, singleton,
-        FromLike, IntoNewArgs, Migrate, NewArgs, NonZeroU64, Seq, Seq2, Via,
+        impl_newargs, impl_stub_enum, impl_stub_like, impl_to_quil, py_deprecated,
+        singleton::{py_singleton, PyModuleSingletonExt},
+        IntoNewArgs, Migrate, NewArgs, NonZeroU64, Seq, Seq2, Via,
     },
     validation::identifier::IdentifierValidationError,
 };
-
-use singleton::{py_singleton, PyModuleSingletonExt};
 
 create_init_submodule! {
     classes: [
@@ -622,6 +617,11 @@ impl PyInstruction {
     fn parse(string: &str) -> PyResult<Instruction> {
         Ok(Instruction::from_str(string)?)
     }
+
+    // TODO: Determine which is better: the approach here (using a macro to add methods to
+    // subclasses of `PyInstruction`) or the approach in `quilpy::expression`
+    // which adds methods to `PyExpression`, but needs to extract `Bound<'_, PyExpression>`
+    // and use a `TryFrom<&'_ Bound<'_, PyExpression>> for Expression` to get the instance.
 }
 
 #[cfg(feature = "stubs")]

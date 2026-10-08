@@ -129,14 +129,12 @@ pub struct PyExpression;
 /// - `ExpressionLike` unifies all the things that can be taken from Python
 ///   and used in a context that requires an `Expression`.
 /// - `Expression` is the Rust-specific enum responsible for actual implementation logic;
-///   it explicitly requires the input is an existing `Expression` variant,
-///   not just something that can be converted into one.
+///   it typically shouldn't be the type of a parameter in Python-exposed methods and functions.
 /// - `PyExpression` is the base-class for all Python-exposed Expression types.
-///   If extracted, it has NO associated data, so it's mostly only useful for type-checking.
-///   For methods that should apply to all `Expression` variants,
-///   we can add them to the `#[pymethods] impl PyExpression` block,
-///   but must extract the `Bound<'_, PyExpression>` and use `Expression::try_from`
-///   to get the actual `Expression` variant.
+///   If extracted, it has NO associated data, so it's mostly only useful for type-checking,
+///   but it can be used as `Bound<'_, PyExpression>`, which is needed
+///   for its own `#[pymethods]` block to provide methods for all `Expression` variants.
+///   You can use `Expression::try_from` to get the actual `Expression` variant.
 ///
 // TODO: Now that `Expression` is _not_ a PyClass, can I use it as an input parameter?
 // FromPyObject is implemented manually to handle specifics around PyExpression subclassing.
@@ -1241,9 +1239,11 @@ mod macros {
 pub(crate) mod stubs {
     use pyo3_stub_gen::{impl_stub_type, runtime::PyRuntimeType, type_alias, PyStubType, TypeInfo};
 
+    use std::collections::HashSet;
+
     #[allow(clippy::wildcard_imports)]
     use super::*;
-    use std::collections::HashSet;
+    use crate::quilpy::union;
 
     impl PyStubType for QualifiedExpression {
         fn type_output() -> TypeInfo {
@@ -1278,25 +1278,39 @@ pub(crate) mod stubs {
         }
     }
 
+    // Note: In stubs, these expand to the (potential expansion of the) types on the right,
+    // so when sensible, prefer using a type alias, as it keeps things tidier.
+    // That said, only use a type alias if the type is semantically equivalent;
+    // otherwise, the longer type string is likely more appropriate and helpful.
     impl_stub_type!(Expression = PyExpression);
-    impl_stub_type!(
-        ExpressionLike = QualifiedExpression | MemoryReference | String | i64 | f64 | Complex64
-    );
-    impl_stub_type!(SubstitutionKey = String | MemoryReference);
+    impl_stub_type!(ExpressionLike = ExpressionDesignator | MemoryReference | String);
+    impl_stub_type!(SubstitutionKey = MemoryReference | String);
     impl_stub_type!(SubstitutionValue = Complex64 | Vec<Complex64>);
     impl_stub_type!(Evaluated = Expression | Complex64);
 
-    // Developer Note: Proper aliases MUST be added to the module in `post_init`!
+    // Note: Proper aliases MUST be added to the module in `post_init`!
     type_alias!(
         "quil._quil.expression",
         ExpressionValueDesignator = i64 | f64 | Complex64
     );
     type_alias!(
         "quil._quil.expression",
-        ExpressionDesignator = Expression | i64 | f64 | Complex64
+        ExpressionDesignator = Expression | ExpressionValueDesignator
     );
     type_alias!(
         "quil._quil.expression",
-        ParameterDesignator = ExpressionLike
+        ParameterDesignator = ExpressionDesignator | MemoryReference
     );
+
+    impl PyRuntimeType for ExpressionValueDesignator {
+        fn runtime_type_object(py: Python<'_>) -> PyResult<Bound<'_, PyAny>> {
+            union!(py, PyInt, PyFloat, PyComplex)
+        }
+    }
+
+    impl PyRuntimeType for ExpressionDesignator {
+        fn runtime_type_object(py: Python<'_>) -> PyResult<Bound<'_, PyAny>> {
+            union!(py, PyExpression, PyInt, PyFloat, PyComplex)
+        }
+    }
 }
