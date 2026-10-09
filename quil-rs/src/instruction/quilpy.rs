@@ -1834,37 +1834,27 @@ impl GateDefinition {
         specification: Option<Migrate<GateSpecification, Seq2<ParameterLike, String>>>,
         matrix: Option<Via<GateSpecificationLike, GateSpecification>>,
     ) -> PyResult<GateDefinition> {
-        let (parameters, specification) = match (parameters, specification) {
+        let (parameters, specification, deprecated_call) = match (parameters, specification) {
             // Preferred constructor: `(name, parameters, specification)`.
             (Some(Migrate::New(parameters)), Some(Migrate::New(specification))) => {
-                (Some(parameters), Some(specification))
+                (Some(parameters), Some(specification), false)
             }
-            (Some(Migrate::New(parameters)), None) => (Some(parameters), None),
-            (None, Some(Migrate::New(specification))) => (None, Some(specification)),
+            (Some(Migrate::New(parameters)), None) => (Some(parameters), None, false),
+            (None, Some(Migrate::New(specification))) => (None, Some(specification), false),
 
             // These imply the user gave `matrix` as a keyword argument,
             // or just left it out entirely, which are handled below with `deprecated_or_new!`.
-            (None, None) => (None, None),
+            (None, None) => (None, None, false),
             (None, Some(Migrate::Old(parameters))) => {
-                (Some(parameters), None)
+                (Some(parameters), None, false)
             },
 
             // Deprecated PyQuil v4 constructor: `(name, matrix, parameters=None)`.
             (Some(Migrate::Old(matrix)), None) => {
-                py_deprecated!(
-                    py,
-                    c"GateDefinition(name, matrix, parameters) is deprecated; \
-                      use GateDefinition(name, parameters, specification) instead"
-                )?;
-                (None, Some(matrix))
+                (None, Some(matrix), true)
             }
             (Some(Migrate::Old(matrix)), Some(Migrate::Old(parameters))) => {
-                py_deprecated!(
-                    py,
-                    c"GateDefinition(name, matrix, parameters) is deprecated; \
-                      use GateDefinition(name, parameters, specification) instead"
-                )?;
-                (Some(parameters), Some(matrix))
+                (Some(parameters), Some(matrix), true)
             }
 
             // If a user provided two specifications for some reason...
@@ -1884,6 +1874,17 @@ impl GateDefinition {
 
         let matrix = matrix.map(Via::into_inner);
         let specification = deprecated_or_new!(py, new = specification, old = matrix)?;
+
+        // We wait until we get here so that if the above check would raise an exception,
+        // we don't issue a deprecation warning first, because that's just confusing.
+        if deprecated_call {
+            py_deprecated!(
+                py,
+                c"GateDefinition(name, matrix, parameters) is deprecated; \
+                  use GateDefinition(name, parameters, specification) instead"
+            )?;
+        }
+
         let parameters = parameters.unwrap_or_default().into();
         Ok(Self::new(name, parameters, specification)?)
     }
