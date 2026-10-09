@@ -259,7 +259,10 @@ impl<T: WaveformData> CommonBuiltinParameters<T> {
         let sample_count_fract = duration * sample_rate;
         let sample_count = sample_count_fract.round();
         let misalignment = sample_count_fract - sample_count;
-        let max_misalignment = 1.0 / (sample_rate * 100.0);
+        let max_misalignment = 0.1 / sample_rate;
+        // We allow a 10% deviation from a perfectly integral number of samples in order to account
+        // for rounding error.  The 10% value was determined by trial and error and may have to
+        // change in the future.
 
         if sample_count < 0.0 || sample_count >= f64::from(u32::MAX) {
             Err(SamplingError::SampleCountOutOfRange {
