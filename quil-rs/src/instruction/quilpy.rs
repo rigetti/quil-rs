@@ -31,7 +31,9 @@ use super::*;
 use crate::{
     expression::{
         consts::{IMAGINARY_UNIT, ONE, ZERO},
-        quilpy::{quil_exp, ExpressionLike, ParameterLike, PyExpression, QualifiedExpression},
+        quilpy::{
+            quil_exp, ExpressionLike, Parameter, ParameterLike, PyExpression, QualifiedExpression,
+        },
     },
     instruction::gate::GateSignature,
     pickleable_new,
@@ -1372,18 +1374,24 @@ pickleable_new! {
 #[pymethods]
 impl CircuitDefinition {
     // TODO(migration-guide): PyQuil v4's constructor calls `qubit_variables` just `qubits`.
+    // `quil` certainly expects those to just be `str`s, but it's possible PyQuil allowed `Qubit`s.
     #[new]
     #[pyo3(signature = (name, parameters, qubit_variables=None, instructions=Vec::new(), *, qubits = None))]
     fn __new__<'py>(
         py: Python<'py>,
         name: String,
-        parameters: Vec<String>,
+        parameters: Seq2<ParameterLike, String>,
         qubit_variables: Option<Vec<String>>,
         instructions: Vec<Instruction>,
         qubits: Option<Vec<String>>,
     ) -> PyResult<Self> {
         let qubit_variables = deprecated_or_new!(py, new = qubit_variables, old = qubits)?;
-        Ok(Self::new(name, parameters, qubit_variables, instructions))
+        Ok(Self::new(
+            name,
+            parameters.into(),
+            qubit_variables,
+            instructions,
+        ))
     }
 
     #[expect(clippy::type_complexity)]
