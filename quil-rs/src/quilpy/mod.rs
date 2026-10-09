@@ -626,6 +626,8 @@ where
 }
 
 /// A trait for stating what Python type to check against before trying to extract a Rust type.
+///
+/// This, together with [`CastWrap`], is mainly to enable some macro magic below.
 pub(crate) trait CastAs {
     type PyType: PyTypeCheck;
 }
@@ -664,6 +666,8 @@ impl<T: for<'py> IntoPyObject<'py, Target = U>, U: DerefToPyAny + PyTypeInfo> Ca
     type PyType = U;
 }
 
+// TODO: remove this dead code if it isn't needed.
+/* Alternatively, this macro could be used to implement `CastAs` a bit more explicitly:
 macro_rules! impl_cast_as {
     ($($PyType:ty),* $(,)?) => {
         $(
@@ -675,11 +679,12 @@ macro_rules! impl_cast_as {
 }
 
 impl_cast_as!(
-    // pyo3::types::PyInt,
-    // pyo3::types::PyString,
-    // pyo3::types::PyFloat,
-    // pyo3::types::PyComplex,
+    pyo3::types::PyInt,
+    pyo3::types::PyString,
+    pyo3::types::PyFloat,
+    pyo3::types::PyComplex,
 );
+*/
 
 /// Attempts to extract `T` from a Python object.
 ///
@@ -696,16 +701,6 @@ where
             .extract::<T>()
             .map_err(|pyerr| CastAsError::Extract(pyerr.into()))
             .map(CastWrap)
-    }
-}
-
-pub(crate) trait FromLike<T> {
-    fn from_like(value: T) -> Self;
-}
-
-impl<T, U: From<T>> FromLike<T> for U {
-    fn from_like(value: T) -> Self {
-        U::from(value)
     }
 }
 
@@ -933,7 +928,7 @@ macro_rules! impl_stub_like {
                     Ok(Self(obj.extract()?))
                 }$( else if let Ok(obj) = $crate::quilpy::CastWrap::<$variant_ty>::try_from(obj) {
                     Ok(Self(
-                        <$base_ty as $crate::quilpy::FromLike<$variant_ty>>::from_like(obj.0)
+                        <$variant_ty as std::convert::Into<$base_ty>>::into(obj.0)
                     ))
                 })* else {
                     Err(CastError::new(obj, <$base_ty as pyo3::type_object::PyTypeCheck>::classinfo_object(obj.py())))?

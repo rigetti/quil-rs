@@ -146,10 +146,20 @@ class Arithmetic(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -240,10 +250,20 @@ class BinaryLogic(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -327,6 +347,10 @@ class CalibrationDefinition(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def from_parts(name: builtins.str, parameters: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], instructions: typing.Sequence[Instruction], modifiers: typing.Optional[typing.Sequence[GateModifier]]) -> CalibrationDefinition:
         r"""
@@ -338,6 +362,12 @@ class CalibrationDefinition(Instruction):
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -442,10 +472,20 @@ class Call(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -535,6 +575,10 @@ class Capture(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     def get_qubit_indices(self) -> builtins.set[builtins.int]:
         r"""
         Return the fixed qubit indices used by this instruction's `frame`.
@@ -545,6 +589,12 @@ class Capture(Instruction):
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -574,10 +624,20 @@ class CircuitDefinition(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -607,10 +667,20 @@ class Comparison(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -671,10 +741,20 @@ class Convert(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -719,6 +799,10 @@ class Declaration(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     def asdict(self) -> builtins.dict[builtins.str, builtins.list[builtins.tuple[builtins.int, builtins.str]] | builtins.str | builtins.int | None]:
         r"""
         Get the DECLARE directive as a dictionary.
@@ -731,6 +815,12 @@ class Declaration(Instruction):
     def offsets(self) -> builtins.list[tuple[builtins.int, builtins.str]]:
         r"""
         Get the offsets for this declaration.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -954,6 +1044,10 @@ class Delay(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def from_frames(duration: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str, frames: typing.Sequence[FrameIdentifier]) -> Delay:
         r"""
@@ -967,6 +1061,12 @@ class Delay(Instruction):
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -986,10 +1086,20 @@ class Exchange(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -1141,10 +1251,20 @@ class Fence(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -1180,11 +1300,21 @@ class FrameDefinition(Instruction):
         [`Debug`](std::fmt::Debug) implementation.
         """
     def __setitem__(self, name: builtins.str, value: AttributeValue  |  expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str) -> None: ...
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     def get_attribute(self, name: builtins.str) -> typing.Optional[AttributeValue]: ...
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def set_attribute(self, name: builtins.str, value: AttributeValue  |  expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str) -> None: ...
     def to_quil(self) -> builtins.str: ...
@@ -1360,10 +1490,20 @@ class GateDefinition(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -1479,15 +1619,21 @@ class HaltType(Instruction):
         
         [`pickling`]: https://docs.python.org/3/library/pickle.html#object.__reduce__
         """
-    def __repr__(self) -> builtins.str:
+    def __repr__(self) -> builtins.str: ...
+    def __str__(self) -> builtins.str:
         r"""
-        Implements `__repr__` for Python in terms of the Rust
-        [`Debug`](std::fmt::Debug) implementation.
+        Get a Quil-like representation as a string.
         """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -1505,10 +1651,20 @@ class Include(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -1544,10 +1700,33 @@ class Instruction:
     """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __hash__(self) -> builtins.int: ...
+    def __new__(cls, arg: Instruction, /) -> Instruction:
+        r"""
+        Ensure the given argument is an ``Instruction`` instance.
+        
+        If the input is already an ``Instruction``, this returns it unchanged.
+        If it can be converted into one, it'll be converted and returned.
+        """
+    @staticmethod
+    def is_quil_t() -> bool:
+        r"""
+        Return true if the instruction is a Quil-T instruction, and false otherwise.
+        """
     @staticmethod
     def parse(string: builtins.str) -> Instruction:
         r"""
-        Parse an [`Instruction`] from a string.
+        Parse an ``Instruction`` from a string.
+        """
+    def to_quil(self) -> builtins.str:
+        r"""
+        Convert this ``Instruction`` to a Quil string, or raise an error if it is not valid Quil.
+        """
+    def to_quil_or_debug(self) -> builtins.str:
+        r"""
+        Return a string in valid Quil syntax if possible.
+        
+        Any individual component of this object which cannot be represented in Quil
+        will be replaced with a ``__repr__`` representation of that component.
         """
 
 class InstructionError(_quil.QuilError):
@@ -1570,10 +1749,20 @@ class Jump(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -1596,10 +1785,20 @@ class JumpUnless(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -1622,10 +1821,20 @@ class JumpWhen(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -1752,10 +1961,20 @@ class Load(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -1797,12 +2016,22 @@ class MeasureCalibrationDefinition(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def from_calibration(identifier: MeasureCalibrationIdentifier, instructions: typing.Sequence[Instruction]) -> MeasureCalibrationDefinition: ...
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -1874,10 +2103,20 @@ class Measurement(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -1980,10 +2219,20 @@ class Move(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -2007,15 +2256,21 @@ class NopType(Instruction):
         
         [`pickling`]: https://docs.python.org/3/library/pickle.html#object.__reduce__
         """
-    def __repr__(self) -> builtins.str:
+    def __repr__(self) -> builtins.str: ...
+    def __str__(self) -> builtins.str:
         r"""
-        Implements `__repr__` for Python in terms of the Rust
-        [`Debug`](std::fmt::Debug) implementation.
+        Get a Quil-like representation as a string.
         """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -2485,10 +2740,20 @@ class Pragma(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -2545,6 +2810,10 @@ class Pulse(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     def get_qubit_indices(self) -> builtins.set[builtins.int]:
         r"""
         Return the fixed qubit indices used by this instruction's `frame`.
@@ -2556,6 +2825,12 @@ class Pulse(Instruction):
         r"""
         Returns true if the instruction is a Quil-T instruction.
         """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
@@ -2566,6 +2841,16 @@ class Qubit:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -2649,6 +2934,10 @@ class RawCapture(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     def get_qubit_indices(self) -> builtins.set[builtins.int]:
         r"""
         Return the fixed qubit indices used by this instruction's `frame`.
@@ -2659,6 +2948,12 @@ class RawCapture(Instruction):
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -2679,6 +2974,10 @@ class Reset(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     def get_qubit_indices(self) -> typing.Optional[builtins.set[builtins.int]]:
         r"""
         Return `None` if the `Reset` has no `Qubit`,
@@ -2689,6 +2988,12 @@ class Reset(Instruction):
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -2709,6 +3014,10 @@ class SetFrequency(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     def get_qubit_indices(self) -> builtins.set[builtins.int]:
         r"""
         Return the fixed qubit indices used by this instruction's `frame`.
@@ -2719,6 +3028,12 @@ class SetFrequency(Instruction):
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -2738,6 +3053,10 @@ class SetPhase(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     def get_qubit_indices(self) -> builtins.set[builtins.int]:
         r"""
         Return the fixed qubit indices used by this instruction's `frame`.
@@ -2748,6 +3067,12 @@ class SetPhase(Instruction):
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -2767,6 +3092,10 @@ class SetScale(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     def get_qubit_indices(self) -> builtins.set[builtins.int]:
         r"""
         Return the fixed qubit indices used by this instruction's `frame`.
@@ -2777,6 +3106,12 @@ class SetScale(Instruction):
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -2813,6 +3148,10 @@ class ShiftFrequency(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     def get_qubit_indices(self) -> builtins.set[builtins.int]:
         r"""
         Return the fixed qubit indices used by this instruction's `frame`.
@@ -2823,6 +3162,12 @@ class ShiftFrequency(Instruction):
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -2842,6 +3187,10 @@ class ShiftPhase(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     def get_qubit_indices(self) -> builtins.set[builtins.int]:
         r"""
         Return the fixed qubit indices used by this instruction's `frame`.
@@ -2852,6 +3201,12 @@ class ShiftPhase(Instruction):
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -2879,10 +3234,20 @@ class Store(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -2905,6 +3270,10 @@ class SwapPhases(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     def get_qubit_indices(self) -> builtins.set[builtins.int]:
         r"""
         Return the fixed qubit indices used by this instruction's `frame`.
@@ -2916,6 +3285,12 @@ class SwapPhases(Instruction):
         r"""
         Returns true if the instruction is a Quil-T instruction.
         """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
@@ -2926,6 +3301,16 @@ class Target:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -3006,10 +3391,20 @@ class UnaryLogic(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -3051,15 +3446,21 @@ class WaitType(Instruction):
         
         [`pickling`]: https://docs.python.org/3/library/pickle.html#object.__reduce__
         """
-    def __repr__(self) -> builtins.str:
+    def __repr__(self) -> builtins.str: ...
+    def __str__(self) -> builtins.str:
         r"""
-        Implements `__repr__` for Python in terms of the Rust
-        [`Debug`](std::fmt::Debug) implementation.
+        Get a Quil-like representation as a string.
         """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -3102,6 +3503,10 @@ class WaveformDefinition(Instruction):
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
     @staticmethod
     def from_waveform(name: builtins.str, definition: Waveform) -> WaveformDefinition:
         r"""
@@ -3111,6 +3516,12 @@ class WaveformDefinition(Instruction):
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...

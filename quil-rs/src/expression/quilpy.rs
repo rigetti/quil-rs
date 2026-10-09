@@ -437,7 +437,10 @@ impl PyExpression {
     }
 
     fn to_quil_or_debug(slf: &Bound<'_, Self>) -> PyResult<String> {
-        Ok(Expression::try_from(slf)?.to_quil_or_debug())
+        Ok(slf
+            .as_borrowed()
+            .extract::<ExpressionView<'_>>()?
+            .to_quil_or_debug())
     }
 
     fn __repr__(slf: &Bound<'_, Self>) -> PyResult<String> {
@@ -705,11 +708,15 @@ py_singleton!(PiType, "Pi", |py| {
 #[cfg(feature = "stubs")]
 pyo3_stub_gen::module_variable!("quil._quil.expression", "Pi", PiType);
 
+// TODO(migration-guide): In PyQuil v4, there wasn't a dedicated `Pi` type.
+// To convert to/from the `Expression::PiConstant` variant, it used `numpy.pi` instead.
+// It's perhaps worth noting that the `__str__`/`__repr__` implementatinos of `numpy.pi`
+// are string representations of its floating point value (`"3.14..."`).
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl PiType {
     fn __str__(&self) -> &'static str {
-        "pi"
+        "π"
     }
 
     fn __repr__(&self) -> &'static str {
