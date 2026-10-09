@@ -2,8 +2,8 @@ use std::marker::PhantomData;
 
 use pyo3::exceptions::PyTypeError;
 use pyo3::types::{DerefToPyAny, PyString, PyType};
+use pyo3::PyTypeInfo;
 use pyo3::{prelude::*, types::PyTuple, PyClass, PyTypeCheck};
-use pyo3::{BoundObject, CastError, PyTypeInfo};
 use rigetti_pyo3::create_init_submodule;
 
 #[cfg(feature = "stubs")]
@@ -17,6 +17,7 @@ use crate::waveform;
 
 pub(crate) mod deprecations;
 pub(crate) mod errors;
+pub(crate) mod memory;
 pub(crate) mod migrations;
 pub(crate) mod singleton;
 

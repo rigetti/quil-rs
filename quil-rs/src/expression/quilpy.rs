@@ -16,6 +16,7 @@ use crate::{
     quil::Quil,
     quilpy::{
         errors::{self, ValueError},
+        memory::{PyMemRef, TryAsBorrowed},
         singleton::{py_singleton, PyModuleSingletonExt},
     },
 };
@@ -32,10 +33,10 @@ create_init_submodule! {
 
         // Python-specific types without a direct Rust equivalent.
         PyExpression,
-        Address,
         Number,
         Parameter,
         PiType,
+        Address, // TODO: Make DeclarationAt or something work here instead.
     ],
     errors: [ errors::EvaluationError, errors::ParseExpressionError ],
     funcs: [
@@ -189,6 +190,7 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ExpressionLike {
 impl<'a, 'py> FromPyObject<'a, 'py> for ExpressionView<'a> {
     type Error = CastError<'a, 'py>;
 
+    // TODO: Handle more Memory types -- likely drop Address in favor of PyMemRef or something.
     fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
         if let Ok(obj) = obj.cast_exact::<Parameter>() {
             Ok(obj.get().as_view())
@@ -239,7 +241,9 @@ impl<'a, 'py> TryFrom<&'a Bound<'py, PyExpression>> for Expression {
         } else if let Ok(slf) = value.cast_exact::<Parameter>() {
             Ok(Expression::Variable(slf.get().name.clone()))
         } else if let Ok(slf) = value.cast_exact::<Address>() {
-            Ok(Expression::Address(slf.get().memory_reference.clone()))
+            Ok(Expression::Address(
+                slf.get().memory_reference.get().clone(),
+            ))
         } else {
             Err(CastError::new(
                 value.as_any().as_borrowed(),
@@ -319,9 +323,10 @@ impl<'py> IntoPyObject<'py> for Expression {
 
     fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
         match self {
-            Expression::Address(memory_reference) => {
-                Address { memory_reference }.into_bound_py_any(py)
+            Expression::Address(memory_reference) => Address {
+                memory_reference: memory_reference.into_pyobject(py)?.unbind(),
             }
+            .into_bound_py_any(py),
             Expression::Variable(name) => Parameter { name }.into_bound_py_any(py),
             Expression::Number(value) => Number { value }.into_bound_py_any(py),
             Expression::PiConstant => PiType.into_bound_py_any(py),
@@ -805,45 +810,106 @@ pickleable_new! {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Parameter {
+    fn __match_args__(&self) -> (&str,) {
+        (&self.name,)
+    }
+}
+
 /// A memory reference embedded in an expression, e.g. ``theta[0]``.
 ///
 /// This corresponds to the [`Expression::Address`] variant.
 /// It's a distinct type from [`MemoryReference`] because a [`MemoryReference`] properly
 /// is a kind of Quil instruction (and hence a `quil` [`Instruction`]),
 /// whereas an [`Address`] is the use of a memory reference within an expression.
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Debug)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.expression", extends = PyExpression, eq, frozen, hash, from_py_object, get_all)
+    pyo3::pyclass(module = "quil._quil.expression", extends = PyExpression, eq, frozen, hash, skip_from_py_object, get_all)
 )]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub(crate) struct Address {
     /// The underlying memory reference, e.g. `theta[0]`.
-    memory_reference: MemoryReference,
+    memory_reference: Py<MemoryReference>,
 }
+// TODO: Can this be united with `DeclarationAt`?
+
+impl FromPyObject<'_, '_> for Address {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'_, '_, PyAny>) -> Result<Self, Self::Error> {
+        let memref = if let Ok(value) = obj.cast::<Address>() {
+            Ok(value.get().memory_reference.clone_ref(obj.py()))
+        } else if let Ok(memref) = obj.cast::<MemoryReference>() {
+            Ok(memref.to_owned().unbind())
+        } else {
+            Err(CastError::new(
+                obj,
+                <Address as PyTypeCheck>::classinfo_object(obj.py()),
+            ))
+        }?;
+        Ok(Self {
+            memory_reference: memref,
+        })
+    }
+}
+
+impl Hash for Address {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.memory_reference.get().hash(state)
+    }
+}
+
+impl PartialEq for Address {
+    fn eq(&self, other: &Self) -> bool {
+        self.memory_reference.get() == other.memory_reference.get()
+    }
+}
+
+impl Eq for Address {}
 
 impl From<Address> for Expression {
     fn from(val: Address) -> Self {
-        Expression::Address(val.memory_reference)
+        Expression::Address(val.memory_reference.get().clone())
     }
 }
 
 impl AsView for Address {
     fn as_view(&self) -> ExpressionView<'_> {
-        ExpressionView::Address(&self.memory_reference)
+        ExpressionView::Address(self.memory_reference.get())
     }
 }
 
 impl AsView for Bound<'_, Address> {
     fn as_view(&self) -> ExpressionView<'_> {
-        ExpressionView::Address(&self.get().memory_reference)
+        ExpressionView::Address(self.get().memory_reference.get())
     }
 }
 
-pickleable_new! {
-    impl Address {
-        fn __new__(memory_reference: MemoryReference);
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Address {
+    #[new]
+    fn __new__<'py>(py: Python<'py>, memory_reference: PyMemRef<'py>) -> PyResult<Self> {
+        let memref = memory_reference
+            .try_borrow()
+            .map(|memref| Ok(memref.to_owned().unbind()))
+            .unwrap_or_else(|| Py::new(py, MemoryReference::from(memory_reference)))?;
+
+        Ok(Self {
+            memory_reference: memref,
+        })
+    }
+
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> (&Bound<'py, MemoryReference>,) {
+        (self.memory_reference.bind(py),)
+    }
+
+    fn __match_args__<'py>(&self, py: Python<'py>) -> (&Bound<'py, MemoryReference>,) {
+        (self.memory_reference.bind(py),)
     }
 }
 
@@ -884,12 +950,6 @@ impl AsView for Bound<'_, Number> {
     }
 }
 
-pickleable_new! {
-    impl Number {
-        fn __new__(value: Complex64);
-    }
-}
-
 impl PartialEq for Number {
     fn eq(&self, other: &Self) -> bool {
         self.as_view() == other.as_view()
@@ -901,6 +961,20 @@ impl Eq for Number {}
 impl Hash for Number {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.as_view().hash(state)
+    }
+}
+
+pickleable_new! {
+    impl Number {
+        fn __new__(value: Complex64);
+    }
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Number {
+    fn __match_args__(&self) -> (Complex64,) {
+        (self.value,)
     }
 }
 
@@ -923,6 +997,10 @@ impl InfixExpression {
 
     fn __getnewargs__(&self) -> (Expression, InfixOperator, Expression) {
         (self.left(), self.operator, self.right())
+    }
+
+    fn __match_args__(&self) -> (Expression, InfixOperator, Expression) {
+        self.__getnewargs__()
     }
 
     #[getter]
@@ -960,6 +1038,10 @@ impl PrefixExpression {
         (self.operator, self.expression())
     }
 
+    fn __match_args__(&self) -> (PrefixOperator, Expression) {
+        self.__getnewargs__()
+    }
+
     #[getter]
     fn expression(&self) -> Expression {
         (*self.expression).clone()
@@ -988,6 +1070,10 @@ impl FunctionCallExpression {
 
     fn __getnewargs__(&self) -> (ExpressionFunction, Expression) {
         (self.function, self.expression())
+    }
+
+    fn __match_args__(&self) -> (ExpressionFunction, Expression) {
+        self.__getnewargs__()
     }
 
     #[getter]
