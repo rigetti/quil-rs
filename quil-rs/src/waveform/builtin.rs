@@ -259,10 +259,7 @@ impl<T: WaveformData> CommonBuiltinParameters<T> {
         let sample_count_fract = duration * sample_rate;
         let sample_count = sample_count_fract.round();
         let misalignment = sample_count_fract - sample_count;
-        let max_misalignment = 0.1 / sample_rate;
-        // We allow a 10% deviation from a perfectly integral number of samples in order to account
-        // for rounding error.  The 10% value was determined by trial and error and may have to
-        // change in the future.
+        let max_misalignment = SAMPLE_RATE_MISALIGNMENT_TOLERANCE / sample_rate;
 
         if sample_count < 0.0 || sample_count >= f64::from(u32::MAX) {
             Err(SamplingError::SampleCountOutOfRange {
@@ -686,6 +683,17 @@ impl<T: WaveformData> BuiltinWaveform<Partial<T>> {
 ////////////////////////////////////////////////////////////////////////////////
 // IQ sample computation
 ////////////////////////////////////////////////////////////////////////////////
+
+/// When [computing the IQ values for a
+/// waveform][BuiltinWaveformParameters::iq_values_at_sample_rate], we require that the duration be
+/// an integer number of samples.  Due to floating-point imprecision, values that look correctly
+/// specified may be slightly off from a true integer.  This constant defines the allowed error in a
+/// provided duration, given as a fractional number of samples.  This value is provided for
+/// informational purposes only, and may change in minor releases of `quil-rs`.
+#[cfg_attr(feature = "python", pyo3::prelude::pymodule_export)]
+pub const SAMPLE_RATE_MISALIGNMENT_TOLERANCE: f64 = 0.1;
+// The value of 10% we're using for now was determined by trial and error and may have to change in
+// the future.
 
 impl BuiltinWaveformParameters for BuiltinWaveform<Concrete> {
     fn iq_values_at_sample_rate(
