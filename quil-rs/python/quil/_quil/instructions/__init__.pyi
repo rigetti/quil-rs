@@ -1700,7 +1700,7 @@ class Instruction:
     """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, arg: Instruction, /) -> Instruction:
+    def __new__(cls, arg: typing.Any, /) -> Instruction:
         r"""
         Ensure the given argument is an ``Instruction`` instance.
         
@@ -1708,7 +1708,7 @@ class Instruction:
         If it can be converted into one, it'll be converted and returned.
         """
     @staticmethod
-    def is_quil_t() -> bool:
+    def is_quil_t() -> builtins.bool:
         r"""
         Return true if the instruction is a Quil-T instruction, and false otherwise.
         """
