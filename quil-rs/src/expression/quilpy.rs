@@ -810,14 +810,6 @@ pickleable_new! {
     }
 }
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl Parameter {
-    fn __match_args__(&self) -> (&str,) {
-        (&self.name,)
-    }
-}
-
 /// A memory reference embedded in an expression, e.g. ``theta[0]``.
 ///
 /// This corresponds to the [`Expression::Address`] variant.
@@ -908,8 +900,8 @@ impl Address {
         (self.memory_reference.bind(py),)
     }
 
-    fn __match_args__<'py>(&self, py: Python<'py>) -> (&Bound<'py, MemoryReference>,) {
-        (self.memory_reference.bind(py),)
+    fn __match_args__(&self) -> (&str,) {
+        ("memory_reference",)
     }
 }
 
@@ -972,14 +964,6 @@ pickleable_new! {
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
-impl Number {
-    fn __match_args__(&self) -> (Complex64,) {
-        (self.value,)
-    }
-}
-
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
 impl InfixExpression {
     // TODO: Augment `pickleable_new` to handle conversions like the kinds used here:
     // - extract `ExpressionLike` and use its TypeStub impl
@@ -999,8 +983,8 @@ impl InfixExpression {
         (self.left(), self.operator, self.right())
     }
 
-    fn __match_args__(&self) -> (Expression, InfixOperator, Expression) {
-        self.__getnewargs__()
+    fn __match_args__(&self) -> (&str, &str, &str) {
+        ("left", "operator", "right")
     }
 
     #[getter]
@@ -1038,8 +1022,8 @@ impl PrefixExpression {
         (self.operator, self.expression())
     }
 
-    fn __match_args__(&self) -> (PrefixOperator, Expression) {
-        self.__getnewargs__()
+    fn __match_args__(&self) -> (&str, &str) {
+        ("operator", "expression")
     }
 
     #[getter]
@@ -1072,8 +1056,8 @@ impl FunctionCallExpression {
         (self.function, self.expression())
     }
 
-    fn __match_args__(&self) -> (ExpressionFunction, Expression) {
-        self.__getnewargs__()
+    fn __match_args__(&self) -> (&str, &str) {
+        ("function", "expression")
     }
 
     #[getter]

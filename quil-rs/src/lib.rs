@@ -47,8 +47,6 @@ pub mod units;
 pub mod validation;
 pub mod waveform;
 
-use std::marker::PhantomData;
-
 pub use program::Program;
 
 #[cfg(feature = "python")]
@@ -210,6 +208,10 @@ macro_rules! pickleable_new {
                 (
                     $((self.$field).clone(),)*
                 )
+            }
+
+            fn __match_args__<'py>(&self, py: pyo3::Python<'py>) -> pyo3::PyResult<pyo3::Bound<'py, pyo3::types::PyTuple>> {
+                pyo3::types::PyTuple::new(py, &[$( stringify!($field) ),*])
             }
         }
     };
