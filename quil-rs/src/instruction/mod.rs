@@ -88,6 +88,8 @@ pub enum ValidationError {
     DefGateSequenceError(#[from] DefGateSequenceError),
 }
 
+// TODO(migration-guide): Halt, Nop, and Wait are unit variants again.
+
 /// A Quil instruction.
 ///
 /// Each variant corresponds to a possible type of Quil instruction,

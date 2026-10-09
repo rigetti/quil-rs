@@ -17,7 +17,7 @@ use pyo3::{
         IntoPyDict as _, PyComplex, PyDict, PyFloat, PyFrozenSet, PyInt, PyNotImplemented,
         PyString, PyTuple,
     },
-    CastError, IntoPyObjectExt, PyTypeCheck,
+    CastError, IntoPyObjectExt, PyClass, PyTypeCheck, PyTypeInfo,
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -582,6 +582,9 @@ macro_rules! impl_instruction {
     };
 }
 
+// TODO(perf,style): Determine if *all* `PyInstruction` subclasses can be marked `frozen`.
+// If so, we could likely make better use of `.get()` for frozen instances.
+
 // As described in the macro's docstring, those prefixed with `*` are `PyInstruction` subclasses,
 // parentheses are variant modifications, and square brackets are methods options,
 // the latter supporting `+ ..` to expand to `+ repr + quil`:
@@ -720,8 +723,14 @@ impl PyInstruction {
     /// If it can be converted into one, it'll be converted and returned.
     #[new]
     #[pyo3(signature = (arg, /))]
-    fn __new__(arg: Instruction) -> Instruction {
-        arg
+    fn __new__<'py>(arg: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyInstruction>> {
+        if let Ok(inst) = arg.cast::<PyInstruction>() {
+            Ok(inst.to_owned())
+        } else if let Ok(inst) = arg.extract::<Instruction>() {
+            Ok(inst.into_pyobject(arg.py())?.cast_into::<PyInstruction>()?)
+        } else {
+            Err(CastError::new(arg.as_borrowed(), PyInstruction::classinfo_object(arg.py())).into())
+        }
     }
 
     /// Parse an ``Instruction`` from a string.
@@ -730,10 +739,14 @@ impl PyInstruction {
         Ok(Instruction::from_str(string)?)
     }
 
+    // TODO(style,perf): Is it better to make these "abstract", or should we forward an implementation?
+    // With `quilpy::expression`, we take a different approach:
+    // we have a `TryFrom<&'_ Bound<'_, PyExpression>> for Expression` that can get an instance,
+    // and add methods to `PyExpression` directly (but needs to extract `Bound<'_, PyExpression>`).
+
     /// Convert this ``Instruction`` to a Quil string, or raise an error if it is not valid Quil.
     fn to_quil(slf: &Bound<'_, Self>) -> PyResult<String> {
-        // TODO(perf): See if we can find a way to avoid extracting the `Instruction` instance.
-        Ok(slf.as_borrowed().extract::<Instruction>()?.to_quil()?)
+        Err(not_impl("to_quil", slf))
     }
 
     /// Return a string in valid Quil syntax if possible.
@@ -741,25 +754,26 @@ impl PyInstruction {
     /// Any individual component of this object which cannot be represented in Quil
     /// will be replaced with a ``__repr__`` representation of that component.
     fn to_quil_or_debug(slf: &Bound<'_, Self>) -> PyResult<String> {
-        // TODO(perf): See if we can find a way to avoid extracting the `Instruction` instance.
-        Ok(slf
-            .as_borrowed()
-            .extract::<Instruction>()?
-            .to_quil_or_debug())
+        Err(not_impl("to_quil_or_debug", slf))
     }
 
     /// Return true if the instruction is a Quil-T instruction, and false otherwise.
     #[staticmethod]
-    #[gen_stub(override_return_type(type_repr = "bool"))]
-    fn is_quil_t<'py>(py: Python<'py>) -> Bound<'py, PyNotImplemented> {
-        // TODO(style): Is it better to make this "abstract", or should we forward an implementation?
-        PyNotImplemented::get(py).to_owned()
+    fn is_quil_t(slf: &Bound<'_, Self>) -> PyResult<bool> {
+        Err(not_impl("is_quil_t", slf))
+    }
+}
+
+fn not_impl<'py>(method: &'static str, obj: &Bound<'py, PyAny>) -> PyErr {
+    if let Ok(name) = obj.get_type().name() {
+        if let Ok(name_str) = name.to_str() {
+            return PyNotImplementedError::new_err(format!(
+                "`{method}` is not implemented for {name_str}"
+            ));
+        }
     }
 
-    // TODO(perf): Determine which is better: the approach here (using a macro to add methods to
-    // subclasses of `PyInstruction`) or the approach in `quilpy::expression`
-    // which adds methods to `PyExpression`, but needs to extract `Bound<'_, PyExpression>`
-    // and use a `TryFrom<&'_ Bound<'_, PyExpression>> for Expression` to get the instance.
+    PyNotImplementedError::new_err(format!("`{method}` is not implemented for this type"))
 }
 
 #[cfg(feature = "stubs")]
