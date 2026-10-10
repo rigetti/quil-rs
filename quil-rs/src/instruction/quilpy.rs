@@ -4853,8 +4853,8 @@ impl_stub_like!(
 #[pymethods]
 impl Qubit {
     #[new]
-    fn __new__(qubit: QubitLike) -> Self {
-        qubit.into()
+    fn __new__<'py>(qubit: QubitLike, py: Python<'py>) -> PyResult<Bound<'py, Self>> {
+        Qubit::from(qubit).into_pyobject(py)
     }
 
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<NewArgs<'py, QubitLike>> {
