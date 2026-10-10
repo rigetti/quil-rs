@@ -413,6 +413,24 @@ impl<T, U> From<Seq2<T, U>> for Vec<U> {
     }
 }
 
+impl<T, U> IntoIterator for Seq<T, U> {
+    type Item = <Vec<U> as IntoIterator>::Item;
+    type IntoIter = <Vec<U> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl<T, U> IntoIterator for Seq2<T, U> {
+    type Item = <Vec<U> as IntoIterator>::Item;
+    type IntoIter = <Vec<U> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
 #[cfg(feature = "stubs")]
 impl<T: PyStubType, U> pyo3_stub_gen::PyStubType for Seq<T, U> {
     fn type_input() -> pyo3_stub_gen::TypeInfo {
@@ -432,6 +450,79 @@ impl<T: PyStubType, U> pyo3_stub_gen::PyStubType for Seq2<T, U> {
 
     fn type_output() -> pyo3_stub_gen::TypeInfo {
         <Vec<T> as PyStubType>::type_output()
+    }
+}
+
+/// Extractor for Python arguments that may be a single instance or a sequence of instances.
+pub(crate) enum OneOrMore<T, U = T> {
+    One(U),
+    More(Seq2<T, U>),
+}
+
+impl<'py, T, U> FromPyObject<'_, 'py> for OneOrMore<T, U>
+where
+    for<'a> T: FromPyObject<'a, 'py> + TryInto<U>,
+    U: ToOwned<Owned = U>,
+    for<'a> <T as TryInto<U>>::Error: Into<PyErr>,
+{
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'_, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(obj) = obj.extract::<T>() {
+            let item = obj.try_into().map_err(Into::into)?;
+            return Ok(Self::One(item));
+        }
+        obj.extract::<Seq2<T, U>>().map(Self::More)
+    }
+}
+
+#[cfg(feature = "stubs")]
+impl<T, U> PyStubType for OneOrMore<T, U>
+where
+    T: PyStubType,
+{
+    fn type_input() -> pyo3_stub_gen::TypeInfo {
+        <T as PyStubType>::type_input() | <Vec<T> as PyStubType>::type_input()
+    }
+
+    fn type_output() -> pyo3_stub_gen::TypeInfo {
+        <T as PyStubType>::type_output() | <Vec<T> as PyStubType>::type_output()
+    }
+}
+
+/// An iterator over a `OneOrMore<T, U>`.
+pub(crate) enum OneOrMoreIter<U> {
+    One(std::iter::Once<U>),
+    More(std::vec::IntoIter<U>),
+}
+
+impl<T, U> IntoIterator for OneOrMore<T, U> {
+    type Item = U;
+    type IntoIter = OneOrMoreIter<U>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            OneOrMore::One(item) => OneOrMoreIter::One(std::iter::once(item)),
+            OneOrMore::More(Seq2(items, _)) => OneOrMoreIter::More(items.into_iter()),
+        }
+    }
+}
+
+impl<U> Iterator for OneOrMoreIter<U> {
+    type Item = U;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            OneOrMoreIter::One(iter) => iter.next(),
+            OneOrMoreIter::More(vec) => vec.next(),
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        match self {
+            OneOrMoreIter::One(iter) => iter.size_hint(),
+            OneOrMoreIter::More(vec) => vec.size_hint(),
+        }
     }
 }
 

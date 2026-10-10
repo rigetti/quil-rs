@@ -17,6 +17,7 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen
 
 use crate::instruction::quilpy::AnyInstruction;
 use crate::instruction::Label;
+use crate::quilpy::{OneOrMore, Seq2};
 use crate::{
     instruction::{
         quilpy::OwnedGateSignature, CalibrationDefinition, Declaration, DefaultHandler,
@@ -91,41 +92,6 @@ impl_repr!(TimeSpanSeconds);
 impl_to_quil!(Program);
 
 type ExpandedProgram = (Program, InstructionSourceMap);
-
-#[derive(pyo3::FromPyObject)]
-enum OneOrMore<T> {
-    One(T),
-    More(Vec<T>),
-}
-
-/// An iterator over a `OneOrMore<T>`.
-enum OneOrMoreIter<T> {
-    One(std::iter::Once<T>),
-    More(std::vec::IntoIter<T>),
-}
-
-impl<T> IntoIterator for OneOrMore<T> {
-    type Item = T;
-    type IntoIter = OneOrMoreIter<T>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        match self {
-            OneOrMore::One(item) => OneOrMoreIter::One(std::iter::once(item)),
-            OneOrMore::More(items) => OneOrMoreIter::More(items.into_iter()),
-        }
-    }
-}
-
-impl<T> Iterator for OneOrMoreIter<T> {
-    type Item = T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            OneOrMoreIter::One(iter) => iter.next(),
-            OneOrMoreIter::More(vec) => vec.next(),
-        }
-    }
-}
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -384,13 +350,13 @@ impl Program {
     #[pyo3(name = "add_instructions", signature = (instructions, *more))]
     fn py_add_instructions(
         &mut self,
-        instructions: OneOrMore<AnyInstruction>,
-        more: Vec<AnyInstruction>,
+        instructions: OneOrMore<AnyInstruction, Instruction>,
+        more: Seq2<AnyInstruction, Instruction>,
     ) {
         instructions
             .into_iter()
             .chain(more)
-            .for_each(|i| self.py_add_instruction(i));
+            .for_each(|i| self.add_instruction(i));
     }
 
     /// Return a new ``Program`` containing only the instructions
@@ -1284,18 +1250,9 @@ struct PyTargetResolver(Py<PyAny>);
 
 #[cfg(feature = "stubs")]
 mod stubs {
-    use pyo3_stub_gen::{impl_stub_type, type_alias, PyStubType};
+    use pyo3_stub_gen::{impl_stub_type, type_alias};
 
-    use super::{EndTargetParam, OneOrMore, Target};
-
-    impl<T> PyStubType for OneOrMore<T>
-    where
-        T: PyStubType,
-    {
-        fn type_output() -> pyo3_stub_gen::TypeInfo {
-            T::type_output() | pyo3_stub_gen::TypeInfo::list_of::<T>()
-        }
-    }
+    use super::{EndTargetParam, Target};
 
     impl_stub_type!(EndTargetParam = Target | u32);
     impl_stub_type!(super::InstructionIndex = usize);
