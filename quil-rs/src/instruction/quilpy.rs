@@ -13,11 +13,8 @@ use pyo3::{
         PyUserWarning, PyValueError,
     },
     prelude::*,
-    types::{
-        IntoPyDict as _, PyComplex, PyDict, PyFloat, PyFrozenSet, PyInt, PyNotImplemented,
-        PyString, PyTuple,
-    },
-    CastError, IntoPyObjectExt, PyClass, PyTypeCheck, PyTypeInfo,
+    types::{IntoPyDict as _, PyComplex, PyDict, PyFloat, PyFrozenSet, PyInt, PyString, PyTuple},
+    CastError, IntoPyObjectExt, PyTypeCheck,
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -31,9 +28,7 @@ use super::*;
 use crate::{
     expression::{
         consts::{IMAGINARY_UNIT, ONE, ZERO},
-        quilpy::{
-            quil_exp, ExpressionLike, Parameter, ParameterLike, PyExpression, QualifiedExpression,
-        },
+        quilpy::{quil_exp, ExpressionLike, ParameterLike, PyExpression, QualifiedExpression},
     },
     instruction::gate::GateSignature,
     pickleable_new,
@@ -44,7 +39,7 @@ use crate::{
         memory::{DeclarationAt, MemoryReferenceLike, PyMemRef},
         py_deprecated,
         singleton::{py_singleton, PyModuleSingletonExt},
-        IntoNewArgs, Migrate, NewArgs, NonZeroU64, Seq, Seq2, Via,
+        IntoNewArgs, Migrate, NewArgs, NonZeroU64, OneOrMore, Seq, Seq2, Via,
     },
     validation::identifier::IdentifierValidationError,
 };
@@ -1712,11 +1707,16 @@ impl Gate {
         self.clone().dagger()
     }
 
-    /// Return a copy of the ``Gate`` with the ``CONTROLLED`` modifier added to it.
+    /// Return a copy of the ``Gate`` with the ``CONTROLLED`` modifier added to it
+    /// using the given control qubit or quibits.
     #[pyo3(name = "controlled")]
     #[must_use]
-    fn py_controlled(&self, control_qubit: QubitLike) -> Self {
-        self.clone().controlled(control_qubit.into())
+    fn py_controlled(&self, control_qubit: OneOrMore<QubitLike, Qubit>) -> Self {
+        let mut result = self.clone();
+        for qubit in control_qubit {
+            result = result.controlled(qubit);
+        }
+        result
     }
 
     /// Return a copy of the ``Gate`` with the ``FORKED`` modifier added to it.

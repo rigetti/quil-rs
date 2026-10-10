@@ -1393,9 +1393,10 @@ class Gate(Instruction):
         r"""
         Get a Quil-like representation as a string.
         """
-    def controlled(self, control_qubit: Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str) -> Gate:
+    def controlled(self, control_qubit: Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str  |  typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str]) -> Gate:
         r"""
-        Return a copy of the ``Gate`` with the ``CONTROLLED`` modifier added to it.
+        Return a copy of the ``Gate`` with the ``CONTROLLED`` modifier added to it
+        using the given control qubit or quibits.
         """
     def dagger(self) -> Gate:
         r"""
