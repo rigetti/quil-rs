@@ -1772,6 +1772,22 @@ impl Gate {
     fn params(&self) -> Vec<Expression> {
         self.parameters.clone()
     }
+
+    /// Return a list of the indices of the qubits this ``Gate`` acts on,
+    /// assuming they are all ``Qubit.Fixed``.
+    ///
+    /// Raises a an error if any of the qubits are not fixed.
+    fn get_qubit_indices(&self) -> PyResult<Vec<u64>> {
+        self.qubits
+            .iter()
+            .map(|qubit| match qubit {
+                Qubit::Fixed(index) => Ok(*index),
+                _ => Err(errors::ValueError::new_err(format!(
+                    "this instruction operates on a non-fixed qubit: {qubit:?}"
+                ))),
+            })
+            .collect()
+    }
 }
 
 #[cfg(feature = "stubs")]
@@ -4854,6 +4870,8 @@ impl_stub_like!(
 impl Qubit {
     #[new]
     fn __new__<'py>(qubit: QubitLike, py: Python<'py>) -> PyResult<Bound<'py, Self>> {
+        // TODO: Check if other complex enums are returning Self instead of using a Bound;
+        // if so, they will incorrectly convert into the base class rather than specific variant.
         Qubit::from(qubit).into_pyobject(py)
     }
 

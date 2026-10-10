@@ -1409,6 +1409,13 @@ class Gate(Instruction):
         Raises a ``GateError`` if the number of provided alternate parameters
         don't equal the number of existing parameters.
         """
+    def get_qubit_indices(self) -> builtins.list[builtins.int]:
+        r"""
+        Return a list of the indices of the qubits this ``Gate`` acts on,
+        assuming they are all ``Qubit.Fixed``.
+        
+        Raises a an error if any of the qubits are not fixed.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
