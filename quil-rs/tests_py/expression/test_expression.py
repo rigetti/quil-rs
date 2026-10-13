@@ -189,8 +189,11 @@ def test_substitute_memref() -> None:
     expr = Expression.parse(r"%x + y[1]")
     with pytest.deprecated_call():
         assert expr.substitute(cast(VarMap, dict(x=1, y=(2, 3)))) == 4+0j
+    with pytest.deprecated_call():
         assert expr.substitute(cast(VarMap, dict(x=1))) == Expression.parse("1 + y[1]")
+    with pytest.deprecated_call():
         assert expr.substitute(cast(VarMap, dict(x=1, y=(2,)))) == Expression.parse("1 + y[1]")
+    with pytest.deprecated_call():
         assert expr.substitute(cast(VarMap, dict(y=(2,3)))) == Expression.parse(r"%x + 3")
 
 
