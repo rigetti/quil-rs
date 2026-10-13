@@ -1777,16 +1777,11 @@ impl Gate {
     /// assuming they are all ``Qubit.Fixed``.
     ///
     /// Raises a an error if any of the qubits are not fixed.
+    ///
+    /// Note: Unlike most other `get_qubit_indices` methods,
+    /// this one returns a `list[int]`, not a `set[int]`.
     fn get_qubit_indices(&self) -> PyResult<Vec<u64>> {
-        self.qubits
-            .iter()
-            .map(|qubit| match qubit {
-                Qubit::Fixed(index) => Ok(*index),
-                _ => Err(errors::ValueError::new_err(format!(
-                    "this instruction operates on a non-fixed qubit: {qubit:?}"
-                ))),
-            })
-            .collect()
+        qubit_indices(&self.qubits)
     }
 }
 
@@ -2492,6 +2487,10 @@ impl Measurement {
         let keyword = HashMap::from([("name".to_string(), name.clone())]);
         (positional, keyword)
     }
+
+    fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
+        qubit_indices([&self.qubit])
+    }
 }
 
 pickleable_new! {
@@ -2515,11 +2514,8 @@ impl Reset {
     /// or return a set containing the index of the `Qubit` if it is a `Fixed` qubit;
     /// otherwise, raise a `ValueError`.
     fn get_qubit_indices(&self) -> PyResult<Option<HashSet<u64>>> {
-        match self.qubit {
-            Some(Qubit::Fixed(index)) => Ok(Some(HashSet::from([index]))),
-            Some(_) => Err(errors::ValueError::new_err(
-                "this Reset operates on a non-fixed qubit",
-            )),
+        match self.qubit.as_ref() {
+            Some(qubit) => qubit_indices([qubit]).map(Some),
             None => Ok(None),
         }
     }
@@ -2791,16 +2787,17 @@ impl Offset {
     }
 }
 
-/// Return the set of fixed qubit indices among `qubits`,
-/// or return a `ValueError` if any aren't `Fixed`.
+/// Return the fixed qubit indices among `qubits`, or return a `ValueError` if any aren't `Fixed`.
 ///
-/// PyQuil v4 used this basic logic in `get_qubit_indices` methods.
-fn frame_qubit_indices(qubits: &[Qubit]) -> PyResult<HashSet<u64>> {
+/// PyQuil v4 uses this basic logic in `get_qubit_indices` methods.
+fn qubit_indices<'a, C: FromIterator<u64>>(
+    qubits: impl IntoIterator<Item = &'a Qubit>,
+) -> PyResult<C> {
     qubits
-        .iter()
+        .into_iter()
         .map(|qubit| match qubit {
             Qubit::Fixed(index) => Ok(*index),
-            _ => Err(errors::ValueError::new_err(format!(
+            qubit => Err(errors::ValueError::new_err(format!(
                 "this instruction operates on a non-fixed qubit: {qubit:?}"
             ))),
         })
@@ -2855,7 +2852,7 @@ impl Pulse {
     ///
     /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
     fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
-        frame_qubit_indices(&self.frame.qubits)
+        qubit_indices(&self.frame.qubits)
     }
 }
 
@@ -2913,7 +2910,7 @@ impl Capture {
     ///
     /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
     fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
-        frame_qubit_indices(&self.frame.qubits)
+        qubit_indices(&self.frame.qubits)
     }
 }
 
@@ -4978,7 +4975,7 @@ impl RawCapture {
     ///
     /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
     fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
-        frame_qubit_indices(&self.frame.qubits)
+        qubit_indices(&self.frame.qubits)
     }
 }
 
@@ -5017,7 +5014,7 @@ impl SetFrequency {
     ///
     /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
     fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
-        frame_qubit_indices(&self.frame.qubits)
+        qubit_indices(&self.frame.qubits)
     }
 }
 
@@ -5056,7 +5053,7 @@ impl ShiftFrequency {
     ///
     /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
     fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
-        frame_qubit_indices(&self.frame.qubits)
+        qubit_indices(&self.frame.qubits)
     }
 }
 
@@ -5079,7 +5076,7 @@ impl SetPhase {
     ///
     /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
     fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
-        frame_qubit_indices(&self.frame.qubits)
+        qubit_indices(&self.frame.qubits)
     }
 }
 
@@ -5102,7 +5099,7 @@ impl ShiftPhase {
     ///
     /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
     fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
-        frame_qubit_indices(&self.frame.qubits)
+        qubit_indices(&self.frame.qubits)
     }
 }
 
@@ -5125,7 +5122,7 @@ impl SetScale {
     ///
     /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
     fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
-        frame_qubit_indices(&self.frame.qubits)
+        qubit_indices(&self.frame.qubits)
     }
 }
 
@@ -5172,8 +5169,8 @@ impl SwapPhases {
     ///
     /// Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
     fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
-        frame_qubit_indices(&self.frame_1.qubits).and_then(|mut indices| {
-            indices.extend(frame_qubit_indices(&self.frame_2.qubits)?);
+        qubit_indices::<HashSet<u64>>(&self.frame_1.qubits).and_then(|mut indices| {
+            indices.extend(qubit_indices::<HashSet<u64>>(&self.frame_2.qubits)?);
             Ok(indices)
         })
     }
