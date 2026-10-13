@@ -1415,6 +1415,9 @@ class Gate(Instruction):
         assuming they are all ``Qubit.Fixed``.
         
         Raises a an error if any of the qubits are not fixed.
+        
+        Note: Unlike most other `get_qubit_indices` methods,
+        this one returns a `list[int]`, not a `set[int]`.
         """
     @staticmethod
     def is_quil_t() -> builtins.bool:
@@ -2115,6 +2118,7 @@ class Measurement(Instruction):
         r"""
         Get a Quil-like representation as a string.
         """
+    def get_qubit_indices(self) -> builtins.set[builtins.int]: ...
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
