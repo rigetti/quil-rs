@@ -210,7 +210,8 @@ macro_rules! pickleable_new {
                 )
             }
 
-            fn __match_args__<'py>(&self, py: pyo3::Python<'py>) -> pyo3::PyResult<pyo3::Bound<'py, pyo3::types::PyTuple>> {
+            #[classattr]
+            fn __match_args__<'py>(py: pyo3::Python<'py>) -> pyo3::PyResult<pyo3::Bound<'py, pyo3::types::PyTuple>> {
                 pyo3::types::PyTuple::new(py, &[$( stringify!($field) ),*])
             }
         }
