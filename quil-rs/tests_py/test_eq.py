@@ -10,9 +10,9 @@ from quil.program import Program
 def test_instruction_eq():
     pi_expr = Number(complex(np.pi, 0))
 
-    rx = Gate("RX", [pi_expr], [Qubit.Fixed(0)], [])
+    rx = Gate("RX", [pi_expr], [Qubit(0)], [])
     rx_copy = deepcopy(rx)
-    ry = Gate("RY", [pi_expr], [Qubit.Fixed(0)], [])
+    ry = Gate("RY", [pi_expr], [Qubit(0)], [])
     assert rx == rx_copy
     assert not (rx != rx_copy)
     assert rx != ry

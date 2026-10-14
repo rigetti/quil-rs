@@ -17,7 +17,7 @@ from quil.instructions import (
 )
 
 
-@pytest.fixture(params=(Qubit.Placeholder(QubitPlaceholder()), Qubit.Fixed(1), Qubit.Variable("x")))
+@pytest.fixture(params=(Qubit(), Qubit(1), Qubit("x"), QubitPlaceholder()))
 def qubit(request: pytest.FixtureRequest) -> Qubit:
     assert isinstance(request.param, Qubit)
     return request.param
@@ -43,7 +43,7 @@ def test_copy(qubit: Qubit, make_instr: Callable[[Qubit], Instruction]):
 
     assert copy.copy(instr) == instr
 
-    if not isinstance(qubit, Qubit.Placeholder):
+    if not isinstance(qubit, QubitPlaceholder):
         assert copy.deepcopy(instr) == instr
     else:
         with pytest.raises(quil.PickleError, match=r"\bQubitPlaceholder\b"):

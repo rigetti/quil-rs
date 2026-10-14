@@ -43,6 +43,8 @@ __all__ = [
     "ExternParameterType",
     "ExternSignature",
     "Fence",
+    "FixedQubit",
+    "FormalArgument",
     "FrameDefinition",
     "FrameIdentifier",
     "Gate",
@@ -113,7 +115,7 @@ __all__ = [
 LabelTargetParameter: TypeAlias = builtins.str  |  TargetPlaceholder  |  Label
 MemoryReferenceDesignator: TypeAlias = MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]
 PauliTargetDesignator: TypeAlias = Qubit  |  builtins.int  |  builtins.str
-QubitDesignator: TypeAlias = QubitPlaceholder  |  builtins.int  |  builtins.str
+QubitDesignator: TypeAlias = Qubit
 Halt: HaltType
 Nop: NopType
 Wait: WaitType
@@ -331,7 +333,7 @@ class CalibrationDefinition(Instruction):
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[CalibrationIdentifier, builtins.list[Instruction]]: ...
     @typing.overload
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], instrs: typing.Sequence[Instruction], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> CalibrationDefinition:
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str], instrs: typing.Sequence[Instruction], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> CalibrationDefinition:
         r"""
         Create a CalibrationDefinition from its constituent parts.
         
@@ -341,7 +343,7 @@ class CalibrationDefinition(Instruction):
     @typing.overload
     def __new__(cls, identifier: typing.Sequence[CalibrationIdentifier], instructions: typing.Sequence[Instruction]) -> CalibrationDefinition: ...
     @typing.overload
-    def __new__(cls, identifier: typing.Optional[CalibrationIdentifier  |  builtins.str] = None, instructions: typing.Optional[typing.Sequence[Instruction]  |  typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]] = None, qubits: typing.Optional[typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str]] = None, instrs: typing.Optional[typing.Sequence[Instruction]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier]] = None, *, name: typing.Optional[builtins.str] = None, parameters: typing.Optional[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]] = None) -> CalibrationDefinition: ...
+    def __new__(cls, identifier: typing.Optional[CalibrationIdentifier  |  builtins.str] = None, instructions: typing.Optional[typing.Sequence[Instruction]  |  typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]] = None, qubits: typing.Optional[typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str]] = None, instrs: typing.Optional[typing.Sequence[Instruction]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier]] = None, *, name: typing.Optional[builtins.str] = None, parameters: typing.Optional[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]] = None) -> CalibrationDefinition: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -352,7 +354,7 @@ class CalibrationDefinition(Instruction):
         Get a Quil-like representation as a string.
         """
     @staticmethod
-    def from_parts(name: builtins.str, parameters: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], instructions: typing.Sequence[Instruction], modifiers: typing.Optional[typing.Sequence[GateModifier]]) -> CalibrationDefinition:
+    def from_parts(name: builtins.str, parameters: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str], instructions: typing.Sequence[Instruction], modifiers: typing.Optional[typing.Sequence[GateModifier]]) -> CalibrationDefinition:
         r"""
         Construct a new instance from its constituent parts.
         
@@ -412,14 +414,14 @@ class CalibrationIdentifier:
         The qubits on which the gate is applied
         """
     @qubits.setter
-    def qubits(self, value: typing.Sequence[Qubit]) -> None:
+    def qubits(self, value: typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str]) -> None:
         r"""
         The qubits on which the gate is applied
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[builtins.str, builtins.list[expression.Expression], builtins.list[Qubit], builtins.list[GateModifier]]: ...
     def __match_args__(self) -> tuple: ...
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str] = [], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str] = [], modifiers: typing.Sequence[GateModifier  |  builtins.str] = []) -> CalibrationIdentifier:
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str] = [], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str] = [], modifiers: typing.Sequence[GateModifier  |  builtins.str] = []) -> CalibrationIdentifier:
         r"""
         Builds a new calibration identifier.
         
@@ -1038,7 +1040,7 @@ class Delay(Instruction):
     def __getnewargs__(self) -> tuple[expression.Expression, builtins.list[Qubit], builtins.list[builtins.str]]: ...
     def __hash__(self) -> builtins.int: ...
     def __match_args__(self) -> tuple: ...
-    def __new__(cls, duration: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str, qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], frame_names: typing.Sequence[builtins.str] = []) -> Delay: ...
+    def __new__(cls, duration: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str, qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str], frame_names: typing.Sequence[builtins.str] = []) -> Delay: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1245,7 +1247,7 @@ class Fence(Instruction):
     def __getnewargs__(self) -> tuple[builtins.list[Qubit]]: ...
     def __hash__(self) -> builtins.int: ...
     def __match_args__(self) -> tuple: ...
-    def __new__(cls, qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str]) -> Fence: ...
+    def __new__(cls, qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str]) -> Fence: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1268,6 +1270,36 @@ class Fence(Instruction):
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
+
+@typing.final
+class FixedQubit(Qubit):
+    r"""
+    A fixed qubit: a qubit with a specific index.
+    
+    This corresponds to the [`Qubit::Fixed`] variant.
+    """
+    @property
+    def index(self) -> builtins.int: ...
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __getnewargs__(self) -> tuple[builtins.int]: ...
+    def __hash__(self) -> builtins.int: ...
+    def __match_args__(self) -> tuple: ...
+    def __new__(cls, index: builtins.int) -> FixedQubit: ...
+
+@typing.final
+class FormalArgument(Qubit):
+    r"""
+    A Quil formal argument: a name used in Quil definitions that a qubit will be bound to.
+    
+    This corresponds to the [`Qubit::Variable`] variant.
+    """
+    @property
+    def name(self) -> builtins.str: ...
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __getnewargs__(self) -> tuple[builtins.str]: ...
+    def __hash__(self) -> builtins.int: ...
+    def __match_args__(self) -> tuple: ...
+    def __new__(cls, name: builtins.str) -> FormalArgument: ...
 
 class FrameDefinition(Instruction):
     @property
@@ -1329,7 +1361,7 @@ class FrameIdentifier:
     def __getnewargs__(self) -> tuple[builtins.list[Qubit], builtins.str]: ...
     def __hash__(self) -> builtins.int: ...
     def __match_args__(self) -> tuple: ...
-    def __new__(cls, qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], name: builtins.str) -> FrameIdentifier: ...
+    def __new__(cls, qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str], name: builtins.str) -> FrameIdentifier: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1371,13 +1403,13 @@ class Gate(Instruction):
     def __getnewargs__(self) -> tuple[builtins.str, builtins.list[expression.Expression], builtins.list[Qubit], builtins.list[GateModifier]]: ...
     def __hash__(self) -> builtins.int: ...
     @typing.overload
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str], qubits: typing.Optional[typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> Gate: ...
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str], qubits: typing.Optional[typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> Gate: ...
     @typing.overload
-    def __new__(cls, name: builtins.str, *, qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str], parameters: typing.Optional[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> Gate: ...
+    def __new__(cls, name: builtins.str, *, qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str], parameters: typing.Optional[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> Gate: ...
     @typing.overload
-    def __new__(cls, name: builtins.str, *, params: typing.Optional[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]], qubits: typing.Optional[typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> Gate: ...
+    def __new__(cls, name: builtins.str, *, params: typing.Optional[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]], qubits: typing.Optional[typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> Gate: ...
     @typing.overload
-    def __new__(cls, name: builtins.str, parameters: typing.Optional[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]] = None, qubits: typing.Optional[typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None, *, params: typing.Optional[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]] = None) -> Gate:
+    def __new__(cls, name: builtins.str, parameters: typing.Optional[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]] = None, qubits: typing.Optional[typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None, *, params: typing.Optional[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]] = None) -> Gate:
         r"""
         Construct a new `Gate` instance.
         
@@ -1393,7 +1425,7 @@ class Gate(Instruction):
         r"""
         Get a Quil-like representation as a string.
         """
-    def controlled(self, control_qubit: Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str  |  typing.Sequence[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str]) -> Gate:
+    def controlled(self, control_qubit: Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str  |  typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str]) -> Gate:
         r"""
         Return a copy of the ``Gate`` with the ``CONTROLLED`` modifier added to it
         using the given control qubit or quibits.
@@ -1402,7 +1434,7 @@ class Gate(Instruction):
         r"""
         Return a copy of the ``Gate`` with the ``DAGGER`` modifier added to it.
         """
-    def forked(self, fork_qubit: Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str, alt_params: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]) -> Gate:
+    def forked(self, fork_qubit: Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str, alt_params: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]) -> Gate:
         r"""
         Return a copy of the ``Gate`` with the ``FORKED`` modifier added to it.
         
@@ -2021,7 +2053,7 @@ class MeasureCalibrationDefinition(Instruction):
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[Qubit, typing.Optional[builtins.str], builtins.list[Instruction]]: ...
-    def __new__(cls, qubit: Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str, memory_reference: typing.Optional[MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]], instructions: typing.Optional[typing.Sequence[Instruction]] = None, *, instrs: typing.Optional[typing.Sequence[Instruction]] = None) -> MeasureCalibrationDefinition: ...
+    def __new__(cls, qubit: Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str, memory_reference: typing.Optional[MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]], instructions: typing.Optional[typing.Sequence[Instruction]] = None, *, instrs: typing.Optional[typing.Sequence[Instruction]] = None) -> MeasureCalibrationDefinition: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -2067,7 +2099,7 @@ class MeasureCalibrationIdentifier:
         The qubit which is being measured.
         """
     @qubit.setter
-    def qubit(self, value: Qubit) -> None:
+    def qubit(self, value: Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str) -> None:
         r"""
         The qubit which is being measured.
         """
@@ -2089,7 +2121,7 @@ class MeasureCalibrationIdentifier:
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs_ex__(self) -> tuple[tuple[Qubit, typing.Optional[builtins.str]], builtins.dict[builtins.str, typing.Optional[builtins.str]]]: ...
-    def __new__(cls, qubit: Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str, target: typing.Optional[builtins.str], *, name: typing.Optional[builtins.str] = None) -> MeasureCalibrationIdentifier: ...
+    def __new__(cls, qubit: Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str, target: typing.Optional[builtins.str], *, name: typing.Optional[builtins.str] = None) -> MeasureCalibrationIdentifier: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -2108,7 +2140,7 @@ class Measurement(Instruction):
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs_ex__(self) -> tuple[tuple[Qubit, typing.Optional[MemoryReference]], builtins.dict[builtins.str, typing.Optional[builtins.str]]]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, qubit: Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str, target: typing.Optional[MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]] = None, *, name: typing.Optional[builtins.str] = None, classical_reg: typing.Optional[MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]] = None) -> Measurement: ...
+    def __new__(cls, qubit: Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str, target: typing.Optional[MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]] = None, *, name: typing.Optional[builtins.str] = None, classical_reg: typing.Optional[MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]] = None) -> Measurement: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -2358,7 +2390,7 @@ class PauliSum:
         This constructor is deprecated; use `(terms, arguments)` instead.
         """
     @typing.overload
-    def __new__(cls, terms_or_args: typing.Optional[typing.Sequence[PauliTerm]  |  typing.Sequence[Qubit  |  builtins.int  |  builtins.str]] = None, /, terms: typing.Optional[typing.Sequence[PauliTerm]  |  typing.Sequence[Qubit  |  builtins.int  |  builtins.str]] = None, arguments: typing.Optional[typing.Sequence[Qubit  |  builtins.int  |  builtins.str]] = None) -> PauliSum:
+    def __new__(cls, terms_or_args: typing.Optional[typing.Sequence[PauliTerm]  |  typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str  |  builtins.int  |  builtins.str]] = None, /, terms: typing.Optional[typing.Sequence[PauliTerm]  |  typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str  |  builtins.int  |  builtins.str]] = None, arguments: typing.Optional[typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str  |  builtins.int  |  builtins.str]] = None) -> PauliSum:
         r"""
         Construct a new `PauliSum` from a list of `PauliTerm`s and an optional list of arguments.
         
@@ -2472,7 +2504,7 @@ class PauliTerm:
         Construct a `PauliTerm` from a sequence of arguments.
         """
     @typing.overload
-    def __new__(cls, op: typing.Optional[PauliGate  |  typing.Sequence[tuple[PauliGate, Qubit  |  builtins.int  |  builtins.str]]] = None, index: typing.Optional[Qubit  |  builtins.int  |  builtins.str  |  expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str] = None, coefficient: typing.Optional[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str] = None, arguments: typing.Optional[typing.Sequence[tuple[PauliGate, Qubit  |  builtins.int  |  builtins.str]]] = None, expression: typing.Optional[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str] = None) -> PauliTerm:
+    def __new__(cls, op: typing.Optional[PauliGate  |  typing.Sequence[tuple[PauliGate, Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str  |  builtins.int  |  builtins.str]]] = None, index: typing.Optional[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str  |  builtins.int  |  builtins.str  |  expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str] = None, coefficient: typing.Optional[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str] = None, arguments: typing.Optional[typing.Sequence[tuple[PauliGate, Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str  |  builtins.int  |  builtins.str]]] = None, expression: typing.Optional[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str] = None) -> PauliTerm:
         r"""
         Construct a new `PauliTerm` from a single operator and qubit index.
         
@@ -2660,7 +2692,7 @@ class PauliTerm:
     @staticmethod
     def from_compact_str(str_pauli_term: builtins.str) -> PauliTerm: ...
     @staticmethod
-    def from_list(terms_list: typing.Sequence[tuple[PauliGate, Qubit  |  builtins.int  |  builtins.str]], coefficient: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str = (1+0j)) -> PauliTerm:
+    def from_list(terms_list: typing.Sequence[tuple[PauliGate, Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str  |  builtins.int  |  builtins.str]], coefficient: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str = (1+0j)) -> PauliTerm:
         r"""
         Construct a new `PauliTerm` from a list of operators and an optional coefficient.
         
@@ -2847,54 +2879,46 @@ class Pulse(Instruction):
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Qubit:
-    def __getnewargs__(self) -> builtins.tuple[QubitPlaceholder  |  builtins.int  |  builtins.str]: ...
-    def __new__(cls, qubit: Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str) -> Qubit: ...
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __ge__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __gt__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __hash__(self) -> builtins.int: ...
+    def __le__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __lt__(self, other: builtins.object, /) -> builtins.bool: ...
+    @typing.overload
+    def __new__(cls, qubit: builtins.int | FixedQubit) -> FixedQubit:
+        r"""
+        Create a new `FixedQubit` from an integer or existing `FixedQubit`.
+        """
+    @typing.overload
+    def __new__(cls, qubit: builtins.str | FormalArgument) -> FormalArgument:
+        r"""
+        Create a new `FormalArgument` from a string or existing `FormalArgument`.
+        """
+    @typing.overload
+    def __new__(cls, qubit: QubitPlaceholder | None = None) -> QubitPlaceholder:
+        r"""
+        Copy the reference to an existing `QubitPlaceholder`,
+        or create a new `QubitPlaceholder` when the argument is `None`.
+        """
+    @typing.overload
+    def __new__(cls, qubit: typing.Optional[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str] = None, /) -> typing.Any:
+        r"""
+        Create a new `Qubit` from an existing one or something that can be converted into one.
+        
+        Existing `Qubit` instances result in a new `Qubit` with the same value,
+        or in the case of a `QubitPlaceholder`, a reference to the same placeholder.
+        
+        The value `None` or values of type `int` or `str` are converted into new `Qubit`s
+        of type `QubitPlaceholder`, `FixedQubit`, or `FormalArgument`, respectively.
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
-    def __str__(self) -> builtins.str:
-        r"""
-        Get a Quil-like representation as a string.
-        """
-    def out(self) -> builtins.str:
-        r"""
-        Get a Quil representation as a string.
-        
-        This method is deprecated; you should use `to_quil` instead.
-        """
-    def to_quil(self) -> builtins.str: ...
-    def to_quil_or_debug(self) -> builtins.str: ...
-    @typing.final
-    class Fixed(Qubit):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> builtins.int: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: builtins.int) -> Qubit.Fixed: ...
-    
-    @typing.final
-    class Placeholder(Qubit):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> QubitPlaceholder: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: QubitPlaceholder) -> Qubit.Placeholder: ...
-    
-    @typing.final
-    class Variable(Qubit):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> builtins.str: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: builtins.str) -> Qubit.Variable: ...
-    
 
-class QubitPlaceholder:
+class QubitPlaceholder(Qubit):
     r"""
     An opaque placeholder for a qubit whose index may be assigned at a later time.
     """
@@ -2977,7 +3001,7 @@ class Reset(Instruction):
     def __getnewargs__(self) -> tuple[typing.Optional[Qubit]]: ...
     def __hash__(self) -> builtins.int: ...
     def __match_args__(self) -> tuple: ...
-    def __new__(cls, qubit: typing.Optional[Qubit  |  QubitPlaceholder  |  builtins.int  |  builtins.str] = None) -> Reset:
+    def __new__(cls, qubit: typing.Optional[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str] = None) -> Reset:
         r"""
         Initialize a new reset instruction, optionally targeting a specific qubit.
         """
@@ -3504,7 +3528,7 @@ class WaveformDefinition(Instruction):
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[builtins.str, builtins.list[builtins.str], builtins.list[expression.Expression]]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[builtins.str], entries: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]) -> WaveformDefinition:
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Parameter  |  builtins.str], entries: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]) -> WaveformDefinition:
         r"""
         Construct a new `WaveformDefinition` from a name, list of parameters, and list of entries.
         

@@ -600,7 +600,7 @@ class Program:
         body instructions, but retaining all of the calibrations,
         etc.][Self::clone_without_body_instructions].
         """
-    def add_instruction(self, instruction: _quil.instructions.Instruction) -> None:
+    def add_instruction(self, instruction: _quil.instructions.Instructions) -> None:
         r"""
         Add an instruction to the end of the program.
         
@@ -609,7 +609,7 @@ class Program:
         instructions are still added to the [`Program::extern_pragma_map`];
         duplicate `PRAGMA EXTERN` names are overwritten.
         """
-    def add_instructions(self, instructions: _quil.instructions.Instruction  |  typing.Sequence[_quil.instructions.Instruction], *more: typing.Any) -> None:
+    def add_instructions(self, instructions: _quil.instructions.Instructions  |  typing.Sequence[_quil.instructions.Instructions], *more: typing.Any) -> None:
         r"""
         Add one or more instructions to the end of the program.
         """
