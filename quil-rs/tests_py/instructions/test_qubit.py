@@ -1,13 +1,4 @@
-from typing import TypeAlias, cast
-
-import pytest
-import numpy as np
-
-from quil.instructions import GateSpecification, Instruction, MemoryReference, TargetPlaceholder, Label, Qubit, Gate, Move
-from quil.program import Program
-from quil.expression import Expression
-from quil.instructions import Declaration
-from quil.instructions import QubitPlaceholder
+from quil.instructions import Gate, Qubit, QubitPlaceholder, FixedQubit, FormalArgument
 
 class TestConstructor:
     """Test that we construct `Qubit`s in several different ways.
@@ -19,21 +10,21 @@ class TestConstructor:
     """
 
     def test_fixed(self):
-        g = Gate("X", (), (1, Qubit(2), Qubit.Fixed(3)))
+        g = Gate("X", (), (1, Qubit(2), FixedQubit(3)))
         for q in g.qubits:
             assert isinstance(q, Qubit)
-            assert isinstance(q, Qubit.Fixed)
-            assert q == Qubit.Fixed(q._0)
+            assert isinstance(q, FixedQubit)
+            assert q == FixedQubit(q.index)
 
     def test_variable(self):
-        g = Gate("X", (), ("x", Qubit("y"), Qubit.Variable("z")))
+        g = Gate("X", (), ("x", Qubit("y"), FormalArgument("z")))
         for q in g.qubits:
             assert isinstance(q, Qubit)
-            assert isinstance(q, Qubit.Variable)
-            assert q == Qubit.Variable(q._0)
+            assert isinstance(q, FormalArgument)
+            assert q == FormalArgument(q.name)
 
     def test_placeholder(self):
-        g = Gate("X", (), (QubitPlaceholder(), Qubit.Placeholder(QubitPlaceholder())))
+        g = Gate("X", (), (Qubit(), Qubit(None), QubitPlaceholder()))
         for q in g.qubits:
             assert isinstance(q, Qubit)
-            assert isinstance(q, Qubit.Placeholder)
+            assert isinstance(q, QubitPlaceholder)

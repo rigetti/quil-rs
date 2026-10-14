@@ -8,14 +8,13 @@ from quil.instructions import (
     Qubit,
     CalibrationDefinition,
     CalibrationIdentifier,
-    QubitPlaceholder,
     Delay,
     Gate,
 )
 
 
 def test_calibration_getters():
-    placeholder = Qubit(QubitPlaceholder())
+    placeholder = Qubit()
 
     calibration = CalibrationDefinition(
         CalibrationIdentifier("MYCAL", [], [placeholder], []),
@@ -29,7 +28,7 @@ def test_calibration_getters():
 
 
 def test_measure_calibration_getters():
-    placeholder = Qubit.Placeholder(QubitPlaceholder())
+    placeholder = Qubit()
 
     calibration = MeasureCalibrationDefinition.from_calibration(
         MeasureCalibrationIdentifier(placeholder, "addr"),
@@ -42,7 +41,7 @@ def test_measure_calibration_getters():
     assert calibration.instructions == []
 
 def test_named_measure_calibration_getters():
-    placeholder = Qubit.Placeholder(QubitPlaceholder())
+    placeholder = Qubit()
 
     calibration = MeasureCalibrationDefinition.from_calibration(
         MeasureCalibrationIdentifier(placeholder, "addr", name = "midcircuit"),
@@ -56,7 +55,7 @@ def test_named_measure_calibration_getters():
 
 
 def test_measurement_getters():
-    placeholder = Qubit.Placeholder(QubitPlaceholder())
+    placeholder = Qubit()
     addr = MemoryReference("addr", 0)
 
     measurement = Measurement(placeholder, addr)
@@ -67,7 +66,7 @@ def test_measurement_getters():
 
 
 def test_named_measurement_getters():
-    placeholder = Qubit.Placeholder(QubitPlaceholder())
+    placeholder = Qubit()
     addr = MemoryReference("addr", 0)
 
     measurement = Measurement(placeholder, addr, name = "midcircuit")

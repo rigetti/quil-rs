@@ -1,9 +1,7 @@
-from collections.abc import Sequence
 from typing import TypeAlias, cast
 
 import pytest
 import numpy as np
-import numpy.typing as npt
 
 import quil
 from quil.instructions import MemoryReference, GateDefinition, GateSpecification

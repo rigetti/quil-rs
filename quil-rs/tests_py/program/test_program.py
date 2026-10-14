@@ -1,12 +1,11 @@
 import inspect
-import itertools
 import pickle
 from typing import Optional
 
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from quil.instructions import Gate, Instruction, Jump, Qubit, QubitPlaceholder, Target, TargetPlaceholder, Measurement, Declaration, JumpWhen, ScalarType, Move, Label
+from quil.instructions import Gate, Jump, Qubit, QubitPlaceholder, TargetPlaceholder, Measurement, Declaration, JumpWhen, ScalarType, Label
 from quil.program import InstructionTarget, Program
 from quil import QuilError
 
@@ -60,7 +59,7 @@ JUMP-WHEN @top counter[0]
 """
 
 def test_custom_resolver():
-    qubit_placeholder = QubitPlaceholder()
+    qubit_placeholder = Qubit()
 
     def qubit_resolver(qubit: QubitPlaceholder) -> Optional[int]:
         return {qubit_placeholder: 9}.get(qubit)
@@ -97,7 +96,7 @@ MEASURE 0 ro[0]
 MEASURE 1 ro[1]
 """
     )
-    assert program.used_qubits == {Qubit.Fixed(0), Qubit.Fixed(1)}
+    assert program.used_qubits == {Qubit(0), Qubit(1)}
     cfg = program.control_flow_graph()
     blocks = cfg.basic_blocks()
     assert len(blocks) == 1
@@ -127,7 +126,7 @@ LABEL @end
 HALT
 """
     )
-    assert program.used_qubits == {Qubit.Fixed(0)}
+    assert program.used_qubits == {Qubit(0)}
     cfg = program.control_flow_graph()
 
     assert cfg.has_dynamic_control_flow()

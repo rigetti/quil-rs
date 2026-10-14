@@ -13,8 +13,10 @@ use pyo3::{
         PyUserWarning, PyValueError,
     },
     prelude::*,
-    types::{IntoPyDict as _, PyComplex, PyDict, PyFloat, PyFrozenSet, PyInt, PyString, PyTuple},
-    CastError, IntoPyObjectExt, PyTypeCheck,
+    types::{
+        IntoPyDict as _, PyComplex, PyDict, PyFloat, PyFrozenSet, PyInt, PyString, PyTuple, PyType,
+    },
+    CastError, IntoPyObjectExt, PyTypeCheck, PyTypeInfo,
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -43,6 +45,7 @@ use crate::{
     },
     validation::identifier::IdentifierValidationError,
 };
+use macros::*;
 
 create_init_submodule! {
     classes: [
@@ -114,6 +117,10 @@ create_init_submodule! {
         DeclarationAt,
 
         PyInstruction,
+        PyQubit,
+        FormalArgument,
+        FixedQubit,
+
         HaltType,
         NopType,
         WaitType,
@@ -130,7 +137,6 @@ create_init_submodule! {
         ExternParameterType,
         GateSpecification,
         PragmaArgument,
-        Qubit,
         Target,
         UnresolvedCallArgument
     ],
@@ -169,414 +175,14 @@ pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?;
     m.add(
         "QubitDesignator",
-        union!(py, Qubit, QubitPlaceholder, PyInt, PyString)?,
+        union!(py, PyQubit, QubitPlaceholder, PyInt, PyString)?,
     )?;
-    m.add("PauliTargetDesignator", union!(py, Qubit, PyInt, PyString)?)?;
+    m.add(
+        "PauliTargetDesignator",
+        union!(py, PyQubit, PyInt, PyString)?,
+    )?;
 
     Ok(())
-}
-
-/// Add a `parse` implementation to a `#[pyclass]` to use the type's `from_str` implementation.
-macro_rules! impl_parse {
-    ($name: ident) => {
-        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-        #[pyo3::pymethods]
-        impl $name {
-            #[staticmethod]
-            #[pyo3(name = "parse")]
-            fn py_parse(string: &str) -> PyResult<Self> {
-                Ok(Self::from_str(string)?)
-            }
-        }
-    };
-}
-
-/// Add an `out` implementation to a `#[pyclass]` to use the type's `Quil` implementation.
-///
-/// The method reports that it is deprecated and recommends using `to_quil` instead.
-/// It is added to maintain backwards compatibility with `QuilAtom` types.
-macro_rules! impl_out {
-    ($($name: ty),* $(,)?) => {
-        $(
-        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-        #[pyo3::pymethods]
-        impl $name {
-            /// Get a Quil representation as a string.
-            ///
-            /// This method is deprecated; you should use `to_quil` instead.
-            fn out(&self, py: Python<'_>) -> PyResult<String> {
-                py_deprecated!(py, c"`out` is deprecated; use `to_quil` instead")?;
-                self.py_to_quil()
-            }
-
-            /// Get a Quil-like representation as a string.
-            fn __str__(&self) -> String {
-                self.py_to_quil_or_debug()
-            }
-        }
-        )*
-    };
-}
-
-/// Add an `is_quil_t` method to the `#[pyclass]`.
-macro_rules! impl_is_quil_t {
-    ($name:ident, $bool:literal) => {
-        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-        #[pyo3::pymethods]
-        impl $name {
-            /// Returns true if the instruction is a Quil-T instruction.
-            #[staticmethod]
-            #[pyo3(name = "is_quil_t")]
-            fn is_quil_t() -> bool {
-                $bool
-            }
-        }
-    };
-}
-
-/// Implement [IntoPyObject] and `From<$T> for PyClassInitializer<$T>`
-/// for a `#[pyclass(extends = PyInstruction)]`.
-macro_rules! py_instruction {
-    ($T:ty) => {
-        impl From<$T> for PyClassInitializer<$T> {
-            fn from(value: $T) -> Self {
-                PyClassInitializer::from(PyInstruction).add_subclass(value)
-            }
-        }
-
-        impl<'py> IntoPyObject<'py> for $T {
-            type Target = Self;
-            type Output = Bound<'py, Self::Target>;
-            type Error = PyErr;
-
-            fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
-                Ok(Py::new(py, PyClassInitializer::from(self))?.into_bound(py))
-            }
-        }
-    };
-}
-
-/// Create a Python singleton instance for an instruction type that has no inner value.
-///
-/// This macro handles the setup for the Python equivalents of
-/// [`Instruction::Halt`], [`Instruction::Nop`], and [`Instruction::Wait`].
-macro_rules! py_instruction_singleton {
-    ($T:ident, $name:ident) => {
-        py_singleton!($T, stringify!($name), |py| {
-            PyClassInitializer::from(PyInstruction).add_subclass($T)
-        });
-
-        // Add the constant value to the stubs.
-        #[cfg(feature = "stubs")]
-        pyo3_stub_gen::module_variable!("quil._quil.instructions", stringify!($name), $T);
-
-        #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
-        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-        #[cfg_attr(feature = "python", pyo3::pymethods)]
-        impl $T {
-            fn __repr__(&self) -> &str {
-                stringify!($name)
-            }
-        }
-
-        impl Quil for $T {
-            fn write(
-                &self,
-                writer: &mut impl std::fmt::Write,
-                fall_back_to_debug: bool,
-            ) -> Result<(), crate::quil::ToQuilError> {
-                Instruction::$name.write(writer, fall_back_to_debug)
-            }
-        }
-    };
-}
-
-/// Implement expected methods on each of the instruction-related types, given as a list.
-///
-/// This makes it easy to see which classes make up the `instructions` module,
-/// to verify that those classes have necessary `#[pymethods]` implemented,
-/// and to see at a glance what differences they do have in their implementations.
-///
-/// Types are supplied in a list. Those which deviate from the default implementations
-/// can give the items they should implement as a sublist, as in this example:
-///
-/// ```ignore
-/// impl_instruction!([
-///     A, // By default, [repr + quil]
-///     B [repr + quil],
-///     *C [quil + parse],
-///     *D(variant=SomeVariant, empty=true)[out + ..],
-///     E[parse + ..],
-/// ]);
-/// ```
-///
-/// The items in the list fit this pattern, where `<>` indicates optional content:
-///
-/// ```ignore
-/// <PY_INSTRUCTION_MARKER> RUST_TYPE <( VARIANT_OPTIONS )> <[ METHOD_OPTIONS ]>
-///
-/// PY_INSTRUCTION_MARKER: `*` -- Indicates this is a `#[pyclass(extends = PyInstruction)]`.
-/// RUST_TYPE:                 -- The name of the Rust `#[pyclass]`.
-/// VARIANT_OPTIONS:           -- Optional, comma-separated list of variant options, in parentheses.
-///                               These can only apply to `#[pyclass]`es marked with an `*`.
-///     variant=VARIANT_NAME   -- The name of the variant in the `Instruction` enum for this type
-///                               (defaults to the same name as the Rust type).
-///     empty=true|false       -- Whether the `Instruction` variant has an inner value
-///                               (defaults to `false`; `true` indicates a Unit variant).
-/// METHOD_OPTIONS:            -- Optional, space-separated list of method options, in brackets.
-///                               By default, all types get `+ repr + quil`,
-///                               and `*`-marked types also get `+ is_quil_t(false)`.
-///     `+ repr`               -- Implement `__repr__` using the type's `Debug` implementation.
-///     `+ quil`               -- Implement `to_quil` using the type's `Quil` implementation.
-///     `+ parse`              -- Implement `parse` using the type's `FromStr` implementation.
-///     `+ out`                -- Implement `out` using the type's `Quil` implementation.
-///                               Note that this is a deprecated method only added for backwards
-///                               compatibility with PyQuil v4; it'll be removed in the future.
-///     `+ is_quil_t(true|false)`
-///                            -- Implement `is_quil_t` to return the given boolean value.
-///                               This is automatically implemented for `*`-marked types
-///                               with a default value of `false`, but those that are Quil-T
-///                               should explicitly add it with a value of `true`.
-///     `+ ..`                 -- Expand to the default set of methods for this type.
-///                               This can be used to add additional methods to the defaults;
-///                               it should be specified as the last item in the list.
-/// ```
-macro_rules! impl_instruction {
-
-    // This macro has a lot of matching rules, but is conceptually very simple.
-    // Given a non-empty list of types, it outputs two new macro invocations:
-    // the first processes the head of the list, and the second processes the rest.
-    // Of course, that second invocation is a recursive call to this macro,
-    // so once the list is empty, it knows it has processed the full list.
-    //
-    // The rules to operate on a single item _could_ be pushed to another macro,
-    // but instead they are included here to just keep everything together.
-    // They are prefixed with the `@one` token and take a type name and list of args,
-    // and they operate essentially the same way as the broader macro:
-    // strip off and process the first arg to produce some output,
-    // then output another invocation with the remaining arguments.
-    //
-    // The internal process to handle the list is formed of rules prefixed with `@list`.
-    // In addition to kicking off the `@one` handling for each type,
-    // they also need to accumulate those types that are `Instruction` variants
-    // so that once the full list is processed, it can output additional methods
-    // implemented on `Instruction` that need to know about all of its variants.
-    // Because some of those variants have inner values and some do not,
-    // the macro needs to split them into two different accumulator lists,
-    // and hence the actual `@list` matching is a series of rules.
-    // Nevertheless, their basic output is as described above.
-    //
-    // Because the `IntoPyObject` and `FromPyObject` implementations for `Instruction`
-    // should only happen _once_, after all the variants are accumulated,
-    // we can't easily include arguments to modify it within the `@one` rules
-    // without adopting an approach that trades expansions between `@one` and `@list`;
-    // doing that would work fine, but would require a deeply-nested expansion,
-    // and we'd have to raise the recursion limit just to get it to compile.
-    //
-    // Instead, we use a small set of `@list` rules to match a `*`-prefix,
-    // and accept additional modifiers within a separate `()`-style sublist.
-    // Although it'd be nifty to token-munch those arguments too,
-    // it'd be a lot more work for not much syntactic sugar,
-    // so we should aim to keep those options simple and explicit.
-    //
-    // In other words, the args in square brackets are for the "per-type" expansions,
-    // while the those in parentheses are for the "at-the-end" expansion.
-    // Processing the former is done independently of the list recursion,
-    // so each type expands at a depth only one (or a few) levels deeper than the last.
-
-    // The initial capture kicks off the recursive processing with empty accumulators.
-    // The full list is given in square brackets so this can capture it in a single token tree.
-    ($tokens:tt) => {
-        impl_instruction!(@list $tokens [] []);
-    };
-
-    // The terminal rule (empty input list) processes the accumulated lists,
-    // though the actual implementation is below to make this easier to grok.
-    (@list [] $variants:tt $empties:tt) => {
-        impl_instruction!(@finalize $variants $empties);
-    };
-
-    // Types without `*` are not `Instruction` variants and aren't accumulated.
-    (@list [$name:ident $([$($args:tt)*])?, $($tail:tt)*] $variants:tt $empties:tt) => {
-        impl_instruction!(@one $name $([$($args)*])?);
-        impl_instruction!(@list [$($tail)*] $variants $empties);
-    };
-
-    // Types prefixed with `*` are `Instruction` variants to accumulate.
-    // They can use specific arguments in `()` to specify an alternative variant name
-    // and whether or not the variant has an inner value.
-
-    // This has an explicit variant name and no inner value.
-    (@list [*$name:ident(variant=$variant:ident, empty=true)  $([$($args:tt)*])?, $($tail:tt)*] $variants:tt [$($empties:tt)*]) => {
-        py_instruction_singleton!($name, $variant);
-        impl_instruction!(@one * $name $([$($args)*])?);
-        impl_instruction!(@list [$($tail)*] $variants [$($empties)* [$name, $variant],]);
-    };
-
-    // This has an explicit variant name and has an inner value.
-    (@list [*$name:ident(variant=$variant:ident $(, empty=false)?) $([$($args:tt)*])?, $($tail:tt)*] [$($variants:tt)*] $empties:tt) => {
-        py_instruction!($name);
-        impl_instruction!(@one * $name $([$($args)*])?);
-        impl_instruction!(@list [$($tail)*] [$($variants)* [$name, $variant],] $empties);
-    };
-
-    // This assumes the variant name matches the type name and expands to one of the above.
-    (@list [*$name:ident$((empty=$is_empty:tt))? $([$($args:tt)*])?, $($tail:tt)*] $variants:tt $empties:tt) => {
-        impl_instruction!(@list [*$name(variant=$name $(,empty=$is_empty)?) $([$($args)*])?, $($tail)*] $variants $empties);
-    };
-
-    // The `@one` rules walk a single type's sublist of arguments one at a time.
-
-    // For types that aren't `*`-marked, put a different tag so we can ensure there's a token
-    // and process them with the same rules when it doesn't make a difference.
-    (@one $name:ident $($args:tt)?) => {
-        impl_instruction!(@one - $name $($args)?);
-    };
-
-    // Use `+ ..` when no args are given.
-    (@one $tag:tt $name:ident) => {
-        impl_instruction!(@one $tag $name [+ ..]);
-    };
-    // Expand `+ ..` to defaults that depend on whether the type is `*`-marked or not.
-    // This appends the defaults to the list so that explicitly-specified args override them.
-    (@one * $name:ident [+ .. $($rest:tt)*] $markers:tt) => {
-        impl_instruction!(@one * $name [$($rest)* + repr + quil + out + is_quil_t(false)] $markers);
-    };
-    (@one - $name:ident [+ .. $($rest:tt)*] $markers:tt) => {
-        impl_instruction!(@one - $name [$($rest)* + repr + quil] $markers);
-    };
-
-    // Add indicator for which methods we've already implemented,
-    // so that they can be given more than once (in particular, as part of `+ ..`).
-    (@one $tag:tt $name:ident $args:tt) => {
-        impl_instruction!(@one $tag $name $args [-, -, -, -, -]);
-    };
-
-    // Terminal rule when done processing arguments.
-    (@one $tag:tt $name:ident [] [ $R:tt, $Q:tt, $P:tt, $T:tt, $O:tt ]) => {};
-
-    // The rest of these spit out a specific implementation and continue processing the rest.
-    // They each have three matchers: two for `+TARGET` or `-TARGET` the first time we see it,
-    // and another for any other instance of it, which just continues processing.
-    // After seeing `+` or `-`, we set the marker to indicate that it's processed already.
-
-    (@one $tag:tt $name:ident [+repr $($rest:tt)*] [-, $Q:tt, $P:tt, $T:tt, $O:tt]) => {
-        impl_repr!($name);
-        impl_instruction!(@one $tag $name [$($rest)*] [REPR, $Q, $P, $T, $O]);
-    };
-    (@one $tag:tt $name:ident [-repr $($rest:tt)*] [$R:tt, $Q:tt, $P:tt, $T:tt, $O:tt ]) => {
-        impl_instruction!(@one $tag $name [$($rest)*] [REPR, $Q, $P, $T, $O]);
-    };
-    (@one $tag:tt $name:ident [+repr $($rest:tt)*] [$R:tt, $Q:tt, $P:tt, $T:tt, $O:tt ]) => {
-        impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, $P, $T, $O]);
-    };
-
-    (@one $tag:tt $name:ident [+quil $($rest:tt)*] [ $R:tt, -, $P:tt, $T:tt, $O:tt ]) => {
-        impl_to_quil!($name);
-        impl_instruction!(@one $tag $name [$($rest)*] [$R, QUIL, $P, $T, $O]);
-    };
-    (@one $tag:tt $name:ident [-quil $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, $T:tt, $O:tt ]) => {
-        impl_instruction!(@one $tag $name [$($rest)*] [$R, QUIL, $P, $T, $O]);
-    };
-    (@one $tag:tt $name:ident [+quil $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, $T:tt, $O:tt ]) => {
-        impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, $P, $T, $O]);
-    };
-
-    (@one $tag:tt $name:ident [+parse $($rest:tt)*] [ $R:tt, $Q:tt, -, $T:tt, $O:tt ]) => {
-        impl_parse!($name);
-        impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, PARSE, $T, $O]);
-    };
-    (@one $tag:tt $name:ident [-parse $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, $T:tt, $O:tt ]) => {
-        impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, PARSE, $T, $O]);
-    };
-    (@one $tag:tt $name:ident [+parse $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, $T:tt, $O:tt ]) => {
-        impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, $P, $T, $O]);
-    };
-
-    (@one $tag:tt $name:ident [+is_quil_t($bool:literal) $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, -, $O:tt ]) => {
-        impl_is_quil_t!($name, $bool);
-        impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, $P, QUIL_T, $O]);
-    };
-    (@one $tag:tt $name:ident [-is_quil_t($bool:literal) $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, $T:tt, $O:tt ]) => {
-        impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, $P, QUIL_T, $O]);
-    };
-    (@one $tag:tt $name:ident [+is_quil_t($bool:literal) $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, $T:tt, $O:tt ]) => {
-        impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, $P, $T, $O]);
-    };
-
-    (@one $tag:tt $name:ident [+out $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, $T:tt, - ]) => {
-        impl_out!($name);
-        impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, $P, $T, OUT]);
-    };
-    (@one $tag:tt $name:ident [-out $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, $T:tt, $O:tt]) => {
-        impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, $P, $T, OUT]);
-    };
-    (@one $tag:tt $name:ident [+out $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, $T:tt, $O:tt]) => {
-        impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, $P, $T, $O]);
-    };
-
-    // This must be the final `@one $name [+ $method]` rule, for reasons that should be obvious.
-    (@one $tag:tt $name:ident [+ $unknown:tt $($rest:tt)*] $($markers:tt)?) => {
-        impl_instruction!(@unknown $tag $name $unknown);
-    };
-    (@one $tag:tt $name:ident [- $unknown:tt $($rest:tt)*] $($markers:tt)?) => {
-        impl_instruction!(@unknown $tag $name $unknown);
-    };
-    (@unknown $tag:tt $name:ident $unknown:tt) => {
-        compile_error!(concat!(
-            "Unknown impl argument `",
-            stringify!($unknown),
-            "` when processing type `",
-            stringify!($tag),
-            stringify!($name),
-            "`"
-        ));
-    };
-
-
-    // Add `+` to the front of the list if it were omitted.
-    // This has to be the last `@one` rule/after the above check to avoid infinite recursion.
-    (@one $tag:tt $name:ident [$($rest:tt)*] $markers:tt) => {
-        impl_instruction!(@one $tag $name [+ $($rest)*] $markers);
-    };
-
-    // Expand the collected accumulators into `Instruction` methods.
-    (@finalize
-        [$([$instr:ident, $instr_variant:ident],)*]
-        [$([$empty:ident, $empty_variant:ident],)*]
-    ) => {
-        impl<'py> IntoPyObject<'py> for Instruction {
-            type Target = PyAny;
-            type Output = Bound<'py, Self::Target>;
-            type Error = PyErr;
-
-            fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
-                match self {
-                    $(Instruction::$instr_variant(value) => value.into_bound_py_any(py),)*
-                    $(Instruction::$empty_variant => $empty.into_bound_py_any(py),)*
-                }
-            }
-        }
-
-        impl<'a, 'py> pyo3::FromPyObject<'a, 'py> for Instruction {
-            type Error = pyo3::PyErr;
-
-            // TODO: Consider using the slightly faster `cast_exact` here;
-            // we should only do that if all `PyInstruction` subclasses
-            // are themselves NOT marked `subclass`.
-            fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
-                if false {
-                    unreachable!("this makes the macro easier to write");
-                }$( else if let Ok(value) = obj.cast::<$instr>() {
-                    Ok(Instruction::$instr_variant(value.extract()?))
-                })* $( else if let Ok(_) = obj.cast::<$empty>() {
-                    Ok(Instruction::$empty_variant)
-                })* else {
-                    Err(CastError::new(obj, PyInstruction::classinfo_object(obj.py())))?
-                }
-            }
-        }
-    };
 }
 
 // TODO(perf,style): Determine if *all* `PyInstruction` subclasses can be marked `frozen`.
@@ -588,80 +194,82 @@ macro_rules! impl_instruction {
 // `*RustType(variant=InstructionVariant, empty=true)[repr + quil + parse + out + is_quil_t(false)]`.
 impl_instruction!([
     *Arithmetic,
-    ArithmeticOperand,
-    ArithmeticOperator,
-    AttributeValue,
-    *BinaryLogic,
-    BinaryOperand,
-    BinaryOperator,
-    *CalibrationDefinition[is_quil_t(true) + ..],
-    CalibrationIdentifier,
-    *Call,
-    *Capture[is_quil_t(true) + ..],
-    *CircuitDefinition,
-    *Comparison,
-    ComparisonOperand,
-    ComparisonOperator,
-    *Convert,
-    *Declaration,
-    *Delay[is_quil_t(true) + ..],
-    DefGateSequence[repr],
-    *Exchange,
-    ExternParameter,
-    ExternParameterType,
-    ExternSignature,
-    *Fence[is_quil_t(true) + ..],
-    *FrameDefinition[is_quil_t(true) + ..],
-    FrameIdentifier[.. + out],
-    *Gate,
-    *GateDefinition,
-    GateModifier,
-    GateSpecification,
-    GateType,
-    *Include,
-    *Jump,
-    *JumpUnless,
-    *JumpWhen,
-    *Label,
-    *Load,
-    *MeasureCalibrationDefinition[is_quil_t(true) + ..],
-    MeasureCalibrationIdentifier,
-    *Measurement,
-    MemoryReference[parse + out + ..],
-    *Move,
-    Offset,
-    OwnedGateSignature[repr],
-    PauliGate[repr],
-    PauliTerm[repr],
-    PauliSum[repr],
-    *Pragma,
-    PragmaArgument,
-    *Pulse[is_quil_t(true) + ..],
-    Qubit[out + ..],
-    QubitPlaceholder[repr],
-    *RawCapture[is_quil_t(true) + ..],
-    *Reset,
-    ScalarType,
-    *SetFrequency[is_quil_t(true) + ..],
-    *SetPhase[is_quil_t(true) + ..],
-    *SetScale[is_quil_t(true) + ..],
-    Sharing[repr],
-    *ShiftFrequency[is_quil_t(true) + ..],
-    *ShiftPhase[is_quil_t(true) + ..],
-    *Store,
-    *SwapPhases[is_quil_t(true) + ..],
-    Target[out + ..],
-    TargetPlaceholder[repr],
-    *UnaryLogic,
-    UnaryOperator,
-    UnresolvedCallArgument, // Python name: CallArgument
-    Vector,
-    Waveform[repr],
-    *WaveformDefinition[is_quil_t(true) + ..],
-    WaveformInvocation[out + ..],
-    *HaltType(variant = Halt, empty = true)[.. - repr],
-    *NopType(variant = Nop, empty = true)[.. - repr],
-    *WaitType(variant = Wait, empty = true)[.. - repr],
+   ArithmeticOperand,
+   ArithmeticOperator,
+   AttributeValue,
+   *BinaryLogic,
+   BinaryOperand,
+   BinaryOperator,
+   *CalibrationDefinition[is_quil_t(true) + ..],
+   CalibrationIdentifier,
+   *Call,
+   *Capture[is_quil_t(true) + ..],
+   *CircuitDefinition,
+   *Comparison,
+   ComparisonOperand,
+   ComparisonOperator,
+   *Convert,
+   *Declaration,
+   *Delay[is_quil_t(true) + ..],
+   DefGateSequence[repr],
+   *Exchange,
+   ExternParameter,
+   ExternParameterType,
+   ExternSignature,
+   *Fence[is_quil_t(true) + ..],
+   *FrameDefinition[is_quil_t(true) + ..],
+   FrameIdentifier[.. + out],
+   *Gate,
+   *GateDefinition,
+   GateModifier,
+   GateSpecification,
+   GateType,
+   *Include,
+   *Jump,
+   *JumpUnless,
+   *JumpWhen,
+   *Label,
+   *Load,
+   *MeasureCalibrationDefinition[is_quil_t(true) + ..],
+   MeasureCalibrationIdentifier,
+   *Measurement,
+   MemoryReference[parse + out + ..],
+   *Move,
+   Offset,
+   OwnedGateSignature[repr],
+   PauliGate[repr],
+   PauliTerm[repr],
+   PauliSum[repr],
+   *Pragma,
+   PragmaArgument,
+   *Pulse[is_quil_t(true) + ..],
+   PyQubit[repr],
+   // FormalArgument[repr],
+   // FixedQubit[repr],
+   QubitPlaceholder[repr],
+   *RawCapture[is_quil_t(true) + ..],
+   *Reset,
+   ScalarType,
+   *SetFrequency[is_quil_t(true) + ..],
+   *SetPhase[is_quil_t(true) + ..],
+   *SetScale[is_quil_t(true) + ..],
+   Sharing[repr],
+   *ShiftFrequency[is_quil_t(true) + ..],
+   *ShiftPhase[is_quil_t(true) + ..],
+   *Store,
+   *SwapPhases[is_quil_t(true) + ..],
+   Target[out + ..],
+   TargetPlaceholder[repr],
+   *UnaryLogic,
+   UnaryOperator,
+   UnresolvedCallArgument, // Python name: CallArgument
+   Vector,
+   Waveform[repr],
+   *WaveformDefinition[is_quil_t(true) + ..],
+   WaveformInvocation[out + ..],
+   *HaltType(variant = Halt, empty = true)[.. - repr],
+   *NopType(variant = Nop, empty = true)[.. - repr],
+   *WaitType(variant = Wait, empty = true)[.. - repr],
 ]);
 
 /// Superclass for all [`Instruction`] variants in Python.
@@ -812,7 +420,7 @@ pub(crate) struct AnyInstruction(pub Instruction);
 #[cfg(feature = "stubs")]
 impl pyo3_stub_gen::PyStubType for AnyInstruction {
     fn type_output() -> pyo3_stub_gen::TypeInfo {
-        pyo3_stub_gen::TypeInfo::with_module("_quil.instructions.Instruction", "quil._quil".into())
+        pyo3_stub_gen::TypeInfo::with_module("_quil.instructions.Instructions", "quil._quil".into())
     }
 }
 
@@ -1168,7 +776,7 @@ submit! {
                 cls,
                 name: builtins.str,
                 parameters: pyo3_stub_gen.RustType["Vec<ExpressionLike>"],
-                qubits: pyo3_stub_gen.RustType["Vec<QubitLike>"],
+                qubits: pyo3_stub_gen.RustType["Vec<Qubit>"],
                 instrs: pyo3_stub_gen.RustType["Vec<Instruction>"],
                 modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
             ) -> CalibrationDefinition:
@@ -1213,7 +821,7 @@ impl CalibrationDefinition {
         identifier: Option<Migrate<CalibrationIdentifier, String>>,
         instructions: Option<Migrate<Vec<Instruction>, Vec<ExpressionLike>>>,
 
-        qubits: Option<Seq<QubitLike, Qubit>>,
+        qubits: Option<Vec<Qubit>>,
         instrs: Option<Vec<Instruction>>,
         modifiers: Option<Vec<GateModifier>>,
 
@@ -1284,7 +892,7 @@ impl CalibrationDefinition {
     fn from_parts(
         name: String,
         parameters: Vec<ExpressionLike>,
-        qubits: Seq<QubitLike, Qubit>,
+        qubits: Vec<Qubit>,
         instructions: Vec<Instruction>,
         modifiers: Option<Vec<GateModifier>>,
     ) -> PyResult<Self> {
@@ -1292,7 +900,7 @@ impl CalibrationDefinition {
             name,
             modifiers.unwrap_or_default(),
             parameters.into_iter().map(Expression::from).collect(),
-            qubits.into(),
+            qubits,
         )?;
         Ok(Self::new(identifier, instructions))
     }
@@ -1333,12 +941,12 @@ pickleable_new! {
         /// Builds a new calibration identifier.
         ///
         /// Raises an error if the given name isn't a valid Quil identifier.
-        #[pyo3(signature = (name, parameters = Seq2::new(), qubits = Seq::new(), modifiers = Seq::new()))]
+        #[pyo3(signature = (name, parameters = Seq2::new(), qubits = Vec::new(), modifiers = Seq::new()))]
         #[pyo3(text_signature = "(name, parameters = [], qubits = [], modifiers = [])")]
         fn __new__(
             name: String,
             parameters: Vec<Expression> as Seq2<ExpressionLike, Expression>,
-            qubits: Vec<Qubit> as Seq<QubitLike, Qubit>,
+            qubits: Vec<Qubit>,
             modifiers: Vec<GateModifier> as Seq<GateModifierDesignator, GateModifier>
         ) -> Result<CalibrationIdentifier, IdentifierValidationError> {
             // Note that  the parameter order is different for the Python version :(
@@ -1346,19 +954,18 @@ pickleable_new! {
                 name,
                 modifiers.into(),
                 parameters.into(),
-                qubits.into(),
+                qubits,
             )
         }
     }
 }
 
-// TODO(migration-guide): So far, we've not replaced the `Parameter` or `FormalArgument` types,
-// which were wrappers around a `name: str` with special formatting rules.
-// In Rust, these are really handled by `Expression::Variable` and `Qubit::Variable` variants,
-// which does somewhat motivate dropping their explicit representation.
-// On the other hand, it may instead be worth introducing the types back
-// in order to enable backwards compatibility, and to enable more restrictive parameter types.
-// TODO: migrate these strings now that Parameter is a thing.
+// TODO(migration-guide): So far, we've not replaced the `FormalArgument` type,
+// which was a wrapper around `name: str` (with special formatting rules).
+// In Rust, this is the `Qubit::Variable` variant,
+// which does somewhat motivate dropping its explicit representation.
+// On the other hand, it may instead be worth introducing the type back
+// in order to enable backwards compatibility, and to enable more restrictive parameter typing.
 // TODO: make a formal argument qubit a thing.
 // TODO: submit! type stubs overload for the signature options (instructions is actually required,
 // but in order to allow specifying `qubits` as a kwarg instead of `qubit_variables`,
@@ -1369,7 +976,6 @@ pickleable_new! {
 #[pymethods]
 impl CircuitDefinition {
     // TODO(migration-guide): PyQuil v4's constructor calls `qubit_variables` just `qubits`.
-    // `quil` certainly expects those to just be `str`s, but it's possible PyQuil allowed `Qubit`s.
     #[new]
     #[pyo3(signature = (name, parameters, qubit_variables=None, instructions=Vec::new(), *, qubits = None))]
     fn __new__<'py>(
@@ -1632,7 +1238,7 @@ submit! {
                 cls,
                 name: builtins.str,
                 parameters: pyo3_stub_gen.RustType["Vec<ExpressionLike>"],
-                qubits: pyo3_stub_gen.RustType["Option<Vec<QubitLike>>"] = None,
+                qubits: pyo3_stub_gen.RustType["Option<Vec<Qubit>>"] = None,
                 modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
             ) -> Gate: ...
 
@@ -1641,7 +1247,7 @@ submit! {
                 cls,
                 name: builtins.str,
                 *,
-                qubits: pyo3_stub_gen.RustType["Vec<QubitLike>"],
+                qubits: pyo3_stub_gen.RustType["Vec<Qubit>"],
                 parameters: pyo3_stub_gen.RustType["Option<Vec<ExpressionLike>>"] = None,
                 modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
             ) -> Gate: ...
@@ -1652,7 +1258,7 @@ submit! {
                 name: builtins.str,
                 *,
                 params: pyo3_stub_gen.RustType["Option<Vec<ExpressionLike>>"],
-                qubits: pyo3_stub_gen.RustType["Option<Vec<QubitLike>>"] = None,
+                qubits: pyo3_stub_gen.RustType["Option<Vec<Qubit>>"] = None,
                 modifiers: pyo3_stub_gen.RustType["Option<Vec<GateModifierDesignator>>"] = None,
             ) -> Gate: ...
         "#
@@ -1678,12 +1284,12 @@ impl Gate {
     fn __new__(
         name: String,
         parameters: Option<Seq2<ExpressionLike, Expression>>,
-        qubits: Option<Seq<QubitLike, Qubit>>,
+        qubits: Option<Vec<Qubit>>,
         modifiers: Option<Seq<GateModifierDesignator, GateModifier>>,
         params: Option<Seq2<ExpressionLike, Expression>>,
     ) -> PyResult<Gate> {
         let parameters = aliased!(parameters, params)?.into();
-        let qubits = qubits.unwrap_or_default().into();
+        let qubits = qubits.unwrap_or_default();
         let modifiers = modifiers.unwrap_or_default().into();
         Ok(Self::new(&name, parameters, qubits, modifiers)?)
     }
@@ -1711,7 +1317,7 @@ impl Gate {
     /// using the given control qubit or quibits.
     #[pyo3(name = "controlled")]
     #[must_use]
-    fn py_controlled(&self, control_qubit: OneOrMore<QubitLike, Qubit>) -> Self {
+    fn py_controlled(&self, control_qubit: OneOrMore<Qubit>) -> Self {
         let mut result = self.clone();
         for qubit in control_qubit {
             result = result.controlled(qubit);
@@ -1726,11 +1332,11 @@ impl Gate {
     #[pyo3(name = "forked")]
     fn py_forked(
         &self,
-        fork_qubit: QubitLike,
+        fork_qubit: Qubit,
         alt_params: Vec<ExpressionLike>,
     ) -> Result<Self, GateError> {
         self.clone().forked(
-            fork_qubit.into(),
+            fork_qubit,
             alt_params.into_iter().map(Expression::from).collect(),
         )
     }
@@ -2356,14 +1962,14 @@ impl MeasureCalibrationDefinition {
     #[new]
     #[pyo3(signature = (qubit, memory_reference, instructions=None, *, instrs=None))]
     fn __new__(
-        qubit: QubitLike,
+        qubit: Qubit,
         memory_reference: Option<MemoryReferenceLike>,
         instructions: Option<Vec<Instruction>>,
         instrs: Option<Vec<Instruction>>,
     ) -> PyResult<Self> {
         let instructions = aliased!(instructions, instrs)?;
         let target = memory_reference.map(|memref| MemoryReference::from(memref).name.clone());
-        let ident = MeasureCalibrationIdentifier::new(None, qubit.into(), target);
+        let ident = MeasureCalibrationIdentifier::new(None, qubit, target);
         Ok(Self::new(ident, instructions))
     }
 
@@ -2428,8 +2034,8 @@ impl MeasureCalibrationIdentifier {
     // `__getnewargs_ex__` is consistent with `__new__`!
     #[pyo3(signature = (qubit, target, *, name = None))]
     #[new]
-    fn __new__(qubit: QubitLike, target: Option<String>, name: Option<String>) -> Self {
-        Self::new(name, qubit.into(), target)
+    fn __new__(qubit: Qubit, target: Option<String>, name: Option<String>) -> Self {
+        Self::new(name, qubit, target)
     }
 
     fn __getnewargs_ex__(&self) -> ((Qubit, Option<String>), HashMap<String, Option<String>>) {
@@ -2463,13 +2069,13 @@ impl Measurement {
     #[pyo3(signature = (qubit, target = None, *, name = None, classical_reg = None))]
     #[new]
     fn __new__(
-        qubit: QubitLike,
+        qubit: Qubit,
         target: Option<MemoryReferenceLike>,
         name: Option<String>,
         classical_reg: Option<MemoryReferenceLike>,
     ) -> PyResult<Self> {
         let target = aliased!(target, classical_reg, None)?.map(Into::into);
-        Ok(Self::new(name, qubit.into(), target))
+        Ok(Self::new(name, qubit, target))
     }
 
     fn __getnewargs_ex__(
@@ -2497,8 +2103,8 @@ pickleable_new! {
     impl Reset {
         /// Initialize a new reset instruction, optionally targeting a specific qubit.
         #[pyo3(signature = (qubit = None))]
-        fn __new__(qubit: Option<Qubit> as Option<QubitLike>) -> Reset {
-            Self { qubit: qubit.map(Into::into) }
+        fn __new__(qubit: Option<Qubit>) -> Reset {
+            Self { qubit }
         }
     }
 }
@@ -2958,7 +2564,7 @@ pickleable_new! {
         #[pyo3(signature = (duration, qubits, frame_names = Vec::new()))]
         fn __new__(
             duration: Expression as ExpressionLike,
-            qubits: Vec<Qubit> as Seq<QubitLike, Qubit>,
+            qubits: Vec<Qubit>,
             frame_names: Vec<String>,
         );
     }
@@ -3002,7 +2608,7 @@ impl Delay {
 
 pickleable_new! {
     impl Fence {
-        fn __new__(qubits: Vec<Qubit> as Seq<QubitLike, Qubit>);
+        fn __new__(qubits: Vec<Qubit>);
     }
 }
 
@@ -3030,8 +2636,8 @@ impl From<FrameAttributeValueLike> for AttributeValue {
 // TODO(migration-guide): The `FrameIdentifier` corresponds to PyQuil's `quilatom.Frame`.
 pickleable_new! {
     impl FrameIdentifier {
-        fn __new__(qubits: Vec<Qubit> as Seq<QubitLike, Qubit>, name: String) -> FrameIdentifier {
-            Self::new(name, qubits.into())
+        fn __new__(qubits: Vec<Qubit>, name: String) -> FrameIdentifier {
+            Self::new(name, qubits)
         }
     }
 }
@@ -3176,14 +2782,15 @@ impl<'a, 'py> FromPyObject<'a, 'py> for PauliGate {
 ///
 /// Technically, we only accept `Qubit::Variable` and `Qubit::Fixed` (or `str` and `int`),
 /// but this wraps `Qubit` and raises a type error if the input is `Qubit::Placeholder`.
+// TODO: Now that there are PyQubit subclasses, limit this to the fixed and variable subclasses.
 #[derive(FromPyObject)]
-struct PauliArg(QubitLike);
+struct PauliArg(Qubit);
 
 impl TryFrom<PauliArg> for String {
     type Error = PyErr;
 
     fn try_from(value: PauliArg) -> Result<Self, Self::Error> {
-        match Qubit::from(value.0) {
+        match value.0 {
             Qubit::Variable(v) => Ok(v),
             Qubit::Fixed(v) => Ok(format!("q{v}")),
             Qubit::Placeholder(_) => Err(PyTypeError::new_err(
@@ -4856,28 +4463,276 @@ impl Pragma {
     }
 }
 
-impl_stub_like!(
-    #[derive(Debug, Clone)]
-    pub(crate) QubitLike =
-    enum Qubit | QubitPlaceholder as Placeholder | u64 as Fixed | String as Variable);
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyo3::pyclass(
+    name = "Qubit",
+    module = "quil._quil.instructions",
+    eq,
+    frozen,
+    hash,
+    from_py_object,
+    ord,
+    subclass
+)]
+pub struct PyQubit;
+
+py_qubit!(QubitPlaceholder);
+py_qubit!(FixedQubit);
+py_qubit!(FormalArgument);
+
+#[cfg(feature = "stubs")]
+impl pyo3_stub_gen::PyStubType for Qubit {
+    fn type_input() -> pyo3_stub_gen::TypeInfo {
+        <PyQubit as pyo3_stub_gen::PyStubType>::type_input()
+            | <QubitPlaceholder as pyo3_stub_gen::PyStubType>::type_input()
+            | <FixedQubit as pyo3_stub_gen::PyStubType>::type_input()
+            | <FormalArgument as pyo3_stub_gen::PyStubType>::type_input()
+            | <u64 as pyo3_stub_gen::PyStubType>::type_input()
+            | <String as pyo3_stub_gen::PyStubType>::type_input()
+    }
+
+    fn type_output() -> pyo3_stub_gen::TypeInfo {
+        <PyQubit as pyo3_stub_gen::PyStubType>::type_output()
+    }
+}
+
+#[cfg(feature = "stubs")]
+impl pyo3_stub_gen::runtime::PyRuntimeType for Qubit {
+    fn runtime_type_object(py: Python<'_>) -> PyResult<Bound<'_, PyAny>> {
+        <PyQubit as pyo3_stub_gen::runtime::PyRuntimeType>::runtime_type_object(py)
+    }
+}
+
+impl<'a, 'py> FromPyObject<'a, 'py> for Qubit {
+    type Error = CastError<'a, 'py>;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(obj) = obj.cast_exact::<FormalArgument>() {
+            Ok(Qubit::Variable(obj.get().name.clone()))
+        } else if let Ok(obj) = obj.cast_exact::<QubitPlaceholder>() {
+            Ok(Qubit::Placeholder(obj.get().clone()))
+        } else if let Ok(obj) = obj.cast_exact::<FixedQubit>() {
+            Ok(Qubit::Fixed(obj.get().index))
+        } else if let Ok(value) = obj.extract::<u64>() {
+            Ok(Qubit::Fixed(value))
+        } else if let Ok(value) = obj.extract::<String>() {
+            Ok(Qubit::Variable(value))
+        } else {
+            Err(CastError::new(
+                obj,
+                <PyQubit as PyTypeCheck>::classinfo_object(obj.py()),
+            ))
+        }
+    }
+}
+
+impl<'py> pyo3::IntoPyObject<'py> for Qubit {
+    type Target = PyAny;
+    type Output = Bound<'py, Self::Target>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        match self {
+            Qubit::Fixed(i) => FixedQubit::from(i).into_bound_py_any(py),
+            Qubit::Variable(v) => FormalArgument::from(v).into_bound_py_any(py),
+            Qubit::Placeholder(p) => p.into_bound_py_any(py),
+        }
+    }
+}
+
+// TODO: Check if other complex enums are returning Self instead of using a Bound;
+// if so, they will incorrectly convert into the base class rather than specific variant.
+//  #[new]
+//  fn __new__<'py>(qubit: QubitLike, py: Python<'py>) -> PyResult<Bound<'py, Self>> {
+//      Qubit::from(qubit).into_pyobject(py)
+//  }
+
+// TODO(migration-guide): Previously `quil`'s `Qubit` class was a `#[pyclass]` directly on the enum,
+// but now it's got a base class and variants, which is easier to use overall.
+// Prior instances that made use of `Qubit.Fixed`, `Qubit.Variable`
+// should now directly use `Qubit` or `FixedQubit`/`FormalArgument` instead,
+// while usage of `Qubit.Placeholder(QubitPlaceholder())` should now use `QubitPlaceholder`;
+// the latter will work with `isinstance` checks against `Qubit`, motivating this change.
+// Note that that specific expression can be replaced directly with `Qubit()`, `Qubit(None)`,
+// or `QubitPlaceholder()`, which are all equivalent.
+
+#[cfg(feature = "stubs")]
+pyo3_stub_gen::inventory::submit! {
+    gen_methods_from_python! {
+        r#"
+        import typing
+
+        class PyQubit:
+            @typing.overload
+            def __new__(cls, qubit: builtins.int | FixedQubit) -> FixedQubit:
+                """Create a new `FixedQubit` from an integer or existing `FixedQubit`."""
+            @typing.overload
+            def __new__(cls, qubit: builtins.str | FormalArgument) -> FormalArgument:
+                """Create a new `FormalArgument` from a string or existing `FormalArgument`."""
+            @typing.overload
+            def __new__(cls, qubit: QubitPlaceholder | None = None) -> QubitPlaceholder:
+                """Copy the reference to an existing `QubitPlaceholder`,
+                or create a new `QubitPlaceholder` when the argument is `None`.
+                """
+        "#
+    }
+}
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
-impl Qubit {
+impl PyQubit {
+    /// Create a new `Qubit` from an existing one or something that can be converted into one.
+    ///
+    /// Existing `Qubit` instances result in a new `Qubit` with the same value,
+    /// or in the case of a `QubitPlaceholder`, a reference to the same placeholder.
+    ///
+    /// The value `None` or values of type `int` or `str` are converted into new `Qubit`s
+    /// of type `QubitPlaceholder`, `FixedQubit`, or `FormalArgument`, respectively.
     #[new]
-    fn __new__<'py>(qubit: QubitLike, py: Python<'py>) -> PyResult<Bound<'py, Self>> {
-        // TODO: Check if other complex enums are returning Self instead of using a Bound;
-        // if so, they will incorrectly convert into the base class rather than specific variant.
-        Qubit::from(qubit).into_pyobject(py)
+    #[pyo3(signature = (qubit=None, /))]
+    fn __new__<'py>(py: Python<'py>, qubit: Option<Qubit>) -> PyResult<Bound<'py, PyAny>> {
+        match qubit {
+            Some(Qubit::Fixed(i)) => FixedQubit::from(i).into_bound_py_any(py),
+            Some(Qubit::Variable(v)) => FormalArgument::from(v).into_bound_py_any(py),
+            Some(Qubit::Placeholder(p)) => p.into_bound_py_any(py),
+            None => QubitPlaceholder::default().into_bound_py_any(py),
+        }
     }
 
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<NewArgs<'py, QubitLike>> {
-        match self {
-            Self::Fixed(value) => NewArgs::new(py, *value),
-            Self::Variable(value) => NewArgs::new(py, value),
-            Self::Placeholder(value) => NewArgs::new(py, value.clone()),
+    // No `__getnewargs__` here because it's implemented in the base classes.
+    // Or more specifically, it's implemented for `FixedQubit` and `FormalArgument`,
+    // but not for `QubitPlaceholder` because it doesn't support pickling.
+
+    /// Prevent further subclassing.
+    #[gen_stub(skip)]
+    #[classmethod]
+    fn __init_subclass__(cls: &Bound<'_, PyType>, py: Python<'_>) -> PyResult<()> {
+        let type_ptr = cls.as_type_ptr();
+        let is_internal = std::ptr::eq(QubitPlaceholder::type_object_raw(py), type_ptr)
+            || std::ptr::eq(FormalArgument::type_object_raw(py), type_ptr)
+            || std::ptr::eq(FixedQubit::type_object_raw(py), type_ptr);
+
+        if !is_internal {
+            return Err(PyTypeError::new_err(format!(
+                "type '{cls}' is not an acceptable base type"
+            )));
         }
+
+        Ok(())
+    }
+}
+
+/// A fixed qubit: a qubit with a specific index.
+///
+/// This corresponds to the [`Qubit::Fixed`] variant.
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil._quil.instructions",
+        extends = PyQubit, eq, frozen, hash, skip_from_py_object, get_all)
+)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
+pub(crate) struct FixedQubit {
+    index: u64,
+}
+
+pickleable_new! {
+    impl FixedQubit {
+        fn __new__(index: u64);
+    }
+}
+
+impl From<FixedQubit> for u64 {
+    fn from(value: FixedQubit) -> Self {
+        value.index
+    }
+}
+
+impl From<u64> for FixedQubit {
+    fn from(value: u64) -> Self {
+        Self { index: value }
+    }
+}
+
+impl From<FixedQubit> for Qubit {
+    fn from(value: FixedQubit) -> Self {
+        Qubit::Fixed(value.index)
+    }
+}
+
+impl<'a, 'py> FromPyObject<'a, 'py> for FixedQubit {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(value) = obj.cast_exact::<FixedQubit>() {
+            Ok(*value.get())
+        } else {
+            Ok(Self {
+                index: obj.extract::<u64>()?,
+            })
+        }
+    }
+}
+
+/// A Quil formal argument: a name used in Quil definitions that a qubit will be bound to.
+///
+/// This corresponds to the [`Qubit::Variable`] variant.
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(
+    feature = "python",
+    pyo3::pyclass(module = "quil._quil.instructions",
+        extends = PyQubit, eq, frozen, hash, skip_from_py_object, get_all)
+)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
+pub(crate) struct FormalArgument {
+    name: String,
+}
+
+pickleable_new! {
+    impl FormalArgument {
+        fn __new__(name: String);
+    }
+}
+
+impl From<FormalArgument> for String {
+    fn from(value: FormalArgument) -> Self {
+        value.name
+    }
+}
+
+impl From<String> for FormalArgument {
+    fn from(value: String) -> Self {
+        Self { name: value }
+    }
+}
+
+impl From<FormalArgument> for Qubit {
+    fn from(value: FormalArgument) -> Self {
+        Qubit::Variable(value.name)
+    }
+}
+
+impl<'a, 'py> FromPyObject<'a, 'py> for FormalArgument {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+        if let Ok(value) = obj.cast_exact::<FormalArgument>() {
+            Ok(value.get().clone())
+        } else {
+            Ok(Self {
+                name: obj.extract::<String>()?,
+            })
+        }
+    }
+}
+
+impl From<QubitPlaceholder> for Qubit {
+    fn from(p: QubitPlaceholder) -> Self {
+        Qubit::Placeholder(p)
     }
 }
 
@@ -5410,14 +5265,12 @@ impl WaveformDefinition {
     ///
     /// See `WaveformDefinition.from_waveform` to construct one directly from a `Waveform` object.
     #[new]
-    fn __new__(name: String, parameters: Vec<String>, entries: Vec<ExpressionLike>) -> Self {
-        Self::new(
-            name,
-            Waveform::new(
-                entries.into_iter().map(Expression::from).collect(),
-                parameters,
-            ),
-        )
+    fn __new__(
+        name: String,
+        parameters: Seq2<ParameterLike, String>,
+        entries: Seq2<ExpressionLike, Expression>,
+    ) -> Self {
+        Self::new(name, Waveform::new(entries.into(), parameters.into()))
     }
 
     fn __getnewargs__(&self) -> (String, Vec<String>, Vec<Expression>) {
@@ -5458,6 +5311,437 @@ impl WaveformInvocation {
     }
 }
 
+mod macros {
+    /// Implement [`IntoPyObject`] and `From<$T> for PyClassInitializer<$T>`
+    /// for a `#[pyclass(extends = PyInstruction)]`.
+    macro_rules! py_instruction {
+        ($T:ty) => {
+            impl From<$T> for PyClassInitializer<$T> {
+                fn from(value: $T) -> Self {
+                    PyClassInitializer::from(PyInstruction).add_subclass(value)
+                }
+            }
+
+            impl<'py> IntoPyObject<'py> for $T {
+                type Target = Self;
+                type Output = Bound<'py, Self::Target>;
+                type Error = PyErr;
+
+                fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+                    Ok(Py::new(py, PyClassInitializer::from(self))?.into_bound(py))
+                }
+            }
+        };
+    }
+
+    /// Implement [`IntoPyObject`] for a `#[pyclass(extends = PyQubit)]`.
+    macro_rules! py_qubit {
+        ($T:ty) => {
+            impl From<$T> for pyo3::PyClassInitializer<$T> {
+                fn from(value: $T) -> Self {
+                    pyo3::PyClassInitializer::from(PyQubit).add_subclass(value)
+                }
+            }
+
+            impl<'py> pyo3::IntoPyObject<'py> for $T {
+                type Target = Self;
+                type Output = Bound<'py, Self::Target>;
+                type Error = PyErr;
+
+                fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+                    Ok(Py::new(py, PyClassInitializer::from(self))?.into_bound(py))
+                }
+            }
+        };
+    }
+
+    /// Create a Python singleton instance for an instruction type that has no inner value.
+    ///
+    /// This macro handles the setup for the Python equivalents of
+    /// [`Instruction::Halt`], [`Instruction::Nop`], and [`Instruction::Wait`].
+    macro_rules! py_instruction_singleton {
+        ($T:ident, $name:ident) => {
+            py_singleton!($T, stringify!($name), |py| {
+                PyClassInitializer::from(PyInstruction).add_subclass($T)
+            });
+
+            // Add the constant value to the stubs.
+            #[cfg(feature = "stubs")]
+            pyo3_stub_gen::module_variable!("quil._quil.instructions", stringify!($name), $T);
+
+            #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+            #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+            #[cfg_attr(feature = "python", pyo3::pymethods)]
+            impl $T {
+                fn __repr__(&self) -> &str {
+                    stringify!($name)
+                }
+            }
+
+            impl Quil for $T {
+                fn write(
+                    &self,
+                    writer: &mut impl std::fmt::Write,
+                    fall_back_to_debug: bool,
+                ) -> Result<(), crate::quil::ToQuilError> {
+                    Instruction::$name.write(writer, fall_back_to_debug)
+                }
+            }
+        };
+    }
+
+    /// Add a `parse` implementation to a `#[pyclass]` to use the type's `from_str` implementation.
+    macro_rules! impl_parse {
+        ($name: ident) => {
+            #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+            #[pyo3::pymethods]
+            impl $name {
+                #[staticmethod]
+                #[pyo3(name = "parse")]
+                fn py_parse(string: &str) -> PyResult<Self> {
+                    Ok(Self::from_str(string)?)
+                }
+            }
+        };
+    }
+
+    /// Add an `out` implementation to a `#[pyclass]` to use the type's `Quil` implementation.
+    ///
+    /// The method reports that it is deprecated and recommends using `to_quil` instead.
+    /// It is added to maintain backwards compatibility with `QuilAtom` types.
+    macro_rules! impl_out {
+        ($($name: ty),* $(,)?) => {
+            $(
+            #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+            #[pyo3::pymethods]
+            impl $name {
+                /// Get a Quil representation as a string.
+                ///
+                /// This method is deprecated; you should use `to_quil` instead.
+                fn out(&self, py: Python<'_>) -> PyResult<String> {
+                    py_deprecated!(py, c"`out` is deprecated; use `to_quil` instead")?;
+                    self.py_to_quil()
+                }
+
+                /// Get a Quil-like representation as a string.
+                fn __str__(&self) -> String {
+                    self.py_to_quil_or_debug()
+                }
+            }
+            )*
+        };
+    }
+
+    /// Add an `is_quil_t` method to the `#[pyclass]`.
+    macro_rules! impl_is_quil_t {
+        ($name:ident, $bool:literal) => {
+            #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+            #[pyo3::pymethods]
+            impl $name {
+                /// Returns true if the instruction is a Quil-T instruction.
+                #[staticmethod]
+                #[pyo3(name = "is_quil_t")]
+                fn is_quil_t() -> bool {
+                    $bool
+                }
+            }
+        };
+    }
+
+    /// Implement expected methods on each of the instruction-related types, given as a list.
+    ///
+    /// This makes it easy to see which classes make up the `instructions` module,
+    /// to verify that those classes have necessary `#[pymethods]` implemented,
+    /// and to see at a glance what differences they do have in their implementations.
+    ///
+    /// Types are supplied in a list. Those which deviate from the default implementations
+    /// can give the items they should implement as a sublist, as in this example:
+    ///
+    /// ```ignore
+    /// impl_instruction!([
+    ///     A, // By default, [repr + quil]
+    ///     B [repr + quil],
+    ///     *C [quil + parse],
+    ///     *D(variant=SomeVariant, empty=true)[out + ..],
+    ///     E[parse + ..],
+    /// ]);
+    /// ```
+    ///
+    /// The items in the list fit this pattern, where `<>` indicates optional content:
+    ///
+    /// ```ignore
+    /// <PY_INSTRUCTION_MARKER> RUST_TYPE <( VARIANT_OPTIONS )> <[ METHOD_OPTIONS ]>
+    ///
+    /// PY_INSTRUCTION_MARKER: `*` -- Indicates this is a `#[pyclass(extends = PyInstruction)]`.
+    /// RUST_TYPE:                 -- The name of the Rust `#[pyclass]`.
+    /// VARIANT_OPTIONS:           -- Optional, comma-separated list of variant options, in parentheses.
+    ///                               These can only apply to `#[pyclass]`es marked with an `*`.
+    ///     variant=VARIANT_NAME   -- The name of the variant in the `Instruction` enum for this type
+    ///                               (defaults to the same name as the Rust type).
+    ///     empty=true|false       -- Whether the `Instruction` variant has an inner value
+    ///                               (defaults to `false`; `true` indicates a Unit variant).
+    /// METHOD_OPTIONS:            -- Optional, space-separated list of method options, in brackets.
+    ///                               By default, all types get `+ repr + quil`,
+    ///                               and `*`-marked types also get `+ is_quil_t(false)`.
+    ///     `+ repr`               -- Implement `__repr__` using the type's `Debug` implementation.
+    ///     `+ quil`               -- Implement `to_quil` using the type's `Quil` implementation.
+    ///     `+ parse`              -- Implement `parse` using the type's `FromStr` implementation.
+    ///     `+ out`                -- Implement `out` using the type's `Quil` implementation.
+    ///                               Note that this is a deprecated method only added for backwards
+    ///                               compatibility with PyQuil v4; it'll be removed in the future.
+    ///     `+ is_quil_t(true|false)`
+    ///                            -- Implement `is_quil_t` to return the given boolean value.
+    ///                               This is automatically implemented for `*`-marked types
+    ///                               with a default value of `false`, but those that are Quil-T
+    ///                               should explicitly add it with a value of `true`.
+    ///     `+ ..`                 -- Expand to the default set of methods for this type.
+    ///                               This can be used to add additional methods to the defaults;
+    ///                               it should be specified as the last item in the list.
+    /// ```
+    macro_rules! impl_instruction {
+
+        // This macro has a lot of matching rules, but is conceptually very simple.
+        // Given a non-empty list of types, it outputs two new macro invocations:
+        // the first processes the head of the list, and the second processes the rest.
+        // Of course, that second invocation is a recursive call to this macro,
+        // so once the list is empty, it knows it has processed the full list.
+        //
+        // The rules to operate on a single item _could_ be pushed to another macro,
+        // but instead they are included here to just keep everything together.
+        // They are prefixed with the `@one` token and take a type name and list of args,
+        // and they operate essentially the same way as the broader macro:
+        // strip off and process the first arg to produce some output,
+        // then output another invocation with the remaining arguments.
+        //
+        // The internal process to handle the list is formed of rules prefixed with `@list`.
+        // In addition to kicking off the `@one` handling for each type,
+        // they also need to accumulate those types that are `Instruction` variants
+        // so that once the full list is processed, it can output additional methods
+        // implemented on `Instruction` that need to know about all of its variants.
+        // Because some of those variants have inner values and some do not,
+        // the macro needs to split them into two different accumulator lists,
+        // and hence the actual `@list` matching is a series of rules.
+        // Nevertheless, their basic output is as described above.
+        //
+        // Because the `IntoPyObject` and `FromPyObject` implementations for `Instruction`
+        // should only happen _once_, after all the variants are accumulated,
+        // we can't easily include arguments to modify it within the `@one` rules
+        // without adopting an approach that trades expansions between `@one` and `@list`;
+        // doing that would work fine, but would require a deeply-nested expansion,
+        // and we'd have to raise the recursion limit just to get it to compile.
+        //
+        // Instead, we use a small set of `@list` rules to match a `*`-prefix,
+        // and accept additional modifiers within a separate `()`-style sublist.
+        // Although it'd be nifty to token-munch those arguments too,
+        // it'd be a lot more work for not much syntactic sugar,
+        // so we should aim to keep those options simple and explicit.
+        //
+        // In other words, the args in square brackets are for the "per-type" expansions,
+        // while the those in parentheses are for the "at-the-end" expansion.
+        // Processing the former is done independently of the list recursion,
+        // so each type expands at a depth only one (or a few) levels deeper than the last.
+
+        // The initial capture kicks off the recursive processing with empty accumulators.
+        // The full list is given in square brackets so this can capture it in a single token tree.
+        ($tokens:tt) => {
+            impl_instruction!(@list $tokens [] []);
+        };
+
+        // The terminal rule (empty input list) processes the accumulated lists,
+        // though the actual implementation is below to make this easier to grok.
+        (@list [] $variants:tt $empties:tt) => {
+            impl_instruction!(@finalize $variants $empties);
+        };
+
+        // Types without `*` are not `Instruction` variants and aren't accumulated.
+        (@list [$name:ident $([$($args:tt)*])?, $($tail:tt)*] $variants:tt $empties:tt) => {
+            impl_instruction!(@one - $name $([$($args)*])?);
+            impl_instruction!(@list [$($tail)*] $variants $empties);
+        };
+
+        // Types prefixed with `*` are `Instruction` variants to accumulate.
+        // They can use specific arguments in `()` to specify an alternative variant name
+        // and whether or not the variant has an inner value.
+
+        // This has an explicit variant name and no inner value.
+        (@list [$tag:tt $name:ident(variant=$variant:ident, empty=true)  $([$($args:tt)*])?, $($tail:tt)*] $variants:tt [$($empties:tt)*]) => {
+            py_instruction_singleton!($name, $variant);
+            impl_instruction!(@one $tag $name $([$($args)*])?);
+            impl_instruction!(@list [$($tail)*] $variants [$($empties)* [$name, $variant],]);
+        };
+
+        // This has an explicit variant name and has an inner value.
+        (@list [$tag:tt $name:ident(variant=$variant:ident $(, empty=false)?) $([$($args:tt)*])?, $($tail:tt)*] [$($variants:tt)*] $empties:tt) => {
+            py_instruction!($name);
+            impl_instruction!(@one $tag $name $([$($args)*])?);
+            impl_instruction!(@list [$($tail)*] [$($variants)* [$name, $variant],] $empties);
+        };
+
+        // This assumes the variant name matches the type name and expands to one of the above.
+        (@list [$tag:tt $name:ident$((empty=$is_empty:tt))? $([$($args:tt)*])?, $($tail:tt)*] $variants:tt $empties:tt) => {
+            impl_instruction!(@list [$tag $name(variant=$name $(,empty=$is_empty)?) $([$($args)*])?, $($tail)*] $variants $empties);
+        };
+
+        // The `@one` rules walk a single type's sublist of arguments one at a time.
+
+        // Use `+ ..` when no args are given.
+        (@one $name:ident) => {
+            impl_instruction!(@one - $name [+ ..]);
+        };
+        (@one $tag:tt $name:ident) => {
+            impl_instruction!(@one $tag $name [+ ..]);
+        };
+        // Expand `+ ..` to defaults that depend on whether the type is `*`-marked or not.
+        // This appends the defaults to the list so that explicitly-specified args override them.
+        (@one * $name:ident [+ .. $($rest:tt)*] $markers:tt) => {
+            impl_instruction!(@one * $name [$($rest)* + repr + quil + out + is_quil_t(false)] $markers);
+        };
+        (@one - $name:ident [+ .. $($rest:tt)*] $markers:tt) => {
+            impl_instruction!(@one - $name [$($rest)* + repr + quil] $markers);
+        };
+
+        // Add indicator for which methods we've already implemented,
+        // so that they can be given more than once (in particular, as part of `+ ..`).
+        (@one $tag:tt $name:ident $args:tt) => {
+            impl_instruction!(@one $tag $name $args [-, -, -, -, -]);
+        };
+
+        // Terminal rule when done processing arguments.
+        (@one $tag:tt $name:ident [] [ $R:tt, $Q:tt, $P:tt, $T:tt, $O:tt ]) => {};
+
+        // The rest of these spit out a specific implementation and continue processing the rest.
+        // They each have three matchers: two for `+TARGET` or `-TARGET` the first time we see it,
+        // and another for any other instance of it, which just continues processing.
+        // After seeing `+` or `-`, we set the marker to indicate that it's processed already.
+
+        (@one $tag:tt $name:ident [+repr $($rest:tt)*] [-, $Q:tt, $P:tt, $T:tt, $O:tt]) => {
+            impl_repr!($name);
+            impl_instruction!(@one $tag $name [$($rest)*] [REPR, $Q, $P, $T, $O]);
+        };
+        (@one $tag:tt $name:ident [-repr $($rest:tt)*] [$R:tt, $Q:tt, $P:tt, $T:tt, $O:tt ]) => {
+            impl_instruction!(@one $tag $name [$($rest)*] [REPR, $Q, $P, $T, $O]);
+        };
+        (@one $tag:tt $name:ident [+repr $($rest:tt)*] [$R:tt, $Q:tt, $P:tt, $T:tt, $O:tt ]) => {
+            impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, $P, $T, $O]);
+        };
+
+        (@one $tag:tt $name:ident [+quil $($rest:tt)*] [ $R:tt, -, $P:tt, $T:tt, $O:tt ]) => {
+            impl_to_quil!($name);
+            impl_instruction!(@one $tag $name [$($rest)*] [$R, QUIL, $P, $T, $O]);
+        };
+        (@one $tag:tt $name:ident [-quil $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, $T:tt, $O:tt ]) => {
+            impl_instruction!(@one $tag $name [$($rest)*] [$R, QUIL, $P, $T, $O]);
+        };
+        (@one $tag:tt $name:ident [+quil $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, $T:tt, $O:tt ]) => {
+            impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, $P, $T, $O]);
+        };
+
+        (@one $tag:tt $name:ident [+parse $($rest:tt)*] [ $R:tt, $Q:tt, -, $T:tt, $O:tt ]) => {
+            impl_parse!($name);
+            impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, PARSE, $T, $O]);
+        };
+        (@one $tag:tt $name:ident [-parse $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, $T:tt, $O:tt ]) => {
+            impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, PARSE, $T, $O]);
+        };
+        (@one $tag:tt $name:ident [+parse $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, $T:tt, $O:tt ]) => {
+            impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, $P, $T, $O]);
+        };
+
+        (@one * $name:ident [+is_quil_t($bool:literal) $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, -, $O:tt ]) => {
+            impl_is_quil_t!($name, $bool);
+            impl_instruction!(@one * $name [$($rest)*] [$R, $Q, $P, QUIL_T, $O]);
+        };
+        (@one $tag:tt $name:ident [-is_quil_t($bool:literal) $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, $T:tt, $O:tt ]) => {
+            impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, $P, QUIL_T, $O]);
+        };
+        (@one * $name:ident [+is_quil_t($bool:literal) $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, $T:tt, $O:tt ]) => {
+            impl_instruction!(@one * $name [$($rest)*] [$R, $Q, $P, $T, $O]);
+        };
+
+        (@one $tag:tt $name:ident [+out $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, $T:tt, - ]) => {
+            impl_out!($name);
+            impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, $P, $T, OUT]);
+        };
+        (@one $tag:tt $name:ident [-out $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, $T:tt, $O:tt]) => {
+            impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, $P, $T, OUT]);
+        };
+        (@one $tag:tt $name:ident [+out $($rest:tt)*] [ $R:tt, $Q:tt, $P:tt, $T:tt, $O:tt]) => {
+            impl_instruction!(@one $tag $name [$($rest)*] [$R, $Q, $P, $T, $O]);
+        };
+
+        // This must be the final `@one $name [+ $method]` rule, for reasons that should be obvious.
+        (@one $tag:tt $name:ident [+ $unknown:tt $($rest:tt)*] $($markers:tt)?) => {
+            impl_instruction!(@unknown $tag $name $unknown);
+        };
+        (@one $tag:tt $name:ident [- $unknown:tt $($rest:tt)*] $($markers:tt)?) => {
+            impl_instruction!(@unknown $tag $name $unknown);
+        };
+        (@unknown $tag:tt $name:ident $unknown:tt) => {
+            compile_error!(concat!(
+                "Unknown impl argument `",
+                stringify!($unknown),
+                "` when processing type `",
+                stringify!($tag),
+                stringify!($name),
+                "`"
+            ));
+        };
+
+
+        // Add `+` to the front of the list if it were omitted.
+        // This has to be the last `@one` rule/after the above check to avoid infinite recursion.
+        (@one $tag:tt $name:ident [$($rest:tt)*] $markers:tt) => {
+            impl_instruction!(@one $tag $name [+ $($rest)*] $markers);
+        };
+
+        // Expand the collected accumulators into `Instruction` methods.
+        (@finalize
+            [$([$instr:ident, $instr_variant:ident],)*]
+            [$([$empty:ident, $empty_variant:ident],)*]
+        ) => {
+            impl<'py> IntoPyObject<'py> for Instruction {
+                type Target = PyAny;
+                type Output = Bound<'py, Self::Target>;
+                type Error = PyErr;
+
+                fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+                    match self {
+                        $(Instruction::$instr_variant(value) => value.into_bound_py_any(py),)*
+                        $(Instruction::$empty_variant => $empty.into_bound_py_any(py),)*
+                    }
+                }
+            }
+
+            impl<'a, 'py> pyo3::FromPyObject<'a, 'py> for Instruction {
+                type Error = pyo3::PyErr;
+
+                // TODO: Consider using the slightly faster `cast_exact` here;
+                // we should only do that if all `PyInstruction` subclasses
+                // are themselves NOT marked `subclass`.
+                fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
+                    if false {
+                        unreachable!("this makes the macro easier to write");
+                    }$( else if let Ok(value) = obj.cast::<$instr>() {
+                        Ok(Instruction::$instr_variant(value.extract()?))
+                    })* $( else if let Ok(_) = obj.cast::<$empty>() {
+                        Ok(Instruction::$empty_variant)
+                    })* else {
+                        Err(CastError::new(obj, PyInstruction::classinfo_object(obj.py())))?
+                    }
+                }
+            }
+        };
+    }
+
+    pub(super) use impl_instruction;
+    pub(super) use impl_is_quil_t;
+    pub(super) use impl_out;
+    pub(super) use impl_parse;
+    pub(super) use py_instruction;
+    pub(super) use py_instruction_singleton;
+    pub(super) use py_qubit;
+}
+
 #[cfg(feature = "stubs")]
 mod stubs {
     use crate::quilpy::impl_stub_enum;
@@ -5490,6 +5774,6 @@ mod stubs {
         "quil._quil.instructions",
         MemoryReferenceDesignator = MemoryReferenceLike
     );
-    type_alias!("quil._quil.instructions", QubitDesignator = QubitLike);
+    type_alias!("quil._quil.instructions", QubitDesignator = Qubit);
     type_alias!("quil._quil.instructions", PauliTargetDesignator = PauliArg);
 }

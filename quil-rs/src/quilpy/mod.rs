@@ -545,6 +545,9 @@ impl<U> Iterator for OneOrMoreIter<U> {
 pub(crate) struct Via<T, U>(pub U, PhantomData<T>);
 
 impl<T, U> Via<T, U> {
+    /// Extract the inner value of type `U` from the wrapper.
+    ///
+    /// `Via` can't implement `From<Via<T, U>> for U` due to Rust consistency rules.
     pub(crate) fn into_inner(self) -> U {
         self.0
     }
