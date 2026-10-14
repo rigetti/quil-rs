@@ -17,6 +17,7 @@ use crate::{
     quilpy::{
         errors::{self, ValueError},
         memory::{PyMemRef, TryAsBorrowed},
+        pickleable_enum,
         singleton::{py_singleton, PyModuleSingletonExt},
     },
 };
@@ -1085,24 +1086,22 @@ impl AsView for Bound<'_, FunctionCallExpression> {
     }
 }
 
+pickleable_enum! {
+    ExpressionFunction => { Cis("CIS"), Cosine("COSINE"), Exponent("EXPONENT"), Sine("SINE"), SquareRoot("SQUARE_ROOT") },
+    InfixOperator => { Caret("CARET"), Plus("PLUS"), Minus("MINUS"), Slash("SLASH"), Star("STAR") },
+    PrefixOperator => { Plus("PLUS"), Minus("MINUS") }
+}
+
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl ExpressionFunction {
     #[new]
-    fn __new__(value: isize) -> PyResult<Self> {
-        match value {
-            val if val == Self::Cis as isize => Ok(Self::Cis),
-            val if val == Self::Cosine as isize => Ok(Self::Cosine),
-            val if val == Self::Exponent as isize => Ok(Self::Exponent),
-            val if val == Self::Sine as isize => Ok(Self::Sine),
-            val if val == Self::SquareRoot as isize => Ok(Self::SquareRoot),
-            _ => Err(ValueError::new_err("unknown value")),
-        }
-    }
-
-    fn __getnewargs__(&self) -> (isize,) {
-        (*self as isize,)
+    #[pyo3(signature = (value, /))]
+    fn __new__(mut value: String) -> PyResult<Self> {
+        value.make_ascii_uppercase();
+        Self::from_str(&value)
+            .map_err(|_| ValueError::new_err("not an ExpressionFunction: {value}"))
     }
 }
 
@@ -1111,16 +1110,10 @@ impl ExpressionFunction {
 #[pymethods]
 impl PrefixOperator {
     #[new]
-    fn __new__(value: isize) -> PyResult<Self> {
-        match value {
-            val if val == Self::Plus as isize => Ok(Self::Plus),
-            val if val == Self::Minus as isize => Ok(Self::Minus),
-            _ => Err(ValueError::new_err("unknown value")),
-        }
-    }
-
-    fn __getnewargs__(&self) -> (isize,) {
-        (*self as isize,)
+    #[pyo3(signature = (value, /))]
+    fn __new__(mut value: String) -> PyResult<Self> {
+        value.make_ascii_uppercase();
+        Self::from_str(&value).map_err(|_| ValueError::new_err("not a PrefixOperator: {value}"))
     }
 }
 
@@ -1129,19 +1122,10 @@ impl PrefixOperator {
 #[pymethods]
 impl InfixOperator {
     #[new]
-    fn __new__(value: isize) -> PyResult<Self> {
-        match value {
-            val if val == Self::Caret as isize => Ok(Self::Caret),
-            val if val == Self::Plus as isize => Ok(Self::Plus),
-            val if val == Self::Minus as isize => Ok(Self::Minus),
-            val if val == Self::Slash as isize => Ok(Self::Slash),
-            val if val == Self::Star as isize => Ok(Self::Star),
-            _ => Err(ValueError::new_err("unknown value")),
-        }
-    }
-
-    fn __getnewargs__(&self) -> (isize,) {
-        (*self as isize,)
+    #[pyo3(signature = (value, /))]
+    fn __new__(mut value: String) -> PyResult<Self> {
+        value.make_ascii_uppercase();
+        Self::from_str(&value).map_err(|_| ValueError::new_err("not an InfixOperator: {value}"))
     }
 }
 

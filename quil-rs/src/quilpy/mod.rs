@@ -1072,6 +1072,61 @@ macro_rules! impl_to_quil {
 
 pub(crate) use impl_to_quil;
 
+/// Create `__reduce__` for simple enums that return the qualified name.
+///
+/// The syntax of this macro is:
+///
+/// ```rust,ignore
+/// pickleable_enum! {
+///     ArithmeticOperator => { Add("ADD"), Subtract("SUBTRACT"), Multiply("MULTIPLY"), Divide("DIVIDE") },
+///     BinaryOperator => { And("AND"), Ior("IOR"), Xor("XOR"), Shl("SHL"), Shr("SHR"), Ashr("ASHR") },
+/// }
+/// ```
+///
+/// If the Python name differs from the Rust name, provide it in parentheses after the Rust name.
+/// If the Python name for the enum itself differs from the Rust name,
+/// write it using for example `ArithmeticOperator as "ArithmeticOp" => { ... }`.
+macro_rules! pickleable_enum {
+    ( $(
+        $enum:ty $(as $pyenum:expr )? => {
+            $( $variant:ident $(( $pyvar:expr ))? ),+ $(,)?
+       }
+       ),+ $(,)?) => {
+        $(
+        #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+        #[pymethods]
+        impl $enum {
+            fn __reduce__<'py>(&self, py: Python<'py>) -> &::pyo3::Bound<'py, ::pyo3::types::PyString> {
+                $crate::quilpy::pickleable_enum!(@match self, py,
+                    [$($pyenum,)? stringify!($enum)],
+                  $([ $variant, $($pyvar,)? stringify!($variant) ])*
+                )
+            }
+        }
+        )*
+    };
+
+    // Expand the match arms, constructing the right names.
+    // This has to be a separate rule because the Python enum name has 0 or 1 repeats,
+    // but needs to be expanded per variant, so the repetition counts don't match up.
+    //
+    // The expansion above can fill the *first, required* slot here
+    // with the outer macro's *optional, second* Python name, if one were provided;
+    // if so, it fills the *second* slot here with the outer macro's *required* Rust name.
+    // If the outer macro didn't have a Python name,
+    // then the first slot here gets the stringified Rust name, while the second is unfilled.
+    // In either case, that's why the second slot is optional and ignored.
+    (@match $self:ident, $py:ident,
+     [$pyclassname:expr $(, $_enum:expr)? ], $( [$variant:ident, $pyattrname:expr $(, $_var:expr)?] )* ) => {
+        match $self {
+            $(Self::$variant => ::pyo3::intern!($py, concat!($pyclassname, ".", $pyattrname)),)*
+        }
+    }
+}
+
+pub(crate) use pickleable_enum;
+
 /// An alternative to [`PyAnyMethods::extract`] that only fails if there are multithreaded mutable
 /// borrows; if casting would fail, it returns [`None`] instead.  This allows avoiding [the
 /// performance hit due to allocation on `extract`
