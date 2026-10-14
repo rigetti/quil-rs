@@ -819,14 +819,14 @@ impl CalibrationDefinition {
     #[new]
     fn __new__(
         identifier: Option<Migrate<CalibrationIdentifier, String>>,
-        instructions: Option<Migrate<Vec<Instruction>, Vec<ExpressionLike>>>,
+        instructions: Option<Migrate<Vec<Instruction>, Seq2<ExpressionLike, Expression>>>,
 
         qubits: Option<Vec<Qubit>>,
         instrs: Option<Vec<Instruction>>,
         modifiers: Option<Vec<GateModifier>>,
 
         name: Option<String>,
-        parameters: Option<Vec<ExpressionLike>>,
+        parameters: Option<Seq2<ExpressionLike, Expression>>,
     ) -> PyResult<Self> {
         match (
             identifier,
@@ -891,7 +891,7 @@ impl CalibrationDefinition {
     #[staticmethod]
     fn from_parts(
         name: String,
-        parameters: Vec<ExpressionLike>,
+        parameters: Seq2<ExpressionLike, Expression>,
         qubits: Vec<Qubit>,
         instructions: Vec<Instruction>,
         modifiers: Option<Vec<GateModifier>>,
@@ -899,7 +899,7 @@ impl CalibrationDefinition {
         let identifier = CalibrationIdentifier::new(
             name,
             modifiers.unwrap_or_default(),
-            parameters.into_iter().map(Expression::from).collect(),
+            parameters.into(),
             qubits,
         )?;
         Ok(Self::new(identifier, instructions))
@@ -982,15 +982,15 @@ impl CircuitDefinition {
         py: Python<'py>,
         name: String,
         parameters: Seq2<ParameterLike, String>,
-        qubit_variables: Option<Vec<String>>,
+        qubit_variables: Option<Seq2<FormalArgumentLike, String>>,
         instructions: Vec<Instruction>,
-        qubits: Option<Vec<String>>,
+        qubits: Option<Seq2<FormalArgumentLike, String>>,
     ) -> PyResult<Self> {
         let qubit_variables = deprecated_or_new!(py, new = qubit_variables, old = qubits)?;
         Ok(Self::new(
             name,
             parameters.into(),
-            qubit_variables,
+            qubit_variables.into(),
             instructions,
         ))
     }
@@ -1333,12 +1333,9 @@ impl Gate {
     fn py_forked(
         &self,
         fork_qubit: Qubit,
-        alt_params: Vec<ExpressionLike>,
+        alt_params: Seq2<ExpressionLike, Expression>,
     ) -> Result<Self, GateError> {
-        self.clone().forked(
-            fork_qubit,
-            alt_params.into_iter().map(Expression::from).collect(),
-        )
+        self.clone().forked(fork_qubit, alt_params.into())
     }
 
     /// Get the matrix resulting from lifting this ``Gate``
@@ -4639,6 +4636,8 @@ pub(crate) struct FixedQubit {
     index: u64,
 }
 
+impl_stub_like!(pub(crate) FixedQubitLike = FixedQubit | u64);
+
 pickleable_new! {
     impl FixedQubit {
         fn __new__(index: u64);
@@ -4691,6 +4690,8 @@ impl<'a, 'py> FromPyObject<'a, 'py> for FixedQubit {
 pub(crate) struct FormalArgument {
     name: String,
 }
+
+impl_stub_like!(pub(crate) FormalArgumentLike = FormalArgument | String);
 
 pickleable_new! {
     impl FormalArgument {
