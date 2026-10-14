@@ -39,7 +39,7 @@ use crate::{
         errors::{self, PickleError},
         impl_newargs, impl_stub_enum, impl_stub_like, impl_to_quil,
         memory::{DeclarationAt, MemoryReferenceLike, PyMemRef},
-        py_deprecated,
+        pickleable_enum, py_deprecated,
         singleton::{py_singleton, PyModuleSingletonExt},
         IntoNewArgs, Migrate, NewArgs, NonZeroU64, OneOrMore, Seq, Seq2, Via,
     },
@@ -592,6 +592,21 @@ impl Arithmetic {
     fn right(&self) -> ArithmeticOperand {
         self.source.clone()
     }
+}
+
+pickleable_enum! {
+    ArithmeticOperator => { Add("ADD"), Subtract("SUBTRACT"), Multiply("MULTIPLY"), Divide("DIVIDE") },
+    BinaryOperator => { And("AND"), Ior("IOR"), Xor("XOR"), Shl("SHL"), Shr("SHR"), Ashr("ASHR") },
+    ComparisonOperator => {
+        Equal("EQUAL"),
+        LessThan("LESS_THAN"), LessThanOrEqual("LESS_THAN_OR_EQUAL"),
+        GreaterThan("GREATER_THAN"), GreaterThanOrEqual("GREATER_THAN_OR_EQUAL")
+    },
+    GateModifier => { Controlled("CONTROLLED"), Dagger("DAGGER"), Forked("FORKED") },
+    GateType => { Matrix("MATRIX"), Permutation("PERMUTATION"), PauliSum("PAULI_SUM"), Sequence("SEQUENCE") },
+    PauliGate => { I("I"), X("X"), Y("Y"), Z("Z") },
+    ScalarType => { Bit("BIT"), Integer("INTEGER"), Octet("OCTET"), Real("REAL") },
+    UnaryOperator => { Not("NOT"), Neg("NEG") },
 }
 
 impl_newargs!(ArithmeticOperandArgs = i64 | f64 | MemoryReference);
