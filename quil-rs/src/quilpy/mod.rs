@@ -986,6 +986,7 @@ macro_rules! impl_stub_like {
 
     (@initial $(#[$meta:meta])* $vis:vis $T:ident = $base_ty:ty $(| $variant_ty:ty $(as $variant_name:ident)? )*) => {
         $(#[$meta])*
+        #[cfg_attr(feature = "stubs", derive(IntoPyObject))]
         $vis struct $T($base_ty);
 
         impl From<$T> for $base_ty {
@@ -1029,6 +1030,14 @@ macro_rules! impl_stub_like {
                 }
             }
         }
+
+        $(
+            impl From<$T> for $variant_ty {
+                fn from(value: $T) -> Self {
+                    value.0.into()
+                }
+            }
+        )*
     };
 
     // Form the variant name; allows it to be different from the type used for extraction.
