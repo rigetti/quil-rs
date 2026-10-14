@@ -1452,42 +1452,51 @@ impl GateDefinition {
     fn __new__(
         py: Python<'_>,
         name: String,
-        parameters: Option<Migrate<Seq2<ParameterLike, String>, GateSpecification>>,
-        specification: Option<Migrate<GateSpecification, Seq2<ParameterLike, String>>>,
+        // IMPORTANT: A sequence of strings will be accepted by either of these types,
+        // so to disambiguate them contextually, this puts ParameterLike first,
+        // since 2d sequences can't be extracted into them.
+        parameters: Option<
+            Migrate<Seq2<ParameterLike, String>, Via<GateSpecificationLike, GateSpecification>>,
+        >,
+        specification: Option<
+            Migrate<Seq2<ParameterLike, String>, Via<GateSpecificationLike, GateSpecification>>,
+        >,
         matrix: Option<Via<GateSpecificationLike, GateSpecification>>,
     ) -> PyResult<GateDefinition> {
         let (parameters, specification, deprecated_call) = match (parameters, specification) {
             // Preferred constructor: `(name, parameters, specification)`.
-            (Some(Migrate::New(parameters)), Some(Migrate::New(specification))) => {
-                (Some(parameters), Some(specification), false)
+            // See the note about New vs Old naming.
+            (Some(Migrate::New(parameters)), Some(Migrate::Old(specification))) => {
+                (Some(parameters), Some(specification.into_inner()), false)
             }
-            (Some(Migrate::New(parameters)), None) => (Some(parameters), None, false),
-            (None, Some(Migrate::New(specification))) => (None, Some(specification), false),
 
             // These imply the user gave `matrix` as a keyword argument,
             // or just left it out entirely, which are handled below with `deprecated_or_new!`.
-            (None, None) => (None, None, false),
-            (None, Some(Migrate::Old(parameters))) => {
-                (Some(parameters), None, false)
+            (None, None) => (None, None, true),
+            // Again `New` is a misnomer here.
+            (Some(Migrate::New(parameters)), None) | (None, Some(Migrate::New(parameters))) => {
+                (Some(parameters), None, true)
             },
+            (None, Some(Migrate::Old(specification))) => (None, Some(specification.into_inner()), true),
 
             // Deprecated PyQuil v4 constructor: `(name, matrix, parameters=None)`.
             (Some(Migrate::Old(matrix)), None) => {
-                (None, Some(matrix), true)
+                (None, Some(matrix.into_inner()), true)
             }
-            (Some(Migrate::Old(matrix)), Some(Migrate::Old(parameters))) => {
-                (Some(parameters), Some(matrix), true)
+            (Some(Migrate::Old(matrix)), Some(Migrate::New(parameters))) => {
+                (Some(parameters), Some(matrix.into_inner()), true)
             }
 
             // If a user provided two specifications for some reason...
-            (Some(Migrate::Old(_)), Some(Migrate::New(p))) => {
+            (Some(Migrate::Old(_)), Some(Migrate::Old(p))) => {
                 return Err(PyTypeError::new_err(format!(
-                    "`parameters` must be a list of `Parameter`s or `str`s, not a `GateSpecification` ({p:?})",
+                    "`parameters` must be a list of `Parameter`s or `str`s, not a `GateSpecification` (got: {:?})",
+                    p.into_inner()
                 )))
             },
 
             // If the user provided two lists of parameters...
-            (Some(Migrate::New(_)), Some(Migrate::Old(_))) => {
+            (Some(Migrate::New(_)), Some(Migrate::New(_))) => {
                 return Err(PyTypeError::new_err(
                     "`specification` must be a `GateSpecification`",
                 ))
@@ -1554,12 +1563,12 @@ impl<'a, 'py> FromPyObject<'a, 'py> for GateSpecification {
             Ok(GateSpecification::PauliSum(value.get().clone()))
         } else if let Ok(value) = obj.cast::<DefGateSequence>() {
             Ok(GateSpecification::Sequence(value.get().clone()))
+        } else if let Ok(permutation) = obj.extract::<Vec<u64>>() {
+            Ok(GateSpecification::Permutation(permutation))
         } else if let Ok(matrix) = obj.extract::<Vec<Seq2<ExpressionLike, Expression>>>() {
             Ok(GateSpecification::Matrix(
                 matrix.into_iter().map(|row| row.into()).collect(),
             ))
-        } else if let Ok(permutation) = obj.extract::<Vec<u64>>() {
-            Ok(GateSpecification::Permutation(permutation))
         } else {
             Err(CastError::new(
                 obj,
@@ -1571,6 +1580,7 @@ impl<'a, 'py> FromPyObject<'a, 'py> for GateSpecification {
 
 #[derive(FromPyObject)]
 struct GateSpecificationLike(GateSpecification);
+
 impl_stub_enum!(GateSpecificationLike =
     GateSpecification | PauliSum | DefGateSequence | Vec<Seq2<ExpressionLike, Expression>> | Vec<u64>);
 
