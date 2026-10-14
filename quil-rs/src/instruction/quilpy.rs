@@ -750,6 +750,22 @@ impl Comparison {
         ))
     }
 
+    fn __getnewargs__(
+        &self,
+    ) -> (
+        ComparisonOperator,
+        MemoryReference,
+        MemoryReference,
+        ComparisonOperand,
+    ) {
+        (
+            self.operator,
+            self.destination.clone(),
+            self.lhs.clone(),
+            self.rhs.clone(),
+        )
+    }
+
     #[pyo3(warn(message = "use `operator` instead", category = PyDeprecationWarning))]
     #[getter]
     fn op(&self) -> ComparisonOperator {
