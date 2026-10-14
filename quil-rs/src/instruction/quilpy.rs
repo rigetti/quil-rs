@@ -620,9 +620,9 @@ impl ArithmeticOperand {
         py: Python<'py>,
     ) -> PyResult<NewArgs<'py, ArithmeticOperandArgs>> {
         match self {
-            Self::LiteralInteger(value) => (value,).into_newargs(py),
-            Self::LiteralReal(value) => (value,).into_newargs(py),
-            Self::MemoryReference(value) => (value.clone(),).into_newargs(py),
+            Self::LiteralInteger(value) => value.into_newargs(py),
+            Self::LiteralReal(value) => value.into_newargs(py),
+            Self::MemoryReference(value) => value.clone().into_newargs(py),
         }
     }
 }
@@ -635,8 +635,8 @@ impl_newargs!(AttributeValueArgs = String | Expression);
 impl AttributeValue {
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<NewArgs<'py, AttributeValueArgs>> {
         match self {
-            Self::String(value) => (value.clone(),).into_newargs(py),
-            Self::Expression(value) => (value.clone(),).into_newargs(py),
+            Self::String(value) => value.clone().into_newargs(py),
+            Self::Expression(value) => value.clone().into_newargs(py),
         }
     }
 }
@@ -654,8 +654,8 @@ impl BinaryOperand {
 
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<NewArgs<'py, BinaryOperandArgs>> {
         match self {
-            Self::LiteralInteger(value) => (value,).into_newargs(py),
-            Self::MemoryReference(value) => (value.clone(),).into_newargs(py),
+            Self::LiteralInteger(value) => value.into_newargs(py),
+            Self::MemoryReference(value) => value.clone().into_newargs(py),
         }
     }
 }
@@ -707,9 +707,9 @@ impl ComparisonOperand {
         py: Python<'py>,
     ) -> PyResult<NewArgs<'py, ComparisonOperandArgs>> {
         match self {
-            Self::LiteralInteger(value) => (value,).into_newargs(py),
-            Self::LiteralReal(value) => (value,).into_newargs(py),
-            Self::MemoryReference(value) => (value.clone(),).into_newargs(py),
+            Self::LiteralInteger(value) => value.into_newargs(py),
+            Self::LiteralReal(value) => value.into_newargs(py),
+            Self::MemoryReference(value) => value.clone().into_newargs(py),
         }
     }
 }
@@ -1213,8 +1213,8 @@ impl ExternParameterType {
         py: Python<'py>,
     ) -> PyResult<NewArgs<'py, ExternParameterTypeArgs>> {
         match self {
-            Self::Scalar(value) | Self::VariableLengthVector(value) => (*value,).into_newargs(py),
-            Self::FixedLengthVector(value) => (value.clone(),).into_newargs(py),
+            Self::Scalar(value) | Self::VariableLengthVector(value) => (*value).into_newargs(py),
+            Self::FixedLengthVector(value) => value.clone().into_newargs(py),
         }
     }
 }
@@ -5178,8 +5178,8 @@ impl Target {
 
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<NewArgs<'py, TargetLike>> {
         match self {
-            Self::Fixed(value) => (value,).into_newargs(py),
-            Self::Placeholder(value) => (value.clone(),).into_newargs(py),
+            Self::Fixed(value) => value.into_newargs(py),
+            Self::Placeholder(value) => value.clone().into_newargs(py),
         }
     }
 }
@@ -5269,11 +5269,14 @@ impl UnaryLogic {
 #[pymethods]
 impl UnresolvedCallArgument {
     #[gen_stub(override_return_type(type_repr = "builtins.tuple[builtins.str | MemoryReference | builtins.complex]", imports = ("builtins")))]
-    fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
+    fn __getnewargs__<'py>(
+        &self,
+        py: Python<'py>,
+    ) -> PyResult<NewArgs<'py, UnresolvedCallArgument>> {
         match self {
-            Self::Identifier(value) => (value.clone(),).into_pyobject(py),
-            Self::MemoryReference(value) => (value.clone(),).into_pyobject(py),
-            Self::Immediate(value) => (*value,).into_pyobject(py),
+            Self::Identifier(value) => value.clone().into_newargs(py),
+            Self::MemoryReference(value) => value.clone().into_newargs(py),
+            Self::Immediate(value) => (*value).into_newargs(py),
         }
     }
 }
