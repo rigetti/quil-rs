@@ -5,6 +5,7 @@ use std::{
 };
 
 use indexmap::IndexMap;
+use ndarray::Array2;
 use num_complex::Complex64;
 use numpy::{PyArray2, ToPyArray};
 use pyo3::{
@@ -43,6 +44,7 @@ use crate::{
         singleton::{py_singleton, PyModuleSingletonExt},
         IntoNewArgs, Migrate, NewArgs, NonZeroU64, OneOrMore, Seq, Seq2, Via,
     },
+    reserved::ReservedGate::S,
     validation::identifier::IdentifierValidationError,
 };
 use macros::*;
@@ -1433,15 +1435,12 @@ submit! {
             def __new__(
                 cls,
                 name: builtins.str,
-                parameters: pyo3_stub_gen.RustType["Vec<ParameterLike>"],
                 specification: pyo3_stub_gen.RustType["GateSpecificationLike"],
+                parameters: pyo3_stub_gen.RustType["Option<Vec<ParameterLike>>"] = None,
             ) -> GateDefinition:
-                """Return a new `GateDefinition` instance with the given name, parameters, and specification.
+                """Return a new `GateDefinition` instance with the given name, specification, and parameters."""
 
-                This is the preferred constructor.
-                """
-
-            @typing_extensions.deprecated("This constructor is deprecated; use the `(name, parameters, specification)` form instead.")
+            @typing_extensions.deprecated("`matrix` is deprecated; use `specification` instead")
             @typing.overload
             def __new__(
                 cls,
@@ -1451,7 +1450,7 @@ submit! {
             ) -> GateDefinition:
                 """Return a new `GateDefinition` instance with the given name, matrix, and parameters.
 
-                This constructor is deprecated; use the `(name, parameters, specification)` form instead.
+                The argument `matrix` has been renamed `specification`.
                 """
         "#
     }
@@ -1460,101 +1459,203 @@ submit! {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl GateDefinition {
-    // This signature accepts both the preferred constructor,
-    // `(name, parameters, specification)`,
-    // and the deprecated PyQuil v4 constructor signature,
-    // `(name: str, matrix: list[list[Expression]] | np.ndarray | np.matrix, parameters: list[Parameter] | None = None)`,
-    // which uses the term `matrix` instead of `specification`,
-    // swaps the order of the last two parameters, and makes `parameters` optional.
-    // Since the two forms swap the meaning of the 2nd and 3rd positional arguments,
-    // we disambiguate them by type, via `Migrate`, rather than by position alone.
-    // `matrix` is also still accepted (deprecated) as a keyword-only alias for `specification`.
+    // PyQuil v4 used this constructor signature:
+    // `(name: str, matrix: list[list[Expression]] | np.ndarray | np.matrix, parameters: list[Parameter] | None = None)`.
+    // Relative the `quil-rs` constructor, this uses the term `specification` instead of `matrix`,
+    // makes `parameters` optional, and swaps the order of those two parameters.
+    //
+    // It's difficult to make a single constructor that is backwards-compatible
+    // without going through a lot of hoops,
+    // and moreover, it's likely PyQuil users were using a subclassed version of `GateDefinition`,
+    // which was managing the argument order in any case.
+    //
+    // Moreover, the `quil` version is a bit cleaner:
+    // - Even though there might not be any `parameters`, when there are some,
+    // it's much more natural to have them come first.
+    // - The `specification` might *not* be a matrix, so it's better to use a more general term.
+    //
+    // Accordingly, this constructor only accepts the `quil` argument order,
+    // and users who were using `GateDefinition` in PyQuil v4 will see a breaking change.
+    // That said, PyQuil _also_ called their subclassed version `DefGate`,
+    // which we can put an alias over, and "fixup" the calling convention there.
+    //
+    // That all said, we *do* support a more flexible `specification` than before.
 
     /// Construct a new `GateDefinition` instance.
-    ///
-    /// The preferred form is `GateDefinition(name, parameters, specification)`.
-    ///
-    /// The deprecated PyQuil v4 constructor, `GateDefinition(name, matrix, parameters=None)`,
-    /// is also still accepted, for backwards compatibility; using it will raise a
-    /// `DeprecationWarning`. `matrix` is also accepted as a deprecated keyword-only alias
-    /// for `specification`.
     #[new]
-    #[pyo3(signature = (name, parameters=None, specification=None, *, matrix=None))]
+    #[pyo3(signature = (name, parameters, specification))]
     fn __new__(
-        py: Python<'_>,
         name: String,
-        // IMPORTANT: A sequence of strings will be accepted by either of these types,
-        // so to disambiguate them contextually, this puts ParameterLike first,
-        // since 2d sequences can't be extracted into them.
-        parameters: Option<
-            Migrate<Seq2<ParameterLike, String>, Via<GateSpecificationLike, GateSpecification>>,
-        >,
-        specification: Option<
-            Migrate<Seq2<ParameterLike, String>, Via<GateSpecificationLike, GateSpecification>>,
-        >,
-        matrix: Option<Via<GateSpecificationLike, GateSpecification>>,
+        parameters: Option<Seq2<ParameterLike, String>>,
+        specification: Via<GateSpecificationLike, GateSpecification>,
     ) -> PyResult<GateDefinition> {
-        let (parameters, specification, deprecated_call) = match (parameters, specification) {
-            // Preferred constructor: `(name, parameters, specification)`.
-            // See the note about New vs Old naming.
-            (Some(Migrate::New(parameters)), Some(Migrate::Old(specification))) => {
-                (Some(parameters), Some(specification.into_inner()), false)
+        let parameters: Vec<String> = parameters.unwrap_or_default().into();
+        let specification = specification.into_inner();
+
+        if let GateSpecification::Matrix(ref matrix) = specification {
+            let rows = matrix.len();
+            if matrix.iter().any(|row| row.len() != rows) {
+                return Err(errors::ValueError::new_err("Matrix must be square"));
             }
 
-            // These imply the user gave `matrix` as a keyword argument,
-            // or just left it out entirely, which are handled below with `deprecated_or_new!`.
-            (None, None) => (None, None, true),
-            // Again `New` is a misnomer here.
-            (Some(Migrate::New(parameters)), None) | (None, Some(Migrate::New(parameters))) => {
-                (Some(parameters), None, true)
-            },
-            (None, Some(Migrate::Old(specification))) => (None, Some(specification.into_inner()), true),
-
-            // Deprecated PyQuil v4 constructor: `(name, matrix, parameters=None)`.
-            (Some(Migrate::Old(matrix)), None) => {
-                (None, Some(matrix.into_inner()), true)
-            }
-            (Some(Migrate::Old(matrix)), Some(Migrate::New(parameters))) => {
-                (Some(parameters), Some(matrix.into_inner()), true)
+            if !is_prime_power(rows as u64) {
+                return Err(errors::ValueError::new_err(format!(
+                    "length of Matrix dimensions must be a prime power, but {rows} is not",
+                )));
             }
 
-            // If a user provided two specifications for some reason...
-            (Some(Migrate::Old(_)), Some(Migrate::Old(p))) => {
-                return Err(PyTypeError::new_err(format!(
-                    "`parameters` must be a list of `Parameter`s or `str`s, not a `GateSpecification` (got: {:?})",
-                    p.into_inner()
-                )))
-            },
-
-            // If the user provided two lists of parameters...
-            (Some(Migrate::New(_)), Some(Migrate::New(_))) => {
-                return Err(PyTypeError::new_err(
-                    "`specification` must be a `GateSpecification`",
-                ))
+            if parameters.is_empty() {
+                // Check if matrix is unitary.
+                let flat: Vec<Complex64> = matrix
+                    .iter()
+                    .flatten()
+                    .cloned()
+                    .map(|x| x.into_complex())
+                    .collect::<Result<_, _>>()?;
+                let mat = Array2::from_shape_vec((rows, rows), flat).map_err(|e| {
+                    errors::ValueError::new_err(format!("Failed to create matrix: {e}"))
+                })?;
+                let mat_conj_t = mat.t().mapv(|x| x.conj());
+                let product = mat.dot(&mat_conj_t);
+                let identity = Array2::eye(rows);
+                if !product.abs_diff_eq(&identity, 1e-12) {
+                    return Err(errors::ValueError::new_err("Matrix must be unitary"));
+                }
             }
-        };
-
-        let matrix = matrix.map(Via::into_inner);
-        let specification = deprecated_or_new!(py, new = specification, old = matrix)?;
-
-        // We wait until we get here so that if the above check would raise an exception,
-        // we don't issue a deprecation warning first, because that's just confusing.
-        if deprecated_call {
-            py_deprecated!(
-                py,
-                c"GateDefinition(name, matrix, parameters) is deprecated; \
-                  use GateDefinition(name, parameters, specification) instead"
-            )?;
         }
 
-        let parameters = parameters.unwrap_or_default().into();
         Ok(Self::new(name, parameters, specification)?)
+    }
+
+    fn __getnewargs__(&self) -> (String, Vec<String>, GateSpecification) {
+        (
+            self.name.clone(),
+            self.parameters.clone(),
+            self.specification.clone(),
+        )
     }
 
     #[getter(signature)]
     fn py_signature(&self) -> OwnedGateSignature {
         self.signature().into()
     }
+}
+
+/// Check if a number is a prime power (i.e., p^k for prime p, integer k >= 1).
+///
+/// This is used to check if a matrix dimension can be interpreted as k qudits of dimension p.
+/// Composite non-prime-power dimensions like 6=2*3 are considered ambiguous and rejected.
+fn is_prime_power(n: u64) -> bool {
+    integer_base_and_exponent(n).is_some()
+}
+
+/// Primes used to peel perfect powers apart.
+///
+/// These functions are used to determine whether a matrix dimension is a prime power,
+/// so we're not particularly concerned with matrices of dimension lengths larger than 2^64.
+const SMALL_PRIMES: [u32; 18] = [
+    2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61,
+];
+
+/// Decompose a number into its integer base and exponent, if it is a perfect power.
+///
+/// Returns prime `d` and exponent `k` such that `n = d.pow(k)`,
+/// or `None` if `n` is not a perfect prime power.
+///
+/// This is the natural qudit decomposition:
+/// a matrix dimension `d.pow(k)` describes `k` qudits of dimension `d`.
+/// Composite non-prime-power dimensions like 6=2*3 are considered ambiguous and rejected.
+fn integer_base_and_exponent(n: u64) -> Option<(u64, u32)> {
+    if n < 2 {
+        return None;
+    }
+
+    let mut base = n;
+    let mut exponent = 1;
+    let mut i = 0;
+    'primes: while i < SMALL_PRIMES.len() {
+        let p = SMALL_PRIMES[i];
+
+        // Reduce `base` by as many powers of `p` as we can:
+        // If `r.pow(p) == base`, then `r.pow(exponent * p) == n`.
+        // In that case, we let `base` become `r`, update the `exponent` accordingly,
+        // and continue peeling off powers of `p` until we can't anymore.
+        while let Some(r) = int_n_root(base, p) {
+            if r < 2 {
+                break 'primes;
+            }
+            base = r;
+            exponent *= p;
+        }
+        i += 1;
+    }
+
+    if is_prime(base) {
+        Some((base, exponent))
+    } else {
+        None
+    }
+}
+
+/// Returns the integer n-th root of x, if it exists, or None if it does not.
+///
+/// This returns the largest integer `m` such that `m.pow(n) == x`,
+/// and assuming that such an integer `m` exists; otherwise, this returns `None`.
+const fn int_n_root(x: u64, n: u32) -> Option<u64> {
+    // Since `m.pow(n) == x < (2).pow(64)`, and because `m` must be at least `2`,
+    // the largest `n` for which this can return a value is `n = 63`.
+    if n == 0 || n >= 64 {
+        return None;
+    }
+
+    // Binary search: faster algorithms exist, but this is simple,
+    // and the numbers are small enough that it doesn't matter.
+    let mut low = 1;
+    let mut high = x;
+    while low <= high {
+        let mid = low.midpoint(high);
+        let mid_pow_n = mid.checked_pow(n);
+        match mid_pow_n {
+            Some(pow) if pow == x => return Some(mid),
+            Some(pow) if pow < x => low = mid + 1,
+            _ => high = mid - 1,
+        }
+    }
+    None
+}
+
+/// Return true if `n` is a prime number, using trial division.
+///
+/// This will be slow for large numbers, but since the intended use
+/// is checking the length of a matrix dimension, it should be fast enough for our purposes.
+/// If it turns out to be a bottleneck, we can replace it with a more efficient primality test.
+const fn is_prime(n: u64) -> bool {
+    if n < 2 {
+        return false;
+    }
+
+    let max = n.isqrt() + 1;
+    let mut i = 0;
+    let mut d = SMALL_PRIMES[0] as u64;
+    while d < max && i < SMALL_PRIMES.len() {
+        d = SMALL_PRIMES[i] as u64;
+        if n == d {
+            return true;
+        }
+        if n.is_multiple_of(d) {
+            return false;
+        }
+        i += 1;
+    }
+
+    while d < max {
+        d += 2;
+        if n.is_multiple_of(d) {
+            return false;
+        }
+    }
+
+    true
 }
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
