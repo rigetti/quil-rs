@@ -1,4 +1,97 @@
 //! This module defines exceptions used (or catchable) on the Python-side.
+//!
+//! We define an exception hierarchy, with `QuilError` as the base,
+//! and typically if we return an error, we should return a type that derives from `QuilError`
+//! (see the note below about the... exception to this rule).
+//! Doing so is particularly useful in unit tests, where tests that are expected to raise
+//! can use `pytest.raises(QuilError)` to be certain that the error caught came from our code.
+//! Generally, such tests should be as specific as needed to avoid a spurious match,
+//! but general enough to being brittle to changes in the specific error returned.
+//!
+//! In any case, when returning an error from Python-exposed code,
+//! you can directly return a Rust error type that converts into one of these exceptions,
+//! or you can construct a [`PyErr`][pyo3::PyErr] directly using `{Exception}::new_err("message")`.
+//! In the former case, the return type will be `Result<T, {RustErrorType}>`,
+//! while the latter must be `Result<T, PyErr>` or more simply [`PyResult<T>`][pyo3::PyResult].
+//! You can also use the `?` operator to convert to a `PyErr` from these error types.
+//!
+//! Here are some concrete examples:
+//!
+//! ```rust
+//! use crate::quilpy::errors::ToQuilStringError;
+//!
+//! fn foo() -> pyo3::PyResult<()> {
+//!     Err(ToQuilStringError::new_err("Label has not yet been resolved"))
+//! }
+//! fn foo2() -> Result<(), pyo3::PyErr> {
+//!     Err(ToQuilStringError::new_err("Label has not yet been resolved"))
+//! }
+//! fn foo3() -> Result<(), crate::quil::ToQuilError> {
+//!     Err(crate::quil::ToQuilError::UnresolvedLabelPlaceholder)
+//! }
+//! ```
+//!
+//! If you find yourself using `new_err` with the same message more than once,
+//! it may be worth defining a new error type here and using it instead.
+//! This will ensure a consistent message that we can easily change in one place,
+//! and gives the option to avoid constructing the `PyErr` if the error can be handled in Rust.
+//!
+//! # Defining New Exceptions
+//!
+//! There are two macros to define exceptions here:
+//!
+//! - `create_exception!` defines a new exception type that is not backed by a Rust error type.
+//!   - This is the right choice for "base" exception types used to group other exceptions.
+//!   - Use this for error types that will always be returned to Python and with a custom message.
+//! - `exception!` defines a new exception type backed by a Rust error type.
+//!   - Obviously, you'll need a Rust error type as well.
+//!     If that type already exists, great, otherwise (if it's Python-API-only),
+//!     you can define that type in this module.
+//!   - You'll need to specify the Python exception it derives from,
+//!     which should be `QuilError` or another type that derives from it.
+//!
+//! ## Naming
+//!
+//! Note that "custom" error types that are exposed to the Python API need two names:
+//! one is the Rust-specific type name to which you'll reference in Rust code,
+//! and the other is the Python name that will be used in the Python API.
+//!
+//! Except for the base `QuilError`, avoid starting the Python name with `Quil`
+//! so that using the type doesn't stutter: `quil.ValueError` is better than `quil.QuilValueError`.
+//!
+//! When the Rust error type is used outside of the Python API,
+//! it must be defined in a module outside of this one,
+//! so it is possible to use the same name for both by using the full path in the macro.
+//!
+//! For error type defined directly in this module, the Rust type name must be unique,
+//! and in any case, we can adopt a convention here to make it clear a type is Python-specific.
+//! Consequently, we use the same convention as `PyO3` and prefix the Rust type name with `Py`.
+//! This sometimes leads a "conflict" the in names between those defined within `PyO3`
+//! and the names we define here, but that is intentional, as in those cases,
+//! we want to use the error type derived from `QuilError` rather than the standard Python type.
+//!
+//! ## When NOT to Define a New Exception
+//!
+//! As mentioned above, we generally want to return errors that derive from `QuilError`,
+//! as it makes it easier to validate we're our code is the source of an error in unit tests.
+//! However, there are cases where users reasonably expect a standard Python exception type,
+//! such as `KeyError` or `TypeError`. In an ideal world, we'd define a type that derives
+//! from both our `QuilError` and the standard Python exception type,
+//! but Python explicitly discourages inheriting from multiple exception types.
+//!
+//! So, if you expect the standard Python exception type to be more useful to users,
+//! then you should return that type instead of a `QuilError`-derived type.
+//! A good candidate is returning the standard `TypeError` if you must manually process a `PyAny`
+//! (although consider [`pyo3::CastError`], which will be more informative).
+//!
+//! On the other hand, avoid using the standard Python `ValueError` type
+//! (used to indicate the argument has the right type, but an inappropriate value)
+//! in favor of defining a new `QuilValueError` type that derives from `QuilError`:
+//! these are almost certainly worth unit testing, and likely aren't valuable for users to catch,
+//! or even if they are, they probably _shouldn't_ be doing so by catching _all_ `ValueError`s,
+//! and even if they really do want to do that, Python has mechanisms to make that work
+//! (but it's slightly more verbose -- a good hint that they probably shouldn't be doing it).
+//!
 use pyo3::exceptions::PyException;
 use rigetti_pyo3::{create_exception, exception};
 
@@ -7,13 +100,25 @@ use rigetti_pyo3::{create_exception, exception};
 /// These errors only apply to Python users and are not reachable directly from the Rust APIs.
 #[derive(Debug, thiserror::Error, PartialEq)]
 #[non_exhaustive]
-pub(crate) enum ArgumentError {
+pub(crate) enum PyValueError {
     #[error("`{0}` and `{1}` are mutually exclusive")]
     MutuallyExclusive(String, String),
     #[error("missing required parameter `{0}`")]
     MissingRequired(String),
 }
 
+/// Errors that can occur when working with arrays from `quil`.
+///
+/// These errors only apply to Python users and are not reachable directly from the Rust APIs.
+#[derive(Debug, thiserror::Error, PartialEq)]
+#[non_exhaustive]
+pub(crate) enum PyArrayError {
+    #[error("not a square matrix")]
+    NonSquare,
+}
+
+// All exceptions defined here should use this as their base,
+// or something that derives from it, so that all exceptions are grouped under it.
 create_exception!(
     quil._quil,
     QuilError,
@@ -22,11 +127,19 @@ create_exception!(
 );
 
 exception!(
-    ArgumentError,
+    PyValueError,
     quil._quil,
     ValueError,
     QuilError,
     "Raised when an argument to a quil function has an inappropriate value."
+);
+
+exception!(
+    PyArrayError,
+    quil._quil,
+    ArrayError,
+    QuilError,
+    "Raised upon failures working with an array."
 );
 
 create_exception!(
