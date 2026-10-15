@@ -629,11 +629,7 @@ impl PyExpression {
     /// Expression simplification can be slow, especially for large recursive expressions.
     /// This will raise an error if simplification doesn't result in a complex number.
     fn __complex__(slf: &Bound<'_, Self>) -> PyResult<Complex64> {
-        match Expression::try_from(slf)?.into_simplified() {
-            Expression::PiConstant => Ok(PI.into()),
-            Expression::Number(c) => Ok(c),
-            _ => Err(EvaluationError::NotANumber)?,
-        }
+        Expression::try_from(slf)?.into_complex()
     }
 
     /// Convert this expression into a `numpy` array.
@@ -687,6 +683,16 @@ impl PyExpression {
         };
 
         Ok(arr)
+    }
+}
+
+impl Expression {
+    pub(crate) fn into_complex(self) -> PyResult<Complex64> {
+        match self.into_simplified() {
+            Expression::PiConstant => Ok(PI.into()),
+            Expression::Number(c) => Ok(c),
+            _ => Err(EvaluationError::NotANumber)?,
+        }
     }
 }
 

@@ -1502,32 +1502,24 @@ class GateDefinition(Instruction):
     @property
     def specification(self) -> GateSpecification: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __getnewargs__(self) -> tuple[builtins.str, builtins.list[builtins.str], GateSpecification]: ...
     def __hash__(self) -> builtins.int: ...
     @typing.overload
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Parameter  |  builtins.str], specification: GateSpecification  |  PauliSum  |  DefGateSequence  |  typing.Sequence[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]]  |  typing.Sequence[builtins.int]) -> GateDefinition:
+    def __new__(cls, name: builtins.str, specification: GateSpecification  |  PauliSum  |  DefGateSequence  |  typing.Sequence[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]]  |  typing.Sequence[builtins.int], parameters: typing.Optional[typing.Sequence[expression.Parameter  |  builtins.str]] = None) -> GateDefinition:
         r"""
-        Return a new `GateDefinition` instance with the given name, parameters, and specification.
-        
-        This is the preferred constructor.
+        Return a new `GateDefinition` instance with the given name, specification, and parameters.
         """
     @typing.overload
     def __new__(cls, name: builtins.str, matrix: GateSpecification  |  PauliSum  |  DefGateSequence  |  typing.Sequence[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]]  |  typing.Sequence[builtins.int], parameters: typing.Optional[typing.Sequence[expression.Parameter  |  builtins.str]] = None) -> GateDefinition:
         r"""
         Return a new `GateDefinition` instance with the given name, matrix, and parameters.
         
-        This constructor is deprecated; use the `(name, parameters, specification)` form instead.
+        The argument `matrix` has been renamed `specification`.
         """
     @typing.overload
-    def __new__(cls, name: builtins.str, parameters: typing.Optional[typing.Sequence[expression.Parameter  |  builtins.str]  |  GateSpecification  |  PauliSum  |  DefGateSequence  |  typing.Sequence[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]]  |  typing.Sequence[builtins.int]] = None, specification: typing.Optional[typing.Sequence[expression.Parameter  |  builtins.str]  |  GateSpecification  |  PauliSum  |  DefGateSequence  |  typing.Sequence[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]]  |  typing.Sequence[builtins.int]] = None, *, matrix: typing.Optional[GateSpecification  |  PauliSum  |  DefGateSequence  |  typing.Sequence[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]]  |  typing.Sequence[builtins.int]] = None) -> GateDefinition:
+    def __new__(cls, name: builtins.str, parameters: typing.Optional[typing.Sequence[expression.Parameter  |  builtins.str]], specification: GateSpecification  |  PauliSum  |  DefGateSequence  |  typing.Sequence[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]]  |  typing.Sequence[builtins.int]) -> GateDefinition:
         r"""
         Construct a new `GateDefinition` instance.
-        
-        The preferred form is `GateDefinition(name, parameters, specification)`.
-        
-        The deprecated PyQuil v4 constructor, `GateDefinition(name, matrix, parameters=None)`,
-        is also still accepted, for backwards compatibility; using it will raise a
-        `DeprecationWarning`. `matrix` is also accepted as a deprecated keyword-only alias
-        for `specification`.
         """
     def __repr__(self) -> builtins.str:
         r"""
