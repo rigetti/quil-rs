@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use numpy::{PyArray, PyArrayDescr, PyArrayDescrMethods};
 use pyo3::{
     exceptions::{PyDeprecationWarning, PyNotImplementedError},
@@ -18,6 +16,7 @@ use crate::{
     quil::Quil,
     quilpy::{
         errors::{self, ValueError},
+        impl_match_args,
         memory::{PyMemRef, TryAsBorrowed},
         pickleable_enum,
         singleton::{py_singleton, PyModuleSingletonExt},
@@ -924,6 +923,8 @@ impl AsView for Bound<'_, Address> {
     }
 }
 
+impl_match_args!(Address("memory_reference"));
+
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Address {
@@ -941,10 +942,6 @@ impl Address {
 
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> (&Bound<'py, MemoryReference>,) {
         (self.memory_reference.bind(py),)
-    }
-
-    fn __match_args__(&self) -> (&str,) {
-        ("memory_reference",)
     }
 }
 
@@ -1005,6 +1002,8 @@ pickleable_new! {
     }
 }
 
+impl_match_args!(InfixExpression("left", "operator", "right"));
+
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl InfixExpression {
@@ -1024,10 +1023,6 @@ impl InfixExpression {
 
     fn __getnewargs__(&self) -> (Expression, InfixOperator, Expression) {
         (self.left(), self.operator, self.right())
-    }
-
-    fn __match_args__(&self) -> (&str, &str, &str) {
-        ("left", "operator", "right")
     }
 
     #[getter]
@@ -1053,6 +1048,8 @@ impl AsView for Bound<'_, InfixExpression> {
     }
 }
 
+impl_match_args!(PrefixExpression("operator", "expression"));
+
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl PrefixExpression {
@@ -1063,10 +1060,6 @@ impl PrefixExpression {
 
     fn __getnewargs__(&self) -> (PrefixOperator, Expression) {
         (self.operator, self.expression())
-    }
-
-    fn __match_args__(&self) -> (&str, &str) {
-        ("operator", "expression")
     }
 
     #[getter]
@@ -1087,6 +1080,8 @@ impl AsView for Bound<'_, PrefixExpression> {
     }
 }
 
+impl_match_args!(FunctionCallExpression("function", "expression"));
+
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl FunctionCallExpression {
@@ -1097,10 +1092,6 @@ impl FunctionCallExpression {
 
     fn __getnewargs__(&self) -> (ExpressionFunction, Expression) {
         (self.function, self.expression())
-    }
-
-    fn __match_args__(&self) -> (&str, &str) {
-        ("function", "expression")
     }
 
     #[getter]
