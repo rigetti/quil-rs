@@ -410,7 +410,7 @@ class InstructionTarget:
     
 
 class MemoryRegion:
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str] = ('size', 'sharing')
     @property
     def sharing(self) -> typing.Optional[instructions.Sharing]: ...
     @property

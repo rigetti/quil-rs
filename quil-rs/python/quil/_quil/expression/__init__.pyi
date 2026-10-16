@@ -250,7 +250,7 @@ class Number(Expression):
     
     This corresponds to the [`Expression::Number`] variant.
     """
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str] = ('value',)
     @property
     def value(self) -> builtins.complex:
         r"""
@@ -268,7 +268,7 @@ class Parameter(Expression):
     
     This corresponds to the [`Expression::Variable`] variant.
     """
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str] = ('name',)
     @property
     def name(self) -> builtins.str: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
