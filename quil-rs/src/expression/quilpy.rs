@@ -852,6 +852,18 @@ pickleable_new! {
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Parameter {
+    fn __str__(&self) -> String {
+        format!("%{}", self.name)
+    }
+
+    fn __repr__(&self) -> String {
+        format!(r#"Parameter("{}")"#, self.name)
+    }
+}
+
 /// A memory reference embedded in an expression, e.g. ``theta[0]``.
 ///
 /// This corresponds to the [`Expression::Address`] variant.
@@ -999,6 +1011,18 @@ impl Hash for Number {
 pickleable_new! {
     impl Number {
         fn __new__(value: Complex64);
+    }
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl Number {
+    fn __str__(&self) -> String {
+        format!("{}", self.value)
+    }
+
+    fn __repr__(&self) -> String {
+        format!(r#"Number("{}")"#, self.value)
     }
 }
 
