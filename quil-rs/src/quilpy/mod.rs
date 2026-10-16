@@ -1128,6 +1128,45 @@ macro_rules! pickleable_enum {
 
 pub(crate) use pickleable_enum;
 
+/// Given a type and list of strings, generates `__match_args__` as a `#[classattr]` for a type.
+///
+/// # Usage
+///
+/// ```rust,ignore
+/// impl_match_args!(MyType("field1", "field2", "field3"));
+/// ```
+///
+/// Expands to:
+/// ```rust,ignore
+/// #[cfg_attr(feature = "stubs", pyo3_stub_gen::derive::gen_stub_pymethods)]
+/// #[pyo3::pymethods]
+/// impl MyType {
+///     #[expect(non_upper_case_globals)]
+///     #[classattr]
+///     const __match_args__: (&'static str, &'static str, &'static str) = ("field1", "field2", "field3");
+/// }
+/// ```
+macro_rules! impl_match_args {
+    ($name:ident($($field:expr),* $(,)?)) => {
+        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+        #[pyo3::pymethods]
+        impl $name {
+            #[expect(non_upper_case_globals)]
+            #[classattr]
+            const __match_args__: $crate::quilpy::impl_match_args!(@str [] [$($field,)*]) = ($($field,)*);
+        }
+    };
+
+    // Expand each field into a tuple of `&'static str` for the type of `__match_args__`.
+    // This has to be done as a token muncher because the repetition doesn't expand a metavariable.
+    (@str [$($strs:tt)*] []) => { ($( $strs )*) };
+    (@str [$($strs:tt)*] [$head:expr, $($rest:expr,)*]) => {
+        $crate::quilpy::impl_match_args!(@str [$($strs)* &'static str,] [$($rest,)*])
+    };
+}
+
+pub(crate) use impl_match_args;
+
 /// An alternative to [`PyAnyMethods::extract`] that only fails if there are multithreaded mutable
 /// borrows; if casting would fail, it returns [`None`] instead.  This allows avoiding [the
 /// performance hit due to allocation on `extract`
