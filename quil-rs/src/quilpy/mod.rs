@@ -31,7 +31,8 @@ create_init_submodule! {
         errors::QuilError,
         errors::ValueError,
         errors::ToQuilStringError,
-        errors::PickleError
+        errors::PickleError,
+        errors::ArrayError
     ],
     submodules: [
         "expression": expression::quilpy::init_submodule,

@@ -31,7 +31,9 @@ use super::*;
 use crate::{
     expression::{
         consts::{IMAGINARY_UNIT, ONE, ZERO},
-        quilpy::{quil_exp, ExpressionLike, ParameterLike, PyExpression, QualifiedExpression},
+        quilpy::{
+            quil_exp, ExpressionLike, Parameter, ParameterLike, PyExpression, QualifiedExpression,
+        },
     },
     instruction::gate::GateSignature,
     pickleable_new,
@@ -44,7 +46,6 @@ use crate::{
         singleton::{py_singleton, PyModuleSingletonExt},
         IntoNewArgs, Migrate, NewArgs, NonZeroU64, OneOrMore, Seq, Seq2, Via,
     },
-    reserved::ReservedGate::S,
     validation::identifier::IdentifierValidationError,
 };
 use macros::*;
@@ -122,6 +123,8 @@ create_init_submodule! {
         PyQubit,
         FormalArgument,
         FixedQubit,
+        GateConstructor,
+        GateConstructorPartial,
 
         HaltType,
         NopType,
@@ -1494,11 +1497,7 @@ impl GateDefinition {
 
         if let GateSpecification::Matrix(ref matrix) = specification {
             let rows = matrix.len();
-            if matrix.iter().any(|row| row.len() != rows) {
-                return Err(errors::ValueError::new_err("Matrix must be square"));
-            }
-
-            if !is_prime_power(rows as u64) {
+            if !is_prime_power(matrix.len() as u64) {
                 return Err(errors::ValueError::new_err(format!(
                     "length of Matrix dimensions must be a prime power, but {rows} is not",
                 )));
@@ -1506,15 +1505,7 @@ impl GateDefinition {
 
             if parameters.is_empty() {
                 // Check if matrix is unitary.
-                let flat: Vec<Complex64> = matrix
-                    .iter()
-                    .flatten()
-                    .cloned()
-                    .map(|x| x.into_complex())
-                    .collect::<Result<_, _>>()?;
-                let mat = Array2::from_shape_vec((rows, rows), flat).map_err(|e| {
-                    errors::ValueError::new_err(format!("Failed to create matrix: {e}"))
-                })?;
+                let mat = matrix_into_array(matrix.clone())?;
                 let mat_conj_t = mat.t().mapv(|x| x.conj());
                 let product = mat.dot(&mat_conj_t);
                 let identity = Array2::eye(rows);
@@ -1539,6 +1530,120 @@ impl GateDefinition {
     fn py_signature(&self) -> OwnedGateSignature {
         self.signature().into()
     }
+
+    /// Get a ``Callable`` that constructs this gate on variable qubit indices.
+    ///
+    /// For example, ``mygate.get_constructor()(1)`` applies the gate to qubit 1.
+    fn get_constructor(slf: Py<Self>) -> PyResult<GateConstructors> {
+        if slf.get().parameters.is_empty() {
+            Ok(GateConstructors::Full(GateConstructor {
+                definition: slf,
+                parameters: Vec::new(),
+            }))
+        } else {
+            Ok(GateConstructors::Partial(GateConstructorPartial {
+                definition: slf,
+            }))
+        }
+    }
+
+    /// Get the parameters this gate takes.
+    ///
+    /// Note that this allocates a new list each time it is called,
+    /// and cannot be used to modify the definition;
+    /// `GateDefinition`s are immutable so they can be consistent with `__hash__`.
+    #[getter]
+    fn parameters(&self) -> Vec<Parameter> {
+        self.parameters.iter().map(|p| p.clone().into()).collect()
+    }
+
+    /// Get the number of arguments this gate takes.
+    fn num_args(&self) -> PyResult<usize> {
+        match &self.specification {
+            GateSpecification::Matrix(matrix) => {
+                let rows = matrix.len() as u64;
+                integer_base_and_exponent(rows)
+                    .map(|(_, exponent)| exponent as usize)
+                    .ok_or(errors::PyArrayError::DimensionError(rows).into())
+            }
+            GateSpecification::Permutation(perm) => {
+                let rows = perm.len() as u64;
+                integer_base_and_exponent(rows)
+                    .map(|(_, exponent)| exponent as usize)
+                    .ok_or(errors::PyArrayError::DimensionError(rows).into())
+            }
+            GateSpecification::PauliSum(ps) => Ok(ps.arguments.len()),
+            GateSpecification::Sequence(seq) => Ok(seq.qubits.len()),
+        }
+    }
+
+    /// Get the matrix that defines this `GateDefinition`, if it has one.
+    ///
+    /// This raises an exception if the `GateDefinition`'s `specification` is not a matrix.
+    #[getter]
+    fn matrix(&self) -> PyResult<Vec<Vec<Expression>>> {
+        match &self.specification {
+            GateSpecification::Matrix(matrix) => Ok(matrix.clone()),
+            _ => Err(errors::ValueError::new_err(
+                "GateDefinition is not defined by a matrix",
+            )),
+        }
+    }
+
+    /// Get the permutation that defines this `GateDefinition`, if it has one.
+    ///
+    /// This raises an exception if the `GateDefinition`'s `specification` is not a permutation.
+    #[getter]
+    fn permutation(&self) -> PyResult<Vec<u64>> {
+        match &self.specification {
+            GateSpecification::Permutation(perm) => Ok(perm.clone()),
+            _ => Err(errors::ValueError::new_err(
+                "GateDefinition is not defined by a permutation",
+            )),
+        }
+    }
+
+    /// Get the arguments the gate takes, if it is defined by a [`PauliSum`].
+    ///
+    /// This raises an exception if the `GateDefinition`'s `specification` is not a PauliSum.
+    #[getter]
+    fn arguments(&self, py: Python<'_>) -> PyResult<Vec<FormalArgument>> {
+        match &self.specification {
+            GateSpecification::PauliSum(ps) => Ok(ps
+                .arguments
+                .iter()
+                .map(|arg| FormalArgument::new(py, arg))
+                .collect()),
+            _ => Err(errors::ValueError::new_err(
+                "GateDefinition is not defined by a PauliSum",
+            )),
+        }
+    }
+
+    /// Get the [`PauliSum`] of the gate definition, if it is defined by one.
+    ///
+    /// This raises an exception if the `GateDefinition`'s `specification` is not a PauliSum.
+    #[getter]
+    fn body(&self) -> PyResult<PauliSum> {
+        match &self.specification {
+            GateSpecification::PauliSum(ps) => Ok(ps.clone()),
+            _ => Err(errors::ValueError::new_err(
+                "GateDefinition is not defined by a PauliSum",
+            )),
+        }
+    }
+}
+
+/// Convert a "matrix" (a 2D vector) of [`Expression`]s into a 2D array of `Complex64`s.
+pub(crate) fn matrix_into_array(matrix: Vec<Vec<Expression>>) -> PyResult<Array2<Complex64>> {
+    let rows = matrix.len();
+    let flat: Vec<Complex64> = matrix
+        .iter()
+        .flatten()
+        .cloned()
+        .map(|x| x.into_complex())
+        .collect::<Result<_, _>>()?;
+    Ok(Array2::from_shape_vec((rows, rows), flat).map_err(errors::PyArrayError::NonSquare)?)
 }
 
 /// Check if a number is a prime power (i.e., p^k for prime p, integer k >= 1).
@@ -1738,6 +1843,91 @@ impl GateSpecification {
             Self::PauliSum(value) => value.clone().into_newargs(py),
             Self::Sequence(value) => value.clone().into_newargs(py),
         }
+    }
+}
+
+/// The possible results of calling [`GateDefinition::get_constructor`].
+#[derive(Debug, IntoPyObject)]
+pub(crate) enum GateConstructors {
+    /// If the gate definition has parameters,
+    /// this is a callable that can be used to bind parameters to the gate.
+    Partial(GateConstructorPartial),
+    /// If the gate definition has no parameters,
+    /// this is a callable that can be used to bind qubits to the gate.
+    /// It is also returned from [`GateConstructorPartial::__call__`]
+    /// after binding parameters to a parameterized gate.
+    Full(GateConstructor),
+}
+
+/// A callable that can be used to bind [`Qubits`]s to a [`GateDefinition`],
+/// resulting in a new [`Gate`] instance.
+///
+/// This is returned from [`GateDefinition::get_constructor`] when the definition has no parameters,
+/// or from [`GateConstructorPartial::__call__`] which binds parameters to a parameterized gate.
+#[derive(Debug)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyo3::pyclass(module = "quil._quil.instructions", frozen)]
+pub(crate) struct GateConstructor {
+    definition: Py<GateDefinition>,
+    parameters: Vec<Expression>,
+}
+
+/// A callable that can be used to bind [`Expression`]s to parameters of a [`GateDefinition`],
+///
+/// This is returned from `GateDefinition.get_constructor()` when the definition has parameters.
+/// Call it to get a `GateConstructor` that can be used to bind qubits to the [`Gate`] call.
+/// Note that if the [`GateDefinition`] has no parameters (i.e., is a "static" gate),
+/// then `GateDefinition.get_constructor()` returns a `GateConstructor` directly,
+/// rather than a `GateConstructorPartial`.
+#[derive(Debug)]
+#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[pyo3::pyclass(module = "quil._quil.instructions", frozen)]
+pub(crate) struct GateConstructorPartial {
+    definition: Py<GateDefinition>,
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl GateConstructorPartial {
+    /// Bind [`Expression`]s to parameters of a [`GateDefinition`] to get a [`GateConstructor`].
+    #[pyo3(signature = (*parameters))]
+    fn __call__<'py>(
+        &self,
+        py: Python<'py>,
+        parameters: Seq2<ExpressionLike, Expression>,
+    ) -> PyResult<GateConstructor> {
+        let parameters: Vec<Expression> = parameters.into();
+        if parameters.len() != self.definition.get().parameters.len() {
+            return Err(errors::ValueError::new_err(format!(
+                "expected {} parameters, got {}",
+                self.definition.get().parameters.len(),
+                parameters.len()
+            )));
+        }
+
+        Ok(GateConstructor {
+            definition: self.definition.clone_ref(py),
+            parameters,
+        })
+    }
+}
+
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl GateConstructor {
+    /// Bind [`Qubit`]s to the qubits of a [`GateDefinition`] and get a new [`Gate`] instance.
+    #[pyo3(signature = (*qubits))]
+    fn __call__(&self, qubits: Vec<Qubit>) -> PyResult<Gate> {
+        let definition = self.definition.get();
+        // TODO: Should we check that the number of qubits matches the num_args?
+        Ok(Gate::new(
+            &definition.name,
+            self.parameters.clone(),
+            qubits,
+            vec![],
+        )?)
     }
 }
 
@@ -4648,7 +4838,7 @@ impl<'a, 'py> FromPyObject<'a, 'py> for Qubit {
 
     fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
         if let Ok(obj) = obj.cast_exact::<FormalArgument>() {
-            Ok(Qubit::Variable(obj.get().name.clone()))
+            Ok(Qubit::Variable(obj.get().name.to_string()))
         } else if let Ok(obj) = obj.cast_exact::<QubitPlaceholder>() {
             Ok(Qubit::Placeholder(obj.get().clone()))
         } else if let Ok(obj) = obj.cast_exact::<FixedQubit>() {
@@ -4674,8 +4864,22 @@ impl<'py> pyo3::IntoPyObject<'py> for Qubit {
     fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
         match self {
             Qubit::Fixed(i) => FixedQubit::from(i).into_bound_py_any(py),
-            Qubit::Variable(v) => FormalArgument::from(v).into_bound_py_any(py),
+            Qubit::Variable(v) => FormalArgument::new(py, &v).into_bound_py_any(py),
             Qubit::Placeholder(p) => p.into_bound_py_any(py),
+        }
+    }
+}
+
+impl<'py> pyo3::IntoPyObject<'py> for &Qubit {
+    type Target = PyAny;
+    type Output = Bound<'py, Self::Target>;
+    type Error = PyErr;
+
+    fn into_pyobject(self, py: Python<'py>) -> Result<Self::Output, Self::Error> {
+        match self {
+            Qubit::Fixed(i) => FixedQubit::from(*i).into_bound_py_any(py),
+            Qubit::Variable(v) => FormalArgument::new(py, v).into_bound_py_any(py),
+            Qubit::Placeholder(p) => p.clone().into_bound_py_any(py),
         }
     }
 }
@@ -4732,12 +4936,10 @@ impl PyQubit {
     #[new]
     #[pyo3(signature = (qubit=None, /))]
     fn __new__<'py>(py: Python<'py>, qubit: Option<Qubit>) -> PyResult<Bound<'py, PyAny>> {
-        match qubit {
-            Some(Qubit::Fixed(i)) => FixedQubit::from(i).into_bound_py_any(py),
-            Some(Qubit::Variable(v)) => FormalArgument::from(v).into_bound_py_any(py),
-            Some(Qubit::Placeholder(p)) => p.into_bound_py_any(py),
-            None => QubitPlaceholder::default().into_bound_py_any(py),
-        }
+        qubit
+            .as_ref()
+            .map(|q| q.into_bound_py_any(py))
+            .unwrap_or_else(|| QubitPlaceholder::default().into_bound_py_any(py))
     }
 
     // No `__getnewargs__` here because it's implemented in the base classes.
@@ -4821,41 +5023,97 @@ impl<'a, 'py> FromPyObject<'a, 'py> for FixedQubit {
 /// A Quil formal argument: a name used in Quil definitions that a qubit will be bound to.
 ///
 /// This corresponds to the [`Qubit::Variable`] variant.
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Debug)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(module = "quil._quil.instructions",
-        extends = PyQubit, eq, frozen, hash, skip_from_py_object, get_all)
+        extends = PyQubit, frozen, skip_from_py_object, get_all)
 )]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub(crate) struct FormalArgument {
-    name: String,
+    name: Py<PyString>,
 }
 
-impl_stub_like!(pub(crate) FormalArgumentLike = FormalArgument | String);
+#[pymethods]
+impl FormalArgument {
+    #[expect(non_upper_case_globals)]
+    #[classattr]
+    const __match_args__: (&'static str,) = ("name",);
 
-pickleable_new! {
-    impl FormalArgument {
-        fn __new__(name: String);
+    #[new]
+    fn __new__(name: Py<PyString>) -> Self {
+        Self { name }
+    }
+
+    fn __getnewargs__<'py>(&self, py: Python<'py>) -> (Py<PyString>,) {
+        (self.name.clone_ref(py),)
+    }
+
+    fn __eq__<'py>(
+        slf: &Bound<'py, Self>,
+        py: Python<'py>,
+        other: &Bound<'py, Self>,
+    ) -> PyResult<bool> {
+        slf.get()
+            .name
+            .bind(py)
+            .as_any()
+            .eq(other.get().name.bind(py))
+    }
+
+    // If we want to use Rust to hash the name (as &str)
+    // (potentially to enable hash and equality comparisons with Qubit::Variable),
+    // we could store a cached hash value in the struct.
+    // To do so, we'd either need to compute it in __new__ or set the value on first access,
+    // but to do that, the value would need to be behind a lock or atomic to keep the class frozen.
+    // The latter is actually likely a better option,
+    // as otherwise you can't create new instances from infallible contexts.
+    fn __hash__(slf: &Bound<'_, Self>) -> PyResult<isize> {
+        slf.hash()
+    }
+}
+
+#[derive(Debug, FromPyObject)]
+#[cfg_attr(feature = "stubs", derive(IntoPyObject))]
+pub(crate) struct FormalArgumentLike(FormalArgument);
+
+#[cfg(feature = "stubs")]
+pyo3_stub_gen::impl_stub_type!(FormalArgumentLike = FormalArgument | String);
+
+impl From<FormalArgumentLike> for FormalArgument {
+    fn from(value: FormalArgumentLike) -> Self {
+        value.0
+    }
+}
+
+impl From<FormalArgumentLike> for String {
+    fn from(value: FormalArgumentLike) -> Self {
+        value.0.into()
+    }
+}
+
+impl FormalArgument {
+    pub(crate) fn new<'py>(py: Python<'py>, name: &str) -> Self {
+        FormalArgument::__new__(PyString::new(py, name).into())
+    }
+
+    pub(crate) fn clone_ref(&self, py: Python<'_>) -> Self {
+        Self {
+            name: self.name.clone_ref(py),
+        }
     }
 }
 
 impl From<FormalArgument> for String {
     fn from(value: FormalArgument) -> Self {
-        value.name
+        value.name.to_string()
     }
 }
 
-impl From<String> for FormalArgument {
-    fn from(value: String) -> Self {
-        Self { name: value }
-    }
-}
-
-impl From<FormalArgument> for Qubit {
-    fn from(value: FormalArgument) -> Self {
-        Qubit::Variable(value.name)
+impl From<Bound<'_, PyString>> for FormalArgument {
+    fn from(value: Bound<'_, PyString>) -> Self {
+        FormalArgument::__new__(value.unbind())
     }
 }
 
@@ -4864,11 +5122,10 @@ impl<'a, 'py> FromPyObject<'a, 'py> for FormalArgument {
 
     fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
         if let Ok(value) = obj.cast_exact::<FormalArgument>() {
-            Ok(value.get().clone())
+            Ok(value.get().clone_ref(obj.py()))
         } else {
-            Ok(Self {
-                name: obj.extract::<String>()?,
-            })
+            let name = obj.extract::<Py<PyString>>()?;
+            Ok(Self::__new__(name))
         }
     }
 }
@@ -5910,6 +6167,8 @@ mod stubs {
     // See docs on `TargetLike` and `LabelTargetLike` for why these are separate types.
     impl_stub_enum!(TargetLike = Target | String | TargetPlaceholder | Label);
     impl_stub_type!(LabelTargetLike = TargetLike);
+
+    impl_stub_type!(GateConstructors = GateConstructor | GateConstructorPartial);
 
     // Expose some of these as type aliases. Note: these must be added to the module in post_init.
     type_alias!(

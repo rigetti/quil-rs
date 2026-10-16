@@ -1082,6 +1082,7 @@ impl Quil for GateSpecification {
 /// A struct encapsulating a quil Gate Definition
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(not(feature = "python"), optipy::strip_pyo3)]
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(
@@ -1090,14 +1091,15 @@ impl Quil for GateSpecification {
         eq,
         frozen,
         hash,
-        get_all,
         subclass,
         from_py_object
     )
 )]
 pub struct GateDefinition {
+    #[pyo3(get)]
     pub name: String,
     pub parameters: Vec<String>,
+    #[pyo3(get)]
     pub specification: GateSpecification,
 }
 

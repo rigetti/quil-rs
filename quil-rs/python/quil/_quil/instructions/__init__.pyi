@@ -48,6 +48,8 @@ __all__ = [
     "FrameDefinition",
     "FrameIdentifier",
     "Gate",
+    "GateConstructor",
+    "GateConstructorPartial",
     "GateDefinition",
     "GateError",
     "GateModifier",
@@ -1294,13 +1296,8 @@ class FormalArgument(Qubit):
     
     This corresponds to the [`Qubit::Variable`] variant.
     """
-    __match_args__: tuple
     @property
-    def name(self) -> builtins.str: ...
-    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[builtins.str]: ...
-    def __hash__(self) -> builtins.int: ...
-    def __new__(cls, name: builtins.str) -> FormalArgument: ...
+    def name(self) -> str: ...
 
 class FrameDefinition(Instruction):
     @property
@@ -1489,14 +1486,79 @@ class Gate(Instruction):
         other invalid input parameters may silently return an invalid result.
         """
 
+@typing.final
+class GateConstructor:
+    r"""
+    A callable that can be used to bind [`Qubits`]s to a [`GateDefinition`],
+    resulting in a new [`Gate`] instance.
+    
+    This is returned from [`GateDefinition::get_constructor`] when the definition has no parameters,
+    or from [`GateConstructorPartial::__call__`] which binds parameters to a parameterized gate.
+    """
+    def __call__(self, *qubits: typing.Any) -> Gate:
+        r"""
+        Bind [`Qubit`]s to the qubits of a [`GateDefinition`] and get a new [`Gate`] instance.
+        """
+
+@typing.final
+class GateConstructorPartial:
+    r"""
+    A callable that can be used to bind [`Expression`]s to parameters of a [`GateDefinition`],
+    
+    This is returned from `GateDefinition.get_constructor()` when the definition has parameters.
+    Call it to get a `GateConstructor` that can be used to bind qubits to the [`Gate`] call.
+    Note that if the [`GateDefinition`] has no parameters (i.e., is a "static" gate),
+    then `GateDefinition.get_constructor()` returns a `GateConstructor` directly,
+    rather than a `GateConstructorPartial`.
+    """
+    def __call__(self, *parameters: typing.Any) -> GateConstructor:
+        r"""
+        Bind [`Expression`]s to parameters of a [`GateDefinition`] to get a [`GateConstructor`].
+        """
+
 class GateDefinition(Instruction):
     r"""
     A struct encapsulating a quil Gate Definition
     """
     @property
+    def arguments(self) -> builtins.list[FormalArgument]:
+        r"""
+        Get the arguments the gate takes, if it is defined by a [`PauliSum`].
+        
+        This raises an exception if the `GateDefinition`'s `specification` is not a PauliSum.
+        """
+    @property
+    def body(self) -> PauliSum:
+        r"""
+        Get the [`PauliSum`] of the gate definition, if it is defined by one.
+        
+        This raises an exception if the `GateDefinition`'s `specification` is not a PauliSum.
+        """
+    @property
+    def matrix(self) -> builtins.list[builtins.list[expression.Expression]]:
+        r"""
+        Get the matrix that defines this `GateDefinition`, if it has one.
+        
+        This raises an exception if the `GateDefinition`'s `specification` is not a matrix.
+        """
+    @property
     def name(self) -> builtins.str: ...
     @property
-    def parameters(self) -> builtins.list[builtins.str]: ...
+    def parameters(self) -> builtins.list[expression.Parameter]:
+        r"""
+        Get the parameters this gate takes.
+        
+        Note that this allocates a new list each time it is called,
+        and cannot be used to modify the definition;
+        `GateDefinition`s are immutable so they can be consistent with `__hash__`.
+        """
+    @property
+    def permutation(self) -> builtins.list[builtins.int]:
+        r"""
+        Get the permutation that defines this `GateDefinition`, if it has one.
+        
+        This raises an exception if the `GateDefinition`'s `specification` is not a permutation.
+        """
     @property
     def signature(self) -> GateSignature: ...
     @property
@@ -1530,10 +1592,20 @@ class GateDefinition(Instruction):
         r"""
         Get a Quil-like representation as a string.
         """
+    def get_constructor(self) -> GateConstructor  |  GateConstructorPartial:
+        r"""
+        Get a ``Callable`` that constructs this gate on variable qubit indices.
+        
+        For example, ``mygate.get_constructor()(1)`` applies the gate to qubit 1.
+        """
     @staticmethod
     def is_quil_t() -> builtins.bool:
         r"""
         Returns true if the instruction is a Quil-T instruction.
+        """
+    def num_args(self) -> builtins.int:
+        r"""
+        Get the number of arguments this gate takes.
         """
     def out(self) -> builtins.str:
         r"""

@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use numpy::{PyArray, PyArrayDescr, PyArrayDescrMethods};
 use pyo3::{
     exceptions::{PyDeprecationWarning, PyNotImplementedError},
@@ -632,6 +634,21 @@ impl PyExpression {
         Expression::try_from(slf)?.into_complex()
     }
 
+    /// Simplify the expression to a complex number, if possible.
+    ///
+    /// This may be slow for large recursive expressions.
+    ///
+    /// This will raise an error if simplification doesn't result in a complex number.
+    /// Use `into_simplified` to get a simplified `Expression`, or use `evaluate(partial=True)`
+    /// to get a complex number when possible or a partially simplified `Expression` otherwise.
+    /// Note that the latter in particular accepts variable and memory reference substitutions,
+    /// which can be used to simplify an `Expression` that contains such references.
+    ///
+    /// This is equivalent to `complex(expr)` or `expr.__complex__()`.
+    fn into_complex(slf: &Bound<'_, Self>) -> PyResult<Complex64> {
+        Expression::try_from(slf)?.into_complex()
+    }
+
     /// Convert this expression into a `numpy` array.
     ///
     /// If `dtype` is `object`, this returns an object array containing this object.
@@ -687,6 +704,12 @@ impl PyExpression {
 }
 
 impl Expression {
+    /// Convert this [`Expression`] into a complex number, if possible.
+    ///
+    /// This may be slow for large recursive expressions.
+    /// This will return an error if simplification doesn't result in a complex number.
+    /// Use [`Expression::into_simplified`] to get a simplified [`Expression`],
+    /// or use [`Expression::evaluate_partial`] if substitutions are desired.
     pub(crate) fn into_complex(self) -> PyResult<Complex64> {
         match self.into_simplified() {
             Expression::PiConstant => Ok(PI.into()),
@@ -760,13 +783,19 @@ impl AsView for Bound<'_, PiType> {
 )]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub(crate) struct Parameter {
-    name: String, // TODO: consider replacing this with `Py<PyString>`.
+    name: String, // TODO: replace this with `Py<PyString>`.
 }
 
 /// Wrapper around [`Parameter`] with type stubs that indicate it the method accepts `str`s, too.
 #[derive(Clone, Debug, Hash, PartialEq, Eq, FromPyObject)]
 #[cfg_attr(feature = "stubs", derive(IntoPyObject))]
 pub(crate) struct ParameterLike(Parameter);
+
+impl From<String> for Parameter {
+    fn from(name: String) -> Self {
+        Self { name }
+    }
+}
 
 impl From<ParameterLike> for Parameter {
     fn from(value: ParameterLike) -> Self {

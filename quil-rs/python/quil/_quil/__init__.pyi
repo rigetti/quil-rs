@@ -15,6 +15,7 @@ from . import program
 from . import validation
 from . import waveform
 __all__ = [
+    "ArrayError",
     "PickleError",
     "QuilError",
     "ToQuilStringError",
@@ -25,6 +26,12 @@ __all__ = [
     "validation",
     "waveform",
 ]
+
+class ArrayError(ValueError):
+    r"""
+    Raised when an array argument has an inappropriate value.
+    """
+    ...
 
 class PickleError(QuilError):
     r"""

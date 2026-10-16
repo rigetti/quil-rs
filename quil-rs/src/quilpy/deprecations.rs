@@ -291,7 +291,7 @@ macro_rules! deprecated_or_new {
                 Ok($old_param)
             },
             || Err(
-                $crate::quilpy::errors::ArgumentError::MissingRequired(stringify!($new_param).to_string())
+                $crate::quilpy::errors::PyValueError::MissingRequired(stringify!($new_param).to_string())
             )?
         )
     };

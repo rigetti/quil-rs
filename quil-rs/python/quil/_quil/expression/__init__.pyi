@@ -154,6 +154,20 @@ class Expression:
         and `memory_references` should be a mapping of memory reference names to lists of floats.
         If not provided, they'll default to an empty mapping.
         """
+    def into_complex(self) -> builtins.complex:
+        r"""
+        Simplify the expression to a complex number, if possible.
+        
+        This may be slow for large recursive expressions.
+        
+        This will raise an error if simplification doesn't result in a complex number.
+        Use `into_simplified` to get a simplified `Expression`, or use `evaluate(partial=True)`
+        to get a complex number when possible or a partially simplified `Expression` otherwise.
+        Note that the latter in particular accepts variable and memory reference substitutions,
+        which can be used to simplify an `Expression` that contains such references.
+        
+        This is equivalent to `complex(expr)` or `expr.__complex__()`.
+        """
     def into_simplified(self) -> Expression:
         r"""
         Return a new expression derived from this one, simplified as much as possible.
