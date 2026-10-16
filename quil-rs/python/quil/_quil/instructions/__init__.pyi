@@ -122,7 +122,7 @@ Halt: HaltType
 Nop: NopType
 Wait: WaitType
 class Arithmetic(Instruction):
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str, builtins.str] = ('operator', 'destination', 'source')
     @property
     def destination(self) -> MemoryReference: ...
     @property
@@ -234,7 +234,7 @@ class AttributeValue:
     
 
 class BinaryLogic(Instruction):
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str, builtins.str] = ('operator', 'destination', 'source')
     @property
     def destination(self) -> MemoryReference: ...
     @property
@@ -380,7 +380,7 @@ class CalibrationIdentifier:
     r"""
     Unique identifier for a calibration definition within a program
     """
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str, builtins.str, builtins.str] = ('name', 'parameters', 'qubits', 'modifiers')
     @property
     def modifiers(self) -> builtins.list[GateModifier]:
         r"""
@@ -452,7 +452,7 @@ class Call(Instruction):
     
     Also see [`ExternSignature`].
     """
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str] = ('name', 'arguments')
     @property
     def arguments(self) -> builtins.list[CallArgument]:
         r"""
@@ -728,7 +728,7 @@ class ComparisonOperand:
     
 
 class Convert(Instruction):
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str] = ('destination', 'source')
     @property
     def destination(self) -> MemoryReference: ...
     @property
@@ -995,7 +995,7 @@ class DefGateSequence:
     r"""
     A sequence of gates that make up a defined gate (i.e. with `DEFGATE ... AS SEQUENCE`).
     """
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str] = ('qubits', 'gates')
     @property
     def gates(self) -> builtins.list[Gate]:
         r"""
@@ -1031,7 +1031,7 @@ class DefGateSequenceError(InstructionError):
     ...
 
 class Delay(Instruction):
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str, builtins.str] = ('duration', 'qubits', 'frame_names')
     @property
     def duration(self) -> expression.Expression: ...
     @property
@@ -1077,7 +1077,7 @@ class Delay(Instruction):
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Exchange(Instruction):
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str] = ('left', 'right')
     @property
     def left(self) -> MemoryReference: ...
     @property
@@ -1119,7 +1119,7 @@ class ExternParameter:
     r"""
     An extern parameter with a name, mutability, and data type.
     """
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str, builtins.str] = ('name', 'mutable', 'data_type')
     @property
     def data_type(self) -> ExternParameterType:
         r"""
@@ -1217,7 +1217,7 @@ class ExternSignature:
     See the [Quil Specification](https://github.com/quil-lang/quil/blob/7f532c7cdde9f51eae6abe7408cc868fba9f91f6/specgen/spec/sec-other.s)
     for details on how these signatures are formed.
     """
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str] = ('return_type', 'parameters')
     @property
     def parameters(self) -> builtins.list[ExternParameter]:
         r"""
@@ -1244,7 +1244,7 @@ class ExternSignature:
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Fence(Instruction):
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str] = ('qubits',)
     @property
     def qubits(self) -> builtins.list[Qubit]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
@@ -1281,7 +1281,7 @@ class FixedQubit(Qubit):
     
     This corresponds to the [`Qubit::Fixed`] variant.
     """
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str] = ('index',)
     @property
     def index(self) -> builtins.int: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
@@ -1351,7 +1351,7 @@ class FrameDefinition(Instruction):
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class FrameIdentifier:
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str] = ('qubits', 'name')
     @property
     def name(self) -> builtins.str: ...
     @property
@@ -1627,7 +1627,7 @@ class GateSignature:
     A signature for a gate definition; this does not include the gate definition content.
     To get a signature from a definition, use `GateDefinition.signature`.
     """
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str, builtins.str, builtins.str] = ('name', 'gate_parameters', 'qubit_parameters', 'gate_type')
     @property
     def gate_parameters(self) -> builtins.list[builtins.str]: ...
     @property
@@ -1747,7 +1747,7 @@ class HaltType(Instruction):
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Include(Instruction):
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str] = ('filename',)
     @property
     def filename(self) -> builtins.str: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
@@ -1844,7 +1844,7 @@ class InstructionError(_quil.QuilError):
     ...
 
 class Jump(Instruction):
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str] = ('target',)
     @property
     def target(self) -> Target: ...
     @target.setter
@@ -1876,7 +1876,7 @@ class Jump(Instruction):
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class JumpUnless(Instruction):
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str] = ('target', 'condition')
     @property
     def condition(self) -> MemoryReference: ...
     @condition.setter
@@ -1912,7 +1912,7 @@ class JumpUnless(Instruction):
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class JumpWhen(Instruction):
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str] = ('target', 'condition')
     @property
     def condition(self) -> MemoryReference: ...
     @condition.setter
@@ -2047,7 +2047,7 @@ class Label(Instruction):
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Load(Instruction):
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str, builtins.str] = ('destination', 'source', 'offset')
     @property
     def destination(self) -> MemoryReference: ...
     @property
@@ -2304,7 +2304,7 @@ class MemoryReference:
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Move(Instruction):
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str] = ('destination', 'source')
     @property
     def destination(self) -> MemoryReference: ...
     @property
@@ -2385,7 +2385,7 @@ class NopType(Instruction):
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Offset:
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str] = ('offset', 'data_type')
     @property
     def data_type(self) -> ScalarType: ...
     @property
@@ -3059,7 +3059,7 @@ class RawCapture(Instruction):
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Reset(Instruction):
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str] = ('qubit',)
     @property
     def qubit(self) -> typing.Optional[Qubit]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
@@ -3139,7 +3139,7 @@ class SetFrequency(Instruction):
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class SetPhase(Instruction):
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str] = ('frame', 'phase')
     @property
     def frame(self) -> FrameIdentifier: ...
     @property
@@ -3178,7 +3178,7 @@ class SetPhase(Instruction):
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class SetScale(Instruction):
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str] = ('frame', 'scale')
     @property
     def frame(self) -> FrameIdentifier: ...
     @property
@@ -3217,7 +3217,7 @@ class SetScale(Instruction):
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Sharing:
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str] = ('name', 'offsets')
     @property
     def name(self) -> builtins.str: ...
     @property
@@ -3273,7 +3273,7 @@ class ShiftFrequency(Instruction):
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class ShiftPhase(Instruction):
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str] = ('frame', 'phase')
     @property
     def frame(self) -> FrameIdentifier: ...
     @property
@@ -3312,7 +3312,7 @@ class ShiftPhase(Instruction):
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Store(Instruction):
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str, builtins.str] = ('destination', 'offset', 'source')
     @property
     def destination(self) -> builtins.str: ...
     @property
@@ -3473,7 +3473,7 @@ class TargetPlaceholder:
         """
 
 class UnaryLogic(Instruction):
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str] = ('operator', 'operand')
     @property
     def op(self) -> UnaryOperator: ...
     @property
@@ -3510,7 +3510,7 @@ class UnaryLogic(Instruction):
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Vector:
-    __match_args__: tuple
+    __match_args__: tuple[builtins.str, builtins.str] = ('data_type', 'length')
     @property
     def data_type(self) -> ScalarType: ...
     @property

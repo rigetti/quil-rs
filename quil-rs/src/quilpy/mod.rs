@@ -1148,8 +1148,8 @@ pub(crate) use pickleable_enum;
 /// ```
 macro_rules! impl_match_args {
     ($name:ident($($field:expr),* $(,)?)) => {
-        #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-        #[pyo3::pymethods]
+        #[cfg_attr(feature = "stubs", ::pyo3_stub_gen::derive::gen_stub_pymethods)]
+        #[::pyo3::pymethods]
         impl $name {
             #[expect(non_upper_case_globals)]
             #[classattr]

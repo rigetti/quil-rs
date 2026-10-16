@@ -209,12 +209,10 @@ macro_rules! pickleable_new {
                     $((self.$field).clone(),)*
                 )
             }
-
-            #[classattr]
-            fn __match_args__<'py>(py: pyo3::Python<'py>) -> pyo3::PyResult<pyo3::Bound<'py, pyo3::types::PyTuple>> {
-                pyo3::types::PyTuple::new(py, &[$( stringify!($field) ),*])
-            }
         }
+
+        #[cfg(feature = "python")]
+        $crate::quilpy::impl_match_args!($name($(stringify!($field)),*));
     };
 
     // These internal rules allow you to write a `some_field: T as U` in the macro input;
