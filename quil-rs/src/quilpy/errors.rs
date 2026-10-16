@@ -107,14 +107,16 @@ pub(crate) enum PyValueError {
     MissingRequired(String),
 }
 
-/// Errors that can occur when working with arrays from `quil`.
+/// Errors that occur when an array argument has an inappropriate value.
 ///
 /// These errors only apply to Python users and are not reachable directly from the Rust APIs.
 #[derive(Debug, thiserror::Error, PartialEq)]
 #[non_exhaustive]
 pub(crate) enum PyArrayError {
-    #[error("not a square matrix")]
-    NonSquare,
+    #[error("not a square matrix: {0}")]
+    NonSquare(ndarray::ShapeError),
+    #[error("matrix dimensions must be a power of a prime qudit dimension (e.g., 2, 3, 4, 5, 7, 8, 9, 11, ...), but got {0}")]
+    DimensionError(u64),
 }
 
 // All exceptions defined here should use this as their base,
@@ -138,8 +140,8 @@ exception!(
     PyArrayError,
     quil._quil,
     ArrayError,
-    QuilError,
-    "Raised upon failures working with an array."
+    ValueError,
+    "Raised when an array argument has an inappropriate value."
 );
 
 create_exception!(
