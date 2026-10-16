@@ -37,6 +37,7 @@ use crate::{
     },
     instruction::gate::GateSignature,
     pickleable_new,
+    quil::ToQuilError,
     quilpy::{
         aliased, deprecated_or_new, deprecated_param,
         errors::{self, PickleError},
@@ -248,9 +249,6 @@ impl_instruction!([
    *Pragma,
    PragmaArgument,
    *Pulse[is_quil_t(true) + ..],
-   PyQubit[repr],
-   // FormalArgument[repr],
-   // FixedQubit[repr],
    QubitPlaceholder[repr],
    *RawCapture[is_quil_t(true) + ..],
    *Reset,
@@ -4963,6 +4961,23 @@ impl PyQubit {
 
         Ok(())
     }
+
+    fn to_quil(slf: &Bound<'_, Self>) -> PyResult<String> {
+        Ok(slf.extract::<Qubit>()?.to_quil()?)
+    }
+
+    fn to_quil_or_debug(slf: &Bound<'_, Self>) -> PyResult<String> {
+        Ok(slf.extract::<Qubit>()?.to_quil_or_debug())
+    }
+
+    fn __repr__(slf: &Bound<'_, Self>) -> PyResult<String> {
+        Self::to_quil_or_debug(slf)
+    }
+
+    #[pyo3(warn(message = "use `to_quil_or_debug` instead", category = PyDeprecationWarning))]
+    fn out(slf: &Bound<'_, Self>) -> PyResult<String> {
+        Self::to_quil_or_debug(slf)
+    }
 }
 
 /// A fixed qubit: a qubit with a specific index.
@@ -5071,6 +5086,14 @@ impl FormalArgument {
     // as otherwise you can't create new instances from infallible contexts.
     fn __hash__(slf: &Bound<'_, Self>) -> PyResult<isize> {
         slf.get().name.bind(slf.py()).hash()
+    }
+
+    fn __str__(&self, py: Python<'_>) -> Py<PyString> {
+        self.name.clone_ref(py)
+    }
+
+    fn __repr__(&self, py: Python<'_>) -> String {
+        format!("<FormalArgument {}>", self.name.clone_ref(py))
     }
 }
 

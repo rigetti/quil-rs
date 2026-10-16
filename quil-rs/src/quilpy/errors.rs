@@ -115,7 +115,7 @@ pub(crate) enum PyValueError {
 pub(crate) enum PyArrayError {
     #[error("not a square matrix: {0}")]
     NonSquare(ndarray::ShapeError),
-    #[error("matrix dimensions must be a power of a prime qudit dimension (e.g., 2, 3, 4, 5, 7, 8, 9, 11, ...), but got {0}")]
+    #[error("number of gate args must be a power of a prime qudit dimension (e.g., 2, 3, 4, 5, 7, 8, 9, 11, ...), but got {0}")]
     DimensionError(u64),
 }
 
