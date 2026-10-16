@@ -5070,7 +5070,7 @@ impl FormalArgument {
     // The latter is actually likely a better option,
     // as otherwise you can't create new instances from infallible contexts.
     fn __hash__(slf: &Bound<'_, Self>) -> PyResult<isize> {
-        slf.hash()
+        slf.get().name.bind(slf.py()).hash()
     }
 }
 
