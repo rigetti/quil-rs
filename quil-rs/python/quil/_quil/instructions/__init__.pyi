@@ -2977,11 +2977,10 @@ class Qubit:
         The value `None` or values of type `int` or `str` are converted into new `Qubit`s
         of type `QubitPlaceholder`, `FixedQubit`, or `FormalArgument`, respectively.
         """
-    def __repr__(self) -> builtins.str:
-        r"""
-        Implements `__repr__` for Python in terms of the Rust
-        [`Debug`](std::fmt::Debug) implementation.
-        """
+    def __repr__(self) -> builtins.str: ...
+    def out(self) -> builtins.str: ...
+    def to_quil(self) -> builtins.str: ...
+    def to_quil_or_debug(self) -> builtins.str: ...
 
 class QubitPlaceholder(Qubit):
     r"""
