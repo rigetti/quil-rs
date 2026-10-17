@@ -36,14 +36,7 @@ use super::{
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(
-        module = "quil._quil.instructions",
-        eq,
-        frozen,
-        hash,
-        skip_from_py_object
-    ),
-    derive(pyo3::FromPyObject)
+    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, from_py_object)
 )]
 pub enum ExternParameterType {
     /// A scalar parameter, which may accept a memory reference or immediate value.
@@ -464,9 +457,8 @@ pub enum CallArgumentResolutionError {
         eq,
         frozen,
         hash,
-        skip_from_py_object
-    ),
-    derive(pyo3::FromPyObject)
+        from_py_object
+    )
 )]
 pub enum UnresolvedCallArgument {
     /// A reference to a declared memory location. Note, this may be resolved to either

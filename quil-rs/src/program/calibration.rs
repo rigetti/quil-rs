@@ -239,8 +239,7 @@ impl SourceMapIndexable<CalibrationSource> for CalibrationExpansion {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.program", eq, frozen, skip_from_py_object),
-    derive(pyo3::FromPyObject)
+    pyo3::pyclass(module = "quil._quil.program", eq, frozen)
 )]
 pub enum CalibrationSource {
     /// Describes a `DEFCAL` instruction
