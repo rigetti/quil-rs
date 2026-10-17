@@ -183,7 +183,8 @@ macro_rules! pickleable_new {
     ) => {
         $(#[$impl_meta])*
         #[cfg_attr(feature = "stubs", pyo3_stub_gen::derive::gen_stub_pymethods)]
-        #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3)]
+        #[cfg_attr(not(feature = "python"), optipy::strip_pyo3)]
+        #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
         #[cfg_attr(feature = "python", pyo3::pymethods)]
         impl $name {
             $(#[$meta])*
