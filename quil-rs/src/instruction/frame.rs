@@ -26,9 +26,8 @@ use crate::{
         frozen,
         hash,
         get_all,
-        skip_from_py_object
-    ),
-    derive(pyo3::FromPyObject)
+        from_py_object
+    )
 )]
 pub enum AttributeValue {
     String(String),
