@@ -172,7 +172,7 @@ def test_substitute() -> None:
         e4 = e1.substitute(full_mapping)
 
     assert complex(e3) == e4
-    x = ((np.array(e2) ** 0)[0]).into_simplified()
+    x = (np.array(e2) ** 0).into_simplified()
     assert float(x) == 1.0
 
     # Validate that `evaluate(..., partial=True)` is equivalent to `substitute`.
