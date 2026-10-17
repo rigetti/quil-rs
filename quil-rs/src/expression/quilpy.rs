@@ -1025,6 +1025,7 @@ impl AsView for Bound<'_, Address> {
 
 impl_match_args!(Address("memory_reference"));
 
+#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Address {
