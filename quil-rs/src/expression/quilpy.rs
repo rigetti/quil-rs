@@ -363,6 +363,11 @@ fn to_obj_array<'py, T: PyClass>(obj: &Bound<'py, T>) -> Bound<'py, PyAny> {
     PyArray::from_owned_object_array(py, ndarray::arr0(as_any)).into_any()
 }
 
+/// Convert a scalar value into a `numpy` array holding just that value.
+fn scalar_array<'py, T: numpy::Element>(py: Python<'py>, value: T) -> Bound<'py, PyAny> {
+    PyArray::from_owned_array(py, ndarray::arr0(value)).into_any()
+}
+
 impl AsView for ExpressionLike {
     fn as_view(&self) -> ExpressionView<'_> {
         match self {
@@ -734,7 +739,7 @@ impl PyExpression {
                 // Without a dtype, attempt to simplify the expression to a complex number.
                 // If that isn't possible, fallback to the object representation.
                 if let Ok(simplified) = PyExpression::__complex__(slf) {
-                    PyArray::from_owned_array(py, ndarray::arr0(simplified)).into_any()
+                    scalar_array(py, simplified)
                 } else {
                     to_obj_array(slf)
                 }
@@ -743,12 +748,9 @@ impl PyExpression {
                 if dtype.is_equiv_to(&PyArrayDescr::object(py)) {
                     to_obj_array(slf)
                 } else if dtype.is_equiv_to(&numpy::dtype::<f64>(py)) {
-                    PyArray::from_owned_array(py, ndarray::arr0(PyExpression::__float__(slf)?))
-                        .into_any()
+                    scalar_array(py, PyExpression::__float__(slf)?)
                 } else {
-                    PyArray::from_owned_array(py, ndarray::arr0(PyExpression::__complex__(slf)?))
-                        .call_method1(pyo3::intern!(py, "astype"), (dtype,))?
-                        .into_any()
+                    scalar_array(py, PyExpression::__complex__(slf)?)
                 }
             }
         };
