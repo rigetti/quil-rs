@@ -175,9 +175,8 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ExpressionLike {
             return Ok(ExpressionLike::Variable(value));
         }
 
-        // TODO: Do we need to check MemoryReference explicitly, or will it be caught by PyExpression?
-        if let Ok(value) = obj.cast::<MemoryReference>() {
-            return Ok(ExpressionLike::MemoryReference(value.get().clone()));
+        if let Ok(value) = obj.extract::<PyMemRef<'py>>() {
+            return Ok(ExpressionLike::MemoryReference(value.into()));
         }
 
         Err(CastError::new(
@@ -997,6 +996,12 @@ impl Eq for Address {}
 impl PartialEq for Address {
     fn eq(&self, other: &Self) -> bool {
         self.memory_reference.get() == other.memory_reference.get()
+    }
+}
+
+impl PartialEq<MemoryReference> for Address {
+    fn eq(&self, other: &MemoryReference) -> bool {
+        self.memory_reference.get() == other
     }
 }
 
