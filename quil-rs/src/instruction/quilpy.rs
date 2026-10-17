@@ -2295,10 +2295,10 @@ impl MeasureCalibrationDefinition {
         Ok(Self::new(ident, instructions))
     }
 
-    fn __getnewargs__(&self) -> (Qubit, Option<String>, Vec<Instruction>) {
+    fn __getnewargs__(&self) -> (Qubit, Option<MemoryReference>, Vec<Instruction>) {
         (
             self.identifier.qubit.clone(),
-            self.identifier.target.clone(),
+            self.memory_reference(),
             self.instructions.clone(),
         )
     }
@@ -2449,6 +2449,8 @@ impl Reset {
     }
 }
 
+// TODO: Likely, most places that "use" MemoryReferences for things like __add__
+// should actually be applied to the `Address` type.
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
