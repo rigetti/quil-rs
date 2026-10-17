@@ -3,6 +3,8 @@ use std::str::FromStr;
 use indexmap::IndexMap;
 use nom_locate::LocatedSpan;
 
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyInstruction;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum};
 
@@ -10,7 +12,6 @@ use super::{MemoryReference, Qubit, QuotedString, WaveformInvocation};
 use crate::{
     expression::Expression,
     parser::{common::parse_frame_identifier, lex, ParseError},
-    pickleable_new,
     program::{disallow_leftover, SyntaxError},
     quil::{Quil, INDENT},
 };
@@ -55,9 +56,9 @@ pub type FrameAttributes = IndexMap<String, AttributeValue>;
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         get_all,
-        set_all,
         subclass,
         from_py_object
     )
@@ -67,9 +68,12 @@ pub struct FrameDefinition {
     pub attributes: FrameAttributes,
 }
 
-pickleable_new! {
-    impl FrameDefinition {
-        pub fn new(identifier: FrameIdentifier, attributes: FrameAttributes);
+impl FrameDefinition {
+    pub fn new(identifier: FrameIdentifier, attributes: FrameAttributes) -> Self {
+        Self {
+            identifier,
+            attributes,
+        }
     }
 }
 
@@ -91,6 +95,9 @@ impl Quil for FrameDefinition {
     }
 }
 
+// TODO(migration-guide): This class is now frozen.
+// The PyQuil version is `quilatom.Frame`.
+// This version also has a `name` property, which the PyQuil version didn't claim to have.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
@@ -110,9 +117,9 @@ pub struct FrameIdentifier {
     pub qubits: Vec<Qubit>,
 }
 
-pickleable_new! {
-    impl FrameIdentifier {
-        pub fn new(name: String, qubits: Vec<Qubit>);
+impl FrameIdentifier {
+    pub fn new(name: String, qubits: Vec<Qubit>) -> Self {
+        Self { name, qubits }
     }
 }
 
@@ -148,6 +155,7 @@ impl FromStr for FrameIdentifier {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         get_all,
         set_all,
@@ -162,14 +170,19 @@ pub struct Capture {
     pub waveform: WaveformInvocation,
 }
 
-pickleable_new! {
-    impl Capture {
-        pub fn new(
-            blocking: bool,
-            frame: FrameIdentifier,
-            memory_reference: MemoryReference,
-            waveform: WaveformInvocation,
-        );
+impl Capture {
+    pub fn new(
+        blocking: bool,
+        frame: FrameIdentifier,
+        memory_reference: MemoryReference,
+        waveform: WaveformInvocation,
+    ) -> Self {
+        Self {
+            blocking,
+            frame,
+            memory_reference,
+            waveform,
+        }
     }
 }
 
@@ -202,6 +215,7 @@ impl Quil for Capture {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         get_all,
         set_all,
@@ -215,9 +229,13 @@ pub struct Pulse {
     pub waveform: WaveformInvocation,
 }
 
-pickleable_new! {
-    impl Pulse {
-        pub fn new(blocking: bool, frame: FrameIdentifier, waveform: WaveformInvocation);
+impl Pulse {
+    pub fn new(blocking: bool, frame: FrameIdentifier, waveform: WaveformInvocation) -> Self {
+        Self {
+            blocking,
+            frame,
+            waveform,
+        }
     }
 }
 
@@ -247,6 +265,7 @@ impl Quil for Pulse {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -262,14 +281,19 @@ pub struct RawCapture {
     pub memory_reference: MemoryReference,
 }
 
-pickleable_new! {
-    impl RawCapture {
-        pub fn new(
-            blocking: bool,
-            frame: FrameIdentifier,
-            duration: Expression,
-            memory_reference: MemoryReference,
-        );
+impl RawCapture {
+    pub fn new(
+        blocking: bool,
+        frame: FrameIdentifier,
+        duration: Expression,
+        memory_reference: MemoryReference,
+    ) -> Self {
+        Self {
+            blocking,
+            frame,
+            duration,
+            memory_reference,
+        }
     }
 }
 
@@ -301,6 +325,7 @@ impl Quil for RawCapture {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -314,9 +339,9 @@ pub struct SetFrequency {
     pub frequency: Expression,
 }
 
-pickleable_new! {
-    impl SetFrequency {
-        pub fn new(frame: FrameIdentifier, frequency: Expression);
+impl SetFrequency {
+    pub fn new(frame: FrameIdentifier, frequency: Expression) -> Self {
+        Self { frame, frequency }
     }
 }
 
@@ -340,6 +365,7 @@ impl Quil for SetFrequency {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -353,9 +379,9 @@ pub struct SetPhase {
     pub phase: Expression,
 }
 
-pickleable_new! {
-    impl SetPhase {
-        pub fn new(frame: FrameIdentifier, phase: Expression);
+impl SetPhase {
+    pub fn new(frame: FrameIdentifier, phase: Expression) -> Self {
+        Self { frame, phase }
     }
 }
 
@@ -379,6 +405,7 @@ impl Quil for SetPhase {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -392,9 +419,9 @@ pub struct SetScale {
     pub scale: Expression,
 }
 
-pickleable_new! {
-    impl SetScale {
-        pub fn new(frame: FrameIdentifier, scale: Expression);
+impl SetScale {
+    pub fn new(frame: FrameIdentifier, scale: Expression) -> Self {
+        Self { frame, scale }
     }
 }
 
@@ -418,6 +445,7 @@ impl Quil for SetScale {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -431,9 +459,9 @@ pub struct ShiftFrequency {
     pub frequency: Expression,
 }
 
-pickleable_new! {
-    impl ShiftFrequency {
-        pub fn new(frame: FrameIdentifier, frequency: Expression);
+impl ShiftFrequency {
+    pub fn new(frame: FrameIdentifier, frequency: Expression) -> Self {
+        Self { frame, frequency }
     }
 }
 
@@ -457,6 +485,7 @@ impl Quil for ShiftFrequency {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -470,9 +499,9 @@ pub struct ShiftPhase {
     pub phase: Expression,
 }
 
-pickleable_new! {
-    impl ShiftPhase {
-        pub fn new(frame: FrameIdentifier, phase: Expression);
+impl ShiftPhase {
+    pub fn new(frame: FrameIdentifier, phase: Expression) -> Self {
+        Self { frame, phase }
     }
 }
 
@@ -496,6 +525,7 @@ impl Quil for ShiftPhase {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -509,9 +539,9 @@ pub struct SwapPhases {
     pub frame_2: FrameIdentifier,
 }
 
-pickleable_new! {
-    impl SwapPhases {
-        pub fn new(frame_1: FrameIdentifier, frame_2: FrameIdentifier);
+impl SwapPhases {
+    pub fn new(frame_1: FrameIdentifier, frame_2: FrameIdentifier) -> Self {
+        Self { frame_1, frame_2 }
     }
 }
 

@@ -5,7 +5,7 @@ from typing import Optional
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
-from quil.instructions import Gate, Instruction, Jump, Qubit, QubitPlaceholder, Target, TargetPlaceholder
+from quil.instructions import Gate, Jump, Qubit, QubitPlaceholder, TargetPlaceholder, Measurement, Declaration, JumpWhen, ScalarType, Label
 from quil.program import InstructionTarget, Program
 from quil import QuilError
 
@@ -24,9 +24,42 @@ MEASURE 1 ro[1]
     unpickled = pickle.loads(pickled)
     assert program == unpickled
 
+def test_construction():
+    def H(qubit: Qubit | str | int):
+        return Gate("H", (), (qubit,), ())
+    def CNOT(q0: Qubit | str | int, q1: Qubit | str | int):
+        return Gate("CNOT", (), (q0, q1), ())
+
+    prog = Program()
+    prog.add_instructions(
+        counter := Declaration("counter", ScalarType.INTEGER),
+        counter[0].move(10),
+        top := Label("top"),
+        ro := Declaration("ro", "BIT", 2),
+        H(0),
+        CNOT(0, 1),
+        Measurement(0, ro[0]),
+        Measurement(1, ro[1]),
+        counter[0].sub(1),
+        JumpWhen(top, counter),
+    )
+
+    prog.resolve_placeholders()
+    text = prog.to_quil()
+    assert text == r"""DECLARE counter INTEGER[1]
+DECLARE ro BIT[2]
+MOVE counter[0] 10
+LABEL @top
+H 0
+CNOT 0 1
+MEASURE 0 ro[0]
+MEASURE 1 ro[1]
+SUB counter[0] 1
+JUMP-WHEN @top counter[0]
+"""
 
 def test_custom_resolver():
-    qubit_placeholder = QubitPlaceholder()
+    qubit_placeholder = Qubit()
 
     def qubit_resolver(qubit: QubitPlaceholder) -> Optional[int]:
         return {qubit_placeholder: 9}.get(qubit)
@@ -39,10 +72,8 @@ def test_custom_resolver():
 
     program = Program()
     program.add_instructions(
-        [
-            Instruction.Gate(Gate("H", [], [Qubit.Placeholder(qubit_placeholder)], [])),
-            Instruction.Jump(Jump(Target.Placeholder(target_placeholder))),
-        ]
+        Gate("H", [], [qubit_placeholder], []),
+        Jump(target_placeholder),
     )
 
     with pytest.raises(QuilError):
@@ -65,7 +96,7 @@ MEASURE 0 ro[0]
 MEASURE 1 ro[1]
 """
     )
-    assert program.used_qubits == {Qubit.Fixed(0), Qubit.Fixed(1)}
+    assert program.used_qubits == {Qubit(0), Qubit(1)}
     cfg = program.control_flow_graph()
     blocks = cfg.basic_blocks()
     assert len(blocks) == 1
@@ -95,7 +126,7 @@ LABEL @end
 HALT
 """
     )
-    assert program.used_qubits == {Qubit.Fixed(0)}
+    assert program.used_qubits == {Qubit(0)}
     cfg = program.control_flow_graph()
 
     assert cfg.has_dynamic_control_flow()
@@ -418,3 +449,32 @@ def test_defgate_sequence_expansion_with_error_handling():
 
     with pytest.raises(BaseException):
         _, _ = program.expand_defgate_sequences_with_source_map(predicate=filter_fn)
+
+
+def test_parse_heavy_nesting():
+    """We should be able to _fail_ at parsing a heavily-nested program without crashing the process.
+
+    If the parser gets smarter, we might need to come up with a different way to overflow the stack.
+    """
+    n = 1
+    while n < 1_000_000_000:
+        if n > 1_000:
+            pytest.xfail(
+                reason="Deep nesting crashes the process due to stack overflow."
+                "This needs to be fixed by setting a recursion limit in the parser."
+            )
+
+        program_text = f"RX{'':(<{n}}1.0{'':)>{n}} 0\n"
+        try:
+            pgm = Program.parse(program_text)
+        except QuilError:
+            return
+
+        assert isinstance(g := pgm.instructions[0], Gate)
+        assert g.to_quil() == "RX(1) 0"
+        assert float(g.parameters[0]) == 1.0
+
+        n *= 10
+
+    assert False, "Did not raise a QuilError for deeply nested expression."
+

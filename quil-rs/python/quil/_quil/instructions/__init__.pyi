@@ -2,12 +2,17 @@
 # ruff: noqa: E501, F401, F403, F405
 
 import builtins
+import collections.abc
 import enum
 import numpy
 import numpy.typing
+import quil
 from quil import _quil
 from quil._quil import expression
+from quil._quil import program
 import typing
+import typing_extensions
+from typing import TypeAlias
 __all__ = [
     "Arithmetic",
     "ArithmeticOperand",
@@ -28,6 +33,7 @@ __all__ = [
     "ComparisonOperator",
     "Convert",
     "Declaration",
+    "DeclarationAt",
     "DefGateSequence",
     "DefGateSequenceError",
     "Delay",
@@ -37,15 +43,21 @@ __all__ = [
     "ExternParameterType",
     "ExternSignature",
     "Fence",
+    "FixedQubit",
+    "FormalArgument",
     "FrameDefinition",
     "FrameIdentifier",
     "Gate",
+    "GateConstructor",
+    "GateConstructorPartial",
     "GateDefinition",
     "GateError",
     "GateModifier",
     "GateSignature",
     "GateSpecification",
     "GateType",
+    "Halt",
+    "HaltType",
     "Include",
     "Instruction",
     "InstructionError",
@@ -53,22 +65,30 @@ __all__ = [
     "JumpUnless",
     "JumpWhen",
     "Label",
+    "LabelTargetParameter",
     "Load",
     "MeasureCalibrationDefinition",
     "MeasureCalibrationIdentifier",
     "Measurement",
     "MemoryReference",
+    "MemoryReferenceDesignator",
     "Move",
+    "Nop",
+    "NopType",
     "Offset",
     "ParseInstructionError",
     "ParseMemoryReferenceError",
+    "PauliArgIter",
     "PauliGate",
     "PauliSum",
+    "PauliTargetDesignator",
     "PauliTerm",
+    "PauliTermIter",
     "Pragma",
     "PragmaArgument",
     "Pulse",
     "Qubit",
+    "QubitDesignator",
     "QubitPlaceholder",
     "RawCapture",
     "Reset",
@@ -86,32 +106,70 @@ __all__ = [
     "UnaryLogic",
     "UnaryOperator",
     "Vector",
+    "Wait",
+    "WaitType",
     "Waveform",
     "WaveformDefinition",
     "WaveformInvocation",
+    "unpack_classical_reg",
 ]
 
-class Arithmetic:
+LabelTargetParameter: TypeAlias = builtins.str  |  TargetPlaceholder  |  Label
+MemoryReferenceDesignator: TypeAlias = MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]
+PauliTargetDesignator: TypeAlias = Qubit  |  builtins.int  |  builtins.str
+QubitDesignator: TypeAlias = Qubit
+Halt: HaltType
+Nop: NopType
+Wait: WaitType
+class Arithmetic(Instruction):
+    __match_args__: tuple[builtins.str, builtins.str, builtins.str] = ('operator', 'destination', 'source')
     @property
     def destination(self) -> MemoryReference: ...
     @property
+    def left(self) -> MemoryReference:
+        r"""
+        Get the destination [`MemoryReference`] for this arithmetic operation.
+        """
+    @property
+    def op(self) -> ArithmeticOperator: ...
+    @property
     def operator(self) -> ArithmeticOperator: ...
+    @property
+    def right(self) -> ArithmeticOperand:
+        r"""
+        Get the source [`ArithmeticOperand`] for this arithmetic operation.
+        """
     @property
     def source(self) -> ArithmeticOperand: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[ArithmeticOperator, MemoryReference, ArithmeticOperand]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, operator: ArithmeticOperator, destination: MemoryReference, source: ArithmeticOperand) -> Arithmetic: ...
+    def __new__(cls, operator: ArithmeticOperator, destination: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], source: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> Arithmetic: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class ArithmeticOperand:
-    def __getnewargs__(self) -> builtins.tuple[builtins.int | builtins.float | MemoryReference]: ...
+    def __getnewargs__(self) -> builtins.tuple[builtins.int  |  builtins.float  |  MemoryReference]: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -148,7 +206,7 @@ class ArithmeticOperand:
     
 
 class AttributeValue:
-    def __getnewargs__(self) -> builtins.tuple[builtins.str | Expression]: ...
+    def __getnewargs__(self) -> builtins.tuple[builtins.str  |  expression.Expression]: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -175,27 +233,48 @@ class AttributeValue:
         def __new__(cls, _0: builtins.str) -> AttributeValue.String: ...
     
 
-class BinaryLogic:
+class BinaryLogic(Instruction):
+    __match_args__: tuple[builtins.str, builtins.str, builtins.str] = ('operator', 'destination', 'source')
     @property
     def destination(self) -> MemoryReference: ...
     @property
+    def left(self) -> MemoryReference: ...
+    @property
     def operator(self) -> BinaryOperator: ...
+    @property
+    def right(self) -> BinaryOperand: ...
     @property
     def source(self) -> BinaryOperand: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[BinaryOperator, MemoryReference, BinaryOperand]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, operator: BinaryOperator, destination: MemoryReference, source: BinaryOperand) -> BinaryLogic: ...
+    def __new__(cls, operator: BinaryOperator, destination: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], source: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> BinaryLogic: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class BinaryOperand:
-    def __getnewargs__(self) -> builtins.tuple[builtins.int | MemoryReference]: ...
+    def __getnewargs__(self) -> builtins.tuple[builtins.int  |  MemoryReference]: ...
+    def __new__(cls, operand: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> BinaryOperand: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -222,11 +301,13 @@ class BinaryOperand:
         def __new__(cls, _0: MemoryReference) -> BinaryOperand.MemoryReference: ...
     
 
-class CalibrationDefinition:
+class CalibrationDefinition(Instruction):
     @property
     def identifier(self) -> CalibrationIdentifier: ...
     @identifier.setter
     def identifier(self, value: CalibrationIdentifier) -> None: ...
+    @property
+    def instrs(self) -> builtins.list[Instruction]: ...
     @property
     def instructions(self) -> builtins.list[Instruction]: ...
     @instructions.setter
@@ -253,14 +334,44 @@ class CalibrationDefinition:
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[CalibrationIdentifier, builtins.list[Instruction]]: ...
-    def __new__(cls, identifier: CalibrationIdentifier, instructions: typing.Sequence[Instruction]) -> CalibrationDefinition:
+    @typing.overload
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str], instrs: typing.Sequence[Instruction], modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> CalibrationDefinition:
         r"""
-        Builds a new calibration definition.
+        Create a CalibrationDefinition from its constituent parts.
+        
+        .. deprecated:: 5.0.0
+            Use `CalibrationDefinition.from_parts` instead.
         """
+    @typing.overload
+    def __new__(cls, identifier: typing.Sequence[CalibrationIdentifier], instructions: typing.Sequence[Instruction]) -> CalibrationDefinition: ...
+    @typing.overload
+    def __new__(cls, identifier: typing.Optional[CalibrationIdentifier  |  builtins.str] = None, instructions: typing.Optional[typing.Sequence[Instruction]  |  typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]] = None, qubits: typing.Optional[typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str]] = None, instrs: typing.Optional[typing.Sequence[Instruction]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier]] = None, *, name: typing.Optional[builtins.str] = None, parameters: typing.Optional[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]] = None) -> CalibrationDefinition: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def from_parts(name: builtins.str, parameters: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str], instructions: typing.Sequence[Instruction], modifiers: typing.Optional[typing.Sequence[GateModifier]]) -> CalibrationDefinition:
+        r"""
+        Construct a new instance from its constituent parts.
+        
+        This builds up the `CalibrationIdentifier` instance for you.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -269,6 +380,7 @@ class CalibrationIdentifier:
     r"""
     Unique identifier for a calibration definition within a program
     """
+    __match_args__: tuple[builtins.str, builtins.str, builtins.str, builtins.str] = ('name', 'parameters', 'qubits', 'modifiers')
     @property
     def modifiers(self) -> builtins.list[GateModifier]:
         r"""
@@ -305,13 +417,13 @@ class CalibrationIdentifier:
         The qubits on which the gate is applied
         """
     @qubits.setter
-    def qubits(self, value: typing.Sequence[Qubit]) -> None:
+    def qubits(self, value: typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str]) -> None:
         r"""
         The qubits on which the gate is applied
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[builtins.str, builtins.list[expression.Expression], builtins.list[Qubit], builtins.list[GateModifier]]: ...
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression], qubits: typing.Sequence[Qubit], modifiers: typing.Sequence[GateModifier]) -> CalibrationIdentifier:
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str] = [], qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str] = [], modifiers: typing.Sequence[GateModifier  |  builtins.str] = []) -> CalibrationIdentifier:
         r"""
         Builds a new calibration identifier.
         
@@ -325,7 +437,7 @@ class CalibrationIdentifier:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Call:
+class Call(Instruction):
     r"""
     A call instruction with a name and arguments.
     
@@ -340,6 +452,7 @@ class Call:
     
     Also see [`ExternSignature`].
     """
+    __match_args__: tuple[builtins.str, builtins.str] = ('name', 'arguments')
     @property
     def arguments(self) -> builtins.list[CallArgument]:
         r"""
@@ -362,6 +475,21 @@ class Call:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -424,7 +552,7 @@ class CallError(_quil.QuilError):
     """
     ...
 
-class Capture:
+class Capture(Instruction):
     @property
     def blocking(self) -> builtins.bool: ...
     @blocking.setter
@@ -438,21 +566,44 @@ class Capture:
     @memory_reference.setter
     def memory_reference(self, value: MemoryReference) -> None: ...
     @property
+    def nonblocking(self) -> builtins.bool: ...
+    @property
     def waveform(self) -> WaveformInvocation: ...
     @waveform.setter
     def waveform(self, value: WaveformInvocation) -> None: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[builtins.bool, FrameIdentifier, MemoryReference, WaveformInvocation]: ...
-    def __new__(cls, blocking: builtins.bool, frame: FrameIdentifier, memory_reference: MemoryReference, waveform: WaveformInvocation) -> Capture: ...
+    def __getnewargs_ex__(self) -> tuple[tuple[FrameIdentifier, WaveformInvocation, MemoryReference], builtins.dict[builtins.str, builtins.bool]]: ...
+    def __new__(cls, frame: FrameIdentifier, kernel: WaveformInvocation, memory_region: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], *, blocking: typing.Optional[builtins.bool] = None, nonblocking: typing.Optional[builtins.bool] = None) -> Capture: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def get_qubit_indices(self) -> builtins.set[builtins.int]:
+        r"""
+        Return the fixed qubit indices used by this instruction's `frame`.
+        
+        Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class CircuitDefinition:
+class CircuitDefinition(Instruction):
     @property
     def instructions(self) -> builtins.list[Instruction]: ...
     @instructions.setter
@@ -471,38 +622,76 @@ class CircuitDefinition:
     def qubit_variables(self, value: typing.Sequence[builtins.str]) -> None: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[builtins.str, builtins.list[builtins.str], builtins.list[builtins.str], builtins.list[Instruction]]: ...
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[builtins.str], qubit_variables: typing.Sequence[builtins.str], instructions: typing.Sequence[Instruction]) -> CircuitDefinition: ...
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Parameter  |  builtins.str], qubit_variables: typing.Optional[typing.Sequence[FormalArgument  |  builtins.str]] = None, instructions: typing.Sequence[Instruction] = [], *, qubits: typing.Optional[typing.Sequence[FormalArgument  |  builtins.str]] = None) -> CircuitDefinition: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Comparison:
+class Comparison(Instruction):
     @property
     def destination(self) -> MemoryReference: ...
     @property
+    def left(self) -> MemoryReference: ...
+    @property
     def lhs(self) -> MemoryReference: ...
+    @property
+    def op(self) -> ComparisonOperator: ...
     @property
     def operator(self) -> ComparisonOperator: ...
     @property
     def rhs(self) -> ComparisonOperand: ...
+    @property
+    def right(self) -> ComparisonOperand: ...
+    @property
+    def target(self) -> MemoryReference: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[ComparisonOperator, MemoryReference, MemoryReference, ComparisonOperand]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, operator: ComparisonOperator, destination: MemoryReference, lhs: MemoryReference, rhs: ComparisonOperand) -> Comparison: ...
+    def __new__(cls, operator: ComparisonOperator, destination: typing.Optional[MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]] = None, lhs: typing.Optional[MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]] = None, rhs: typing.Optional[ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]] = None, *, target: typing.Optional[MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]] = None, left: typing.Optional[MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]] = None, right: typing.Optional[ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]] = None) -> Comparison: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class ComparisonOperand:
-    def __getnewargs__(self) -> builtins.tuple[builtins.int | builtins.float | MemoryReference]: ...
+    def __getnewargs__(self) -> builtins.tuple[builtins.int  |  builtins.float  |  MemoryReference]: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -538,46 +727,275 @@ class ComparisonOperand:
         def __new__(cls, _0: MemoryReference) -> ComparisonOperand.MemoryReference: ...
     
 
-class Convert:
+class Convert(Instruction):
+    __match_args__: tuple[builtins.str, builtins.str] = ('destination', 'source')
     @property
     def destination(self) -> MemoryReference: ...
+    @property
+    def left(self) -> MemoryReference: ...
+    @property
+    def right(self) -> MemoryReference: ...
     @property
     def source(self) -> MemoryReference: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[MemoryReference, MemoryReference]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, destination: MemoryReference, source: MemoryReference) -> Convert: ...
+    def __new__(cls, destination: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], source: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> Convert: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Declaration:
+class Declaration(Instruction):
+    @property
+    def memory_size(self) -> builtins.int:
+        r"""
+        Get the number of elements being declared.
+        """
+    @property
+    def memory_type(self) -> builtins.str:
+        r"""
+        Get a string representation of the type of memory being declared.
+        """
     @property
     def name(self) -> builtins.str: ...
+    @property
+    def shared_region(self) -> typing.Optional[builtins.str]:
+        r"""
+        Get the memory region name this declaration is sharing with, if any.
+        """
     @property
     def sharing(self) -> typing.Optional[Sharing]: ...
     @property
     def size(self) -> Vector: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[builtins.str, Vector, typing.Optional[Sharing]]: ...
+    def __getitem__(self, index: builtins.int) -> DeclarationAt:
+        r"""
+        Return a new `DeclarationAt` to this `Declaration` at the given `index`.
+        
+        The result can be used in places where a `MemoryReference` is expected,
+        but has the advantage of sharing the underlying `Declaration` object;
+        that allows it to use less memory and to validate certain memory operations
+        while constructing a `quil.program.Program`.
+        """
+    def __getnewargs__(self) -> tuple[builtins.str, ScalarType, builtins.int, typing.Optional[builtins.str], typing.Optional[builtins.list[tuple[builtins.int, ScalarType]]]]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, name: builtins.str, size: Vector, sharing: typing.Optional[Sharing]) -> Declaration: ...
+    def __new__(cls, name: builtins.str, memory_type: ScalarType  |  typing.Literal["BIT", "INTEGER", "REAL", "OCTET"], memory_size: builtins.int = 1, shared_region: typing.Optional[builtins.str] = None, offsets: typing.Optional[typing.Sequence[tuple[builtins.int, ScalarType  |  typing.Literal["BIT", "INTEGER", "REAL", "OCTET"]]]] = None) -> Declaration: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def asdict(self) -> builtins.dict[builtins.str, builtins.list[builtins.tuple[builtins.int, builtins.str]] | builtins.str | builtins.int | None]:
+        r"""
+        Get the DECLARE directive as a dictionary.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def offsets(self) -> builtins.list[tuple[builtins.int, builtins.str]]:
+        r"""
+        Get the offsets for this declaration.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
+
+@typing.final
+class DeclarationAt:
+    r"""
+    A wrapper around a [`Declaration`] for use in places we'd normally need a `MemoryReference`.
+    
+    You can get an instance of `DeclarationAt` by indexing a `Declaration`,
+    and you can then use it in places where a `MemoryReference` is expected.
+    
+    # Example
+    
+    With use of the warlus operator, you can often write a list of instructions
+    without needing to explicitly declare `MemoryReference` objects:
+    
+    ```python
+    instructions = [
+        counter := Declaration("counter", ScalarType.INTEGER),      # DECLARE counter INTEGER
+        counter[0].move(10),                                        # MOVE counter[0] 10
+        top := Label("top"),                                        # LABEL @top
+        # additional instructions...
+        counter[0].sub(1),                                          # SUB counter[0] 1
+        JumpWhen(top, counter[0]),                                  # JUMP-WHEN @top counter[0]
+    ]
+    ```
+    """
+    def add(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Arithmetic:
+        r"""
+        Return a new `Arithmetic` instruction representing `ADD self other`.
+        
+        # Example
+        
+        ```python
+        from quil.instructions import Declaration, ScalarType
+        
+        x = Declaration("x", ScalarType.INTEGER, 3)
+        arith = x[2].add(5)
+        assert isinstance(arith, Arithmetic)
+        assert arith.to_quil() == "ADD x[2] 5"
+        ```
+        """
+    def and_(self, other: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> BinaryLogic: ...
+    def convert(self, source: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Convert:
+        r"""
+        Return a new `Convert` instruction representing `self = (T)source`.
+        
+        This is like a `Move` instruction with a cast from the source type to the destination type.
+        Note that in Quil, the source of a `CONVERT` instruction MUST be a `MemoryReference`,
+        so this method only accepts `MemoryReference`s and things that can be converted into them,
+        not arbitrary numeric literals.
+        
+        # Example
+        
+        ```python
+        from quil.instructions import Declaration, ScalarType, Convert
+        
+        x = Declaration("x", ScalarType.INTEGER, 3)
+        y = Declaration("y", ScalarType.REAL, 3)
+        cvt = x[2].convert(y[1])
+        assert isinstance(cvt, Convert)
+        assert cvt.to_quil() == "CONVERT x[2] y[1]"  # x[2] := (INTEGER) y[1]
+        ```
+        """
+    def div(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Arithmetic: ...
+    def exchange(self, other: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Exchange:
+        r"""
+        Return a new `Exchange` instruction representing the exchange of `self` and `other`.
+        
+        # Example
+        
+        ```Python
+        from quil.instructions import Declaration, ScalarType, Exchange
+        
+        x = Declaration("x", ScalarType.INTEGER, 3)
+        y = Declaration("y", ScalarType.INTEGER, 3)
+        ex = x[2].exchange(y[1])
+        assert isinstance(ex, Exchange)
+        assert ex.to_quil() == "EXCHANGE x[2] y[1]"  # x[2] <-> y[1]
+        ```
+        """
+    def ior(self, other: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> BinaryLogic: ...
+    def load_from(self, source: Declaration, offset: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Load:
+        r"""
+        Return a new `Load` instruction representing the indirect load `self = source[offset]`.
+        
+        # Example
+        
+        ```python
+        from quil.instructions import Declaration, ScalarType, Load
+        
+        x = Declaration("x", ScalarType.INTEGER, 3)
+        y = Declaration("y", ScalarType.INTEGER, 3)
+        z = Declaration("z", ScalarType.INTEGER, 3)
+        ld = x[2].load_from(y, z[1])
+        assert isinstance(ld, Load)
+        assert ld.to_quil() == "LOAD x[2] y z[1]"  # x[2] := y[z[1]]
+        ```
+        """
+    def move(self, value: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Move:
+        r"""
+        Return a new `Move` instruction representing `self = value`.
+        
+        # Example
+        
+        ```python
+        from quil.instructions import Declaration, ScalarType, Move
+        
+        x = Declaration("x", ScalarType.INTEGER, 3)
+        mv = x[2].move(5)
+        assert isinstance(mv, Move)
+        assert mv.to_quil() == "MOVE x[2] 5"  # x[2] := 5
+        ```
+        """
+    def mul(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Arithmetic: ...
+    def neg(self) -> UnaryLogic: ...
+    def not_(self) -> UnaryLogic:
+        r"""
+        Return a new instruction representing a logical `NOT` of this memory reference.
+        
+        # Example
+        
+        ```python
+        from quil.instructions import Declaration, ScalarType, UnaryLogic
+        
+        x = Declaration("x", ScalarType.INTEGER, 3)
+        n = x[2].not()
+        assert isinstance(n, UnaryLogic)
+        assert n.to_quil() == "NOT x[2]"  # x[2] := ~x[2]
+        ```
+        """
+    def store_eq(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Comparison:
+        r"""
+        Return a new `Comparison` instruction representing `self = (a == b)`.
+        
+        Note that `self` must represent a `MemoryReference` of type `BIT`,
+        the left-hand side of the comparison must be a `MemoryReference`-like object,
+        and the right-hand side must have a type compatible with the left-hand side.
+        See the Quil specification for more details on valid comparisons.
+        """
+    def store_ge(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Comparison: ...
+    def store_gt(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Comparison: ...
+    def store_le(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Comparison: ...
+    def store_lt(self, a: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], b: ComparisonOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Comparison: ...
+    def store_to(self, destination: Declaration, offset: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Store:
+        r"""
+        Return a new `Store` instruction representing the indirect store `destination[offset] = self`.
+        
+        # Example
+        
+        ```python
+        from quil.instructions import Declaration, ScalarType, Store
+        
+        x = Declaration("x", ScalarType.INTEGER, 3)
+        y = Declaration("y", ScalarType.INTEGER, 3)
+        z = Declaration("z", ScalarType.INTEGER, 3)
+        st = x[2].store_to(y, z[1])
+        assert isinstance(st, Store)
+        assert st.to_quil() == "STORE y z[1] x[2]"  # y[z[1]] := x[2]
+        ```
+        """
+    def sub(self, other: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> Arithmetic: ...
+    def xor(self, other: BinaryOperand  |  builtins.int  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], /) -> BinaryLogic: ...
 
 class DefGateSequence:
     r"""
     A sequence of gates that make up a defined gate (i.e. with `DEFGATE ... AS SEQUENCE`).
     """
+    __match_args__: tuple[builtins.str, builtins.str] = ('qubits', 'gates')
     @property
     def gates(self) -> builtins.list[Gate]:
         r"""
@@ -612,26 +1030,54 @@ class DefGateSequenceError(InstructionError):
     """
     ...
 
-class Delay:
+class Delay(Instruction):
+    __match_args__: tuple[builtins.str, builtins.str, builtins.str] = ('duration', 'qubits', 'frame_names')
     @property
     def duration(self) -> expression.Expression: ...
     @property
     def frame_names(self) -> builtins.list[builtins.str]: ...
     @property
+    def frames(self) -> builtins.list[FrameIdentifier]: ...
+    @property
     def qubits(self) -> builtins.list[Qubit]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[expression.Expression, builtins.list[builtins.str], builtins.list[Qubit]]: ...
+    def __getnewargs__(self) -> tuple[expression.Expression, builtins.list[Qubit], builtins.list[builtins.str]]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, duration: expression.Expression, frame_names: typing.Sequence[builtins.str], qubits: typing.Sequence[Qubit]) -> Delay: ...
+    def __new__(cls, duration: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str, qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str], frame_names: typing.Sequence[builtins.str] = []) -> Delay: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def from_frames(duration: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str, frames: typing.Sequence[FrameIdentifier]) -> Delay:
+        r"""
+        Create a new `Delay` instruction from a list of `FrameIdentifier`s.
+        """
+    def has_frames(self) -> builtins.bool:
+        r"""
+        Return `True` if this `Delay` has any frames, or `False` otherwise.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Exchange:
+class Exchange(Instruction):
+    __match_args__: tuple[builtins.str, builtins.str] = ('left', 'right')
     @property
     def left(self) -> MemoryReference: ...
     @property
@@ -639,11 +1085,26 @@ class Exchange:
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[MemoryReference, MemoryReference]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, left: MemoryReference, right: MemoryReference) -> Exchange: ...
+    def __new__(cls, left: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], right: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> Exchange: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -658,6 +1119,7 @@ class ExternParameter:
     r"""
     An extern parameter with a name, mutability, and data type.
     """
+    __match_args__: tuple[builtins.str, builtins.str, builtins.str] = ('name', 'mutable', 'data_type')
     @property
     def data_type(self) -> ExternParameterType:
         r"""
@@ -693,7 +1155,7 @@ class ExternParameterType:
     r"""
     A parameter type within an extern signature.
     """
-    def __getnewargs__(self) -> builtins.tuple[ScalarType | Vector]: ...
+    def __getnewargs__(self) -> builtins.tuple[ScalarType  |  Vector]: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -755,6 +1217,7 @@ class ExternSignature:
     See the [Quil Specification](https://github.com/quil-lang/quil/blob/7f532c7cdde9f51eae6abe7408cc868fba9f91f6/specgen/spec/sec-other.s)
     for details on how these signatures are formed.
     """
+    __match_args__: tuple[builtins.str, builtins.str] = ('return_type', 'parameters')
     @property
     def parameters(self) -> builtins.list[ExternParameter]:
         r"""
@@ -780,59 +1243,142 @@ class ExternSignature:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Fence:
+class Fence(Instruction):
+    __match_args__: tuple[builtins.str] = ('qubits',)
     @property
     def qubits(self) -> builtins.list[Qubit]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[builtins.list[Qubit]]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, qubits: typing.Sequence[Qubit]) -> Fence: ...
+    def __new__(cls, qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str]) -> Fence: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class FrameDefinition:
+@typing.final
+class FixedQubit(Qubit):
+    r"""
+    A fixed qubit: a qubit with a specific index.
+    
+    This corresponds to the [`Qubit::Fixed`] variant.
+    """
+    __match_args__: tuple[builtins.str] = ('index',)
+    @property
+    def index(self) -> builtins.int: ...
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __getnewargs__(self) -> tuple[builtins.int]: ...
+    def __hash__(self) -> builtins.int: ...
+    def __new__(cls, index: builtins.int) -> FixedQubit: ...
+
+@typing.final
+class FormalArgument(Qubit):
+    r"""
+    A Quil formal argument: a name used in Quil definitions that a qubit will be bound to.
+    
+    This corresponds to the [`Qubit::Variable`] variant.
+    """
+    @property
+    def name(self) -> str: ...
+
+class FrameDefinition(Instruction):
     @property
     def attributes(self) -> builtins.dict[builtins.str, AttributeValue]: ...
-    @attributes.setter
-    def attributes(self, value: typing.Mapping[builtins.str, AttributeValue]) -> None: ...
+    @property
+    def frame(self) -> FrameIdentifier:
+        r"""
+        Get the [`FrameIdentifier`] for this frame definition.
+        """
     @property
     def identifier(self) -> FrameIdentifier: ...
-    @identifier.setter
-    def identifier(self, value: FrameIdentifier) -> None: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[FrameIdentifier, builtins.dict[builtins.str, AttributeValue]]: ...
-    def __new__(cls, identifier: FrameIdentifier, attributes: typing.Mapping[builtins.str, AttributeValue]) -> FrameDefinition: ...
+    def __getitem__(self, name: builtins.str) -> AttributeValue: ...
+    def __getnewargs_ex__(self) -> tuple: ...
+    def __new__(cls, identifier: FrameIdentifier, attributes: typing.Optional[typing.Mapping[builtins.str, AttributeValue  |  expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]] = None, /, **more_attributes: typing.Any) -> FrameDefinition:
+        r"""
+        Construct a new `FrameDefinition` with the given `identifier` and optional attributes.
+        
+        You can provide an optional `attributes` dictionary with pre-set values,
+        and you can additionally provide keyword arguments for additional attributes.
+        If given both, the keyword arguments will override any initial values in `attributes`.
+        
+        Note that Quil defines attribute values as either strings or expressions,
+        so given a bare `str` value, it'll be interpreted as an `AttributeValue.String`.
+        To set explicit `Expression.Variable` values, you must wrap them in `Expression` yourself.
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __setitem__(self, name: builtins.str, value: AttributeValue  |  expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str) -> None: ...
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def get_attribute(self, name: builtins.str) -> typing.Optional[AttributeValue]: ...
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
+    def set_attribute(self, name: builtins.str, value: AttributeValue  |  expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str) -> None: ...
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class FrameIdentifier:
+    __match_args__: tuple[builtins.str, builtins.str] = ('qubits', 'name')
     @property
     def name(self) -> builtins.str: ...
     @property
     def qubits(self) -> builtins.list[Qubit]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[builtins.str, builtins.list[Qubit]]: ...
+    def __getnewargs__(self) -> tuple[builtins.list[Qubit], builtins.str]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, name: builtins.str, qubits: typing.Sequence[Qubit]) -> FrameIdentifier: ...
+    def __new__(cls, qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str], name: builtins.str) -> FrameIdentifier: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Gate:
+class Gate(Instruction):
     r"""
     A struct encapsulating all the properties of a Quil Quantum Gate.
     """
@@ -843,30 +1389,76 @@ class Gate:
     @property
     def parameters(self) -> builtins.list[expression.Expression]: ...
     @property
+    def params(self) -> builtins.list[expression.Expression]:
+        r"""
+        Get the parameters of this ``Gate``.
+        
+        This is an alias for `parameters`, the canonical name of this property.
+        """
+    @property
     def qubits(self) -> builtins.list[Qubit]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[builtins.str, builtins.list[expression.Expression], builtins.list[Qubit], builtins.list[GateModifier]]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression], qubits: typing.Sequence[Qubit], modifiers: typing.Sequence[GateModifier]) -> Gate: ...
+    @typing.overload
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str], qubits: typing.Optional[typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> Gate: ...
+    @typing.overload
+    def __new__(cls, name: builtins.str, *, qubits: typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str], parameters: typing.Optional[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> Gate: ...
+    @typing.overload
+    def __new__(cls, name: builtins.str, *, params: typing.Optional[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]], qubits: typing.Optional[typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None) -> Gate: ...
+    @typing.overload
+    def __new__(cls, name: builtins.str, parameters: typing.Optional[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]] = None, qubits: typing.Optional[typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str]] = None, modifiers: typing.Optional[typing.Sequence[GateModifier  |  builtins.str]] = None, *, params: typing.Optional[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]] = None) -> Gate:
+        r"""
+        Construct a new `Gate` instance.
+        
+        This constructor accepts `params` as an alias for `parameters`;
+        if you provide both, it will raise an error.
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
-    def controlled(self, control_qubit: Qubit) -> Gate:
+    def __str__(self) -> builtins.str:
         r"""
-        Return a copy of the ``Gate`` with the ``CONTROLLED`` modifier added to it.
+        Get a Quil-like representation as a string.
+        """
+    def controlled(self, control_qubit: Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str  |  typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str]) -> Gate:
+        r"""
+        Return a copy of the ``Gate`` with the ``CONTROLLED`` modifier added to it
+        using the given control qubit or quibits.
         """
     def dagger(self) -> Gate:
         r"""
         Return a copy of the ``Gate`` with the ``DAGGER`` modifier added to it.
         """
-    def forked(self, fork_qubit: Qubit, alt_params: typing.Sequence[expression.Expression]) -> Gate:
+    def forked(self, fork_qubit: Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str, alt_params: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]) -> Gate:
         r"""
         Return a copy of the ``Gate`` with the ``FORKED`` modifier added to it.
         
         Raises a ``GateError`` if the number of provided alternate parameters
         don't equal the number of existing parameters.
+        """
+    def get_qubit_indices(self) -> builtins.list[builtins.int]:
+        r"""
+        Return a list of the indices of the qubits this ``Gate`` acts on,
+        assuming they are all ``Qubit.Fixed``.
+        
+        Raises a an error if any of the qubits are not fixed.
+        
+        Note: Unlike most other `get_qubit_indices` methods,
+        this one returns a `list[int]`, not a `set[int]`.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -894,14 +1486,79 @@ class Gate:
         other invalid input parameters may silently return an invalid result.
         """
 
-class GateDefinition:
+@typing.final
+class GateConstructor:
+    r"""
+    A callable that can be used to bind [`Qubits`]s to a [`GateDefinition`],
+    resulting in a new [`Gate`] instance.
+    
+    This is returned from [`GateDefinition::get_constructor`] when the definition has no parameters,
+    or from [`GateConstructorPartial::__call__`] which binds parameters to a parameterized gate.
+    """
+    def __call__(self, *qubits: typing.Any) -> Gate:
+        r"""
+        Bind [`Qubit`]s to the qubits of a [`GateDefinition`] and get a new [`Gate`] instance.
+        """
+
+@typing.final
+class GateConstructorPartial:
+    r"""
+    A callable that can be used to bind [`Expression`]s to parameters of a [`GateDefinition`],
+    
+    This is returned from `GateDefinition.get_constructor()` when the definition has parameters.
+    Call it to get a `GateConstructor` that can be used to bind qubits to the [`Gate`] call.
+    Note that if the [`GateDefinition`] has no parameters (i.e., is a "static" gate),
+    then `GateDefinition.get_constructor()` returns a `GateConstructor` directly,
+    rather than a `GateConstructorPartial`.
+    """
+    def __call__(self, *parameters: typing.Any) -> GateConstructor:
+        r"""
+        Bind [`Expression`]s to parameters of a [`GateDefinition`] to get a [`GateConstructor`].
+        """
+
+class GateDefinition(Instruction):
     r"""
     A struct encapsulating a quil Gate Definition
     """
     @property
+    def arguments(self) -> builtins.list[FormalArgument]:
+        r"""
+        Get the arguments the gate takes, if it is defined by a [`PauliSum`].
+        
+        This raises an exception if the `GateDefinition`'s `specification` is not a PauliSum.
+        """
+    @property
+    def body(self) -> PauliSum:
+        r"""
+        Get the [`PauliSum`] of the gate definition, if it is defined by one.
+        
+        This raises an exception if the `GateDefinition`'s `specification` is not a PauliSum.
+        """
+    @property
+    def matrix(self) -> builtins.list[builtins.list[expression.Expression]]:
+        r"""
+        Get the matrix that defines this `GateDefinition`, if it has one.
+        
+        This raises an exception if the `GateDefinition`'s `specification` is not a matrix.
+        """
+    @property
     def name(self) -> builtins.str: ...
     @property
-    def parameters(self) -> builtins.list[builtins.str]: ...
+    def parameters(self) -> builtins.list[expression.Parameter]:
+        r"""
+        Get the parameters this gate takes.
+        
+        Note that this allocates a new list each time it is called,
+        and cannot be used to modify the definition;
+        `GateDefinition`s are immutable so they can be consistent with `__hash__`.
+        """
+    @property
+    def permutation(self) -> builtins.list[builtins.int]:
+        r"""
+        Get the permutation that defines this `GateDefinition`, if it has one.
+        
+        This raises an exception if the `GateDefinition`'s `specification` is not a permutation.
+        """
     @property
     def signature(self) -> GateSignature: ...
     @property
@@ -909,11 +1566,52 @@ class GateDefinition:
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[builtins.str, builtins.list[builtins.str], GateSpecification]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, name: builtins.str, parameters: typing.Sequence[builtins.str], specification: GateSpecification) -> GateDefinition: ...
+    @typing.overload
+    def __new__(cls, name: builtins.str, specification: GateSpecification  |  PauliSum  |  DefGateSequence  |  typing.Sequence[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]]  |  typing.Sequence[builtins.int], parameters: typing.Optional[typing.Sequence[expression.Parameter  |  builtins.str]] = None) -> GateDefinition:
+        r"""
+        Return a new `GateDefinition` instance with the given name, specification, and parameters.
+        """
+    @typing.overload
+    def __new__(cls, name: builtins.str, matrix: GateSpecification  |  PauliSum  |  DefGateSequence  |  typing.Sequence[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]]  |  typing.Sequence[builtins.int], parameters: typing.Optional[typing.Sequence[expression.Parameter  |  builtins.str]] = None) -> GateDefinition:
+        r"""
+        Return a new `GateDefinition` instance with the given name, matrix, and parameters.
+        
+        The argument `matrix` has been renamed `specification`.
+        """
+    @typing.overload
+    def __new__(cls, name: builtins.str, parameters: typing.Optional[typing.Sequence[expression.Parameter  |  builtins.str]], specification: GateSpecification  |  PauliSum  |  DefGateSequence  |  typing.Sequence[typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]]  |  typing.Sequence[builtins.int]) -> GateDefinition:
+        r"""
+        Construct a new `GateDefinition` instance.
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def get_constructor(self) -> GateConstructor  |  GateConstructorPartial:
+        r"""
+        Get a ``Callable`` that constructs this gate on variable qubit indices.
+        
+        For example, ``mygate.get_constructor()(1)`` applies the gate to qubit 1.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def num_args(self) -> builtins.int:
+        r"""
+        Get the number of arguments this gate takes.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -929,6 +1627,7 @@ class GateSignature:
     A signature for a gate definition; this does not include the gate definition content.
     To get a signature from a definition, use `GateDefinition.signature`.
     """
+    __match_args__: tuple[builtins.str, builtins.str, builtins.str, builtins.str] = ('name', 'gate_parameters', 'qubit_parameters', 'gate_type')
     @property
     def gate_parameters(self) -> builtins.list[builtins.str]: ...
     @property
@@ -951,7 +1650,7 @@ class GateSpecification:
     r"""
     An enum representing a the specification of a [`GateDefinition`] for a given [`GateType`]
     """
-    def __getnewargs__(self) -> builtins.tuple[builtins.list[builtins.list[expression.Expression]] | builtins.list[builtins.int] | PauliSum | DefGateSequence]: ...
+    def __getnewargs__(self) -> builtins.tuple[builtins.list[builtins.list[expression.Expression]]  |  builtins.list[builtins.int]  |  PauliSum  |  DefGateSequence]: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1009,7 +1708,46 @@ class GateSpecification:
         def __new__(cls, _0: DefGateSequence) -> GateSpecification.Sequence: ...
     
 
-class Include:
+@typing.final
+class HaltType(Instruction):
+    r"""
+    The type of the `Halt` [`Instruction`].
+    """
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __hash__(self) -> builtins.int: ...
+    def __new__(cls) -> HaltType:
+        r"""
+        Get a reference to the singleton instance of this type.
+        """
+    def __reduce__(self) -> str:
+        r"""
+        Returns the name of the singleton instance relative its module.
+        
+        Enables [`pickling`][] of singleton instances.
+        
+        [`pickling`]: https://docs.python.org/3/library/pickle.html#object.__reduce__
+        """
+    def __repr__(self) -> builtins.str: ...
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
+    def to_quil(self) -> builtins.str: ...
+    def to_quil_or_debug(self) -> builtins.str: ...
+
+class Include(Instruction):
+    __match_args__: tuple[builtins.str] = ('filename',)
     @property
     def filename(self) -> builtins.str: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
@@ -1021,426 +1759,83 @@ class Include:
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Instruction:
     r"""
-    A Quil instruction.
+    Superclass for all [`Instruction`] variants in Python.
     
-    Each variant (for Python users, each nested subclass)
-    corresponds to a possible type of Quil instruction,
-    which is accessible as a member within the variant.
-    
-    # Python Users
-    
-    The subclasses of this class are class attributes defined on it,
-    and can be used to "wrap" instructions when they should be stored together.
-    In particular, they are *NOT* the instruction classes you'd typically create,
-    and instances of instruction classes are *NOT* subclasses of this class:
+    The subclasses of this class are the various Quil instructions types.
     
     ```python
     >>> from quil.instructions import Instruction, Gate, Qubit
-    >>> issubclass(Instruction.Gate, Instruction)
-    True
-    >>> issubclass(Gate, Instruction)
-    False
     >>> g = Gate("X", (), (Qubit.Fixed(0),), ())
     >>> isinstance(g, Gate)
     True
-    >>> isinstance(g, Instruction.Gate)
-    False
-    >>> g_instr = Instruction.Gate(g)
-    >>> isinstance(g_instr, Gate)
-    False
-    >>> isinstance(g_instr, Instruction.Gate)
-    True
-    >>> isinstance(g_instr._0, Gate)
-    True
-    >>> g_instr._0 == g
+    >>> isinstance(g, Instruction)
     True
     ```
     
-    The point of this class is to wrap different kinds of instructions
-    when stored together in a collection, all of which are of type `Instruction`.
     You can check for different instruction variants and destructure them using `match`:
     
     ```python
-    match g_instr:
-        case Instruction.Gate(gate):
-            assert isinstance(gate, Gate)
-        case Instruction.Wait() | Instruction.Nop():
-            # note the `()` -- these aren't like Python's enumerations!
+    match x:
+        case Gate():
+            print("A gate instruction!")
+        case Wait | Nop | Halt:
+            print("A singleton instruction!")
+        case Instruction():
+            print("Some other instruction!")
+        case _:
+            print("Not an instruction!")
     ```
     """
-    def __getnewargs__(self) -> builtins.tuple[()] | builtins.tuple[Arithmetic | BinaryLogic | Call | Capture | CalibrationDefinition | CircuitDefinition | Comparison | Convert | Declaration | Delay | Exchange | Fence | FrameDefinition | Gate | GateDefinition | Include | Jump | JumpUnless | JumpWhen | Label | Load | MeasureCalibrationDefinition | Measurement | Move | Pragma | Pulse | RawCapture | Reset | SetFrequency | SetPhase | SetScale | ShiftFrequency | ShiftPhase | Store | SwapPhases | UnaryLogic | WaveformDefinition]: ...
-    def __repr__(self) -> builtins.str:
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __hash__(self) -> builtins.int: ...
+    def __new__(cls, arg: typing.Any, /) -> Instruction:
         r"""
-        Implements `__repr__` for Python in terms of the Rust
-        [`Debug`](std::fmt::Debug) implementation.
-        """
-    def is_quil_t(self) -> builtins.bool:
-        r"""
-        Returns true if the instruction is a Quil-T instruction.
+        Ensure the given argument is an ``Instruction`` instance.
+        
+        If the input is already an ``Instruction``, this returns it unchanged.
+        If it can be converted into one, it'll be converted and returned.
         """
     @staticmethod
-    def parse(string: builtins.str) -> Instruction: ...
-    def to_quil(self) -> builtins.str: ...
-    def to_quil_or_debug(self) -> builtins.str: ...
-    @typing.final
-    class Arithmetic(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Arithmetic: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Arithmetic) -> Instruction.Arithmetic: ...
-    
-    @typing.final
-    class BinaryLogic(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> BinaryLogic: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: BinaryLogic) -> Instruction.BinaryLogic: ...
-    
-    @typing.final
-    class CalibrationDefinition(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> CalibrationDefinition: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: CalibrationDefinition) -> Instruction.CalibrationDefinition: ...
-    
-    @typing.final
-    class Call(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Call: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Call) -> Instruction.Call: ...
-    
-    @typing.final
-    class Capture(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Capture: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Capture) -> Instruction.Capture: ...
-    
-    @typing.final
-    class CircuitDefinition(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> CircuitDefinition: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: CircuitDefinition) -> Instruction.CircuitDefinition: ...
-    
-    @typing.final
-    class Comparison(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Comparison: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Comparison) -> Instruction.Comparison: ...
-    
-    @typing.final
-    class Convert(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Convert: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Convert) -> Instruction.Convert: ...
-    
-    @typing.final
-    class Declaration(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Declaration: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Declaration) -> Instruction.Declaration: ...
-    
-    @typing.final
-    class Delay(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Delay: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Delay) -> Instruction.Delay: ...
-    
-    @typing.final
-    class Exchange(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Exchange: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Exchange) -> Instruction.Exchange: ...
-    
-    @typing.final
-    class Fence(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Fence: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Fence) -> Instruction.Fence: ...
-    
-    @typing.final
-    class FrameDefinition(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> FrameDefinition: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: FrameDefinition) -> Instruction.FrameDefinition: ...
-    
-    @typing.final
-    class Gate(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Gate: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Gate) -> Instruction.Gate: ...
-    
-    @typing.final
-    class GateDefinition(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> GateDefinition: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: GateDefinition) -> Instruction.GateDefinition: ...
-    
-    @typing.final
-    class Halt(Instruction):
-        __match_args__ = ()
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls) -> Instruction.Halt: ...
-    
-    @typing.final
-    class Include(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Include: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Include) -> Instruction.Include: ...
-    
-    @typing.final
-    class Jump(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Jump: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Jump) -> Instruction.Jump: ...
-    
-    @typing.final
-    class JumpUnless(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> JumpUnless: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: JumpUnless) -> Instruction.JumpUnless: ...
-    
-    @typing.final
-    class JumpWhen(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> JumpWhen: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: JumpWhen) -> Instruction.JumpWhen: ...
-    
-    @typing.final
-    class Label(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Label: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Label) -> Instruction.Label: ...
-    
-    @typing.final
-    class Load(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Load: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Load) -> Instruction.Load: ...
-    
-    @typing.final
-    class MeasureCalibrationDefinition(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> MeasureCalibrationDefinition: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: MeasureCalibrationDefinition) -> Instruction.MeasureCalibrationDefinition: ...
-    
-    @typing.final
-    class Measurement(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Measurement: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Measurement) -> Instruction.Measurement: ...
-    
-    @typing.final
-    class Move(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Move: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Move) -> Instruction.Move: ...
-    
-    @typing.final
-    class Nop(Instruction):
-        __match_args__ = ()
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls) -> Instruction.Nop: ...
-    
-    @typing.final
-    class Pragma(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Pragma: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Pragma) -> Instruction.Pragma: ...
-    
-    @typing.final
-    class Pulse(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Pulse: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Pulse) -> Instruction.Pulse: ...
-    
-    @typing.final
-    class RawCapture(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> RawCapture: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: RawCapture) -> Instruction.RawCapture: ...
-    
-    @typing.final
-    class Reset(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Reset: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Reset) -> Instruction.Reset: ...
-    
-    @typing.final
-    class SetFrequency(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> SetFrequency: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: SetFrequency) -> Instruction.SetFrequency: ...
-    
-    @typing.final
-    class SetPhase(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> SetPhase: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: SetPhase) -> Instruction.SetPhase: ...
-    
-    @typing.final
-    class SetScale(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> SetScale: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: SetScale) -> Instruction.SetScale: ...
-    
-    @typing.final
-    class ShiftFrequency(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> ShiftFrequency: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: ShiftFrequency) -> Instruction.ShiftFrequency: ...
-    
-    @typing.final
-    class ShiftPhase(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> ShiftPhase: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: ShiftPhase) -> Instruction.ShiftPhase: ...
-    
-    @typing.final
-    class Store(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> Store: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: Store) -> Instruction.Store: ...
-    
-    @typing.final
-    class SwapPhases(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> SwapPhases: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: SwapPhases) -> Instruction.SwapPhases: ...
-    
-    @typing.final
-    class UnaryLogic(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> UnaryLogic: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: UnaryLogic) -> Instruction.UnaryLogic: ...
-    
-    @typing.final
-    class Wait(Instruction):
-        __match_args__ = ()
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls) -> Instruction.Wait: ...
-    
-    @typing.final
-    class WaveformDefinition(Instruction):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> WaveformDefinition: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: WaveformDefinition) -> Instruction.WaveformDefinition: ...
-    
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Return true if the instruction is a Quil-T instruction, and false otherwise.
+        """
+    @staticmethod
+    def parse(string: builtins.str) -> Instruction:
+        r"""
+        Parse an ``Instruction`` from a string.
+        """
+    def to_quil(self) -> builtins.str:
+        r"""
+        Convert this ``Instruction`` to a Quil string, or raise an error if it is not valid Quil.
+        """
+    def to_quil_or_debug(self) -> builtins.str:
+        r"""
+        Return a string in valid Quil syntax if possible.
+        
+        Any individual component of this object which cannot be represented in Quil
+        will be replaced with a ``__repr__`` representation of that component.
+        """
 
 class InstructionError(_quil.QuilError):
     r"""
@@ -1448,23 +1843,40 @@ class InstructionError(_quil.QuilError):
     """
     ...
 
-class Jump:
+class Jump(Instruction):
+    __match_args__: tuple[builtins.str] = ('target',)
     @property
     def target(self) -> Target: ...
     @target.setter
     def target(self, value: Target) -> None: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[Target]: ...
-    def __new__(cls, target: Target) -> Jump: ...
+    def __new__(cls, target: Target  |  builtins.str  |  TargetPlaceholder  |  Label) -> Jump: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class JumpUnless:
+class JumpUnless(Instruction):
+    __match_args__: tuple[builtins.str, builtins.str] = ('target', 'condition')
     @property
     def condition(self) -> MemoryReference: ...
     @condition.setter
@@ -1475,16 +1887,32 @@ class JumpUnless:
     def target(self, value: Target) -> None: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[Target, MemoryReference]: ...
-    def __new__(cls, target: Target, condition: MemoryReference) -> JumpUnless: ...
+    def __new__(cls, target: Target  |  builtins.str  |  TargetPlaceholder  |  Label, condition: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> JumpUnless: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class JumpWhen:
+class JumpWhen(Instruction):
+    __match_args__: tuple[builtins.str, builtins.str] = ('target', 'condition')
     @property
     def condition(self) -> MemoryReference: ...
     @condition.setter
@@ -1495,58 +1923,183 @@ class JumpWhen:
     def target(self, value: Target) -> None: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[Target, MemoryReference]: ...
-    def __new__(cls, target: Target, condition: MemoryReference) -> JumpWhen: ...
+    def __new__(cls, target: Target  |  builtins.str  |  TargetPlaceholder  |  Label, condition: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> JumpWhen: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Label:
+class Label(Instruction):
+    @property
+    def label(self) -> Target:
+        r"""
+        Get a copy of the `Label`'s `target`.
+        
+        This is an alias of `target`, the canonical name of this property.
+        """
+    @property
+    def name(self) -> builtins.str:
+        r"""
+        Get the `Label`'s name, assuming it is a `Fixed` target.
+        
+        This is deprecated because a `Label`'s `target` might not be `Fixed`.
+        It is provided for backwards compatibility with PyQuil v4.
+        
+        Users can use the following pattern to check if the `Label`'s `Target` is `Fixed`,
+        and if so, get its name:
+        
+        ```python
+        match some_label:
+            case Label(target=Target.Fixed(name)):
+                print(f"Label has a fixed target: {name}")
+            case Label(target=Target.Placeholder(_)):
+                print("Label has a placeholder target")
+        ```
+        """
     @property
     def target(self) -> Target: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[Target]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, target: Target) -> Label: ...
+    def __match_args__(self) -> tuple[builtins.str]: ...
+    def __new__(cls, target: typing.Optional[Target  |  builtins.str  |  TargetPlaceholder  |  Label] = None, *, placeholder: typing.Optional[builtins.bool] = None) -> Label:
+        r"""
+        Create a new `Label`.
+        
+        A `Label` represents a ``LABEL`` instruction, which in Quil reads as ``LABEL @target-name``.
+        Labels are used by unconditional jump instructions, e.g. ``JUMP @target-name``,
+        and its siblings, ``JUMP-WHEN @target-name foo[0]`` and ``JUMP-UNLESS @target-name bar[0]``.
+        The `@target-name` part of these instructions is this class's ``target`` attribute.
+        
+        # Example Usage
+        
+        You can use a `Label` directly as the ``target`` of a ``Jump`` instruction.
+        
+        ```python
+        prog = Program(
+            top := Label("top"),
+            counter_memory := Declaration("counter", ScalarType.INTEGER),
+            Declaration("ro", ScalarType.BIT, 2),
+            H(0),
+            Jump(top),
+        )
+        prog.resolve_placeholders()
+        print(prog.to_quil())
+        ```
+        
+        Use ``Program.resolve_placeholders()`` to fill in the value before outputting Quil::
+        You can construct a `Label` with a fixed `target` using ``Label("some-name")``,
+        and then you can reference that point using, for example, ``Jump("some-name")``.
+        
+        You can create a new `Label` from a particular `Target`,
+        or you can let the constructor create the `Target` instance for you.
+        Use ``Label("name")`` for fixed target or ``Label()`` to create a placeholder target;
+        if you want a placeholder with a specific `base_label`,
+        you'll need to specify ``Label("name", placeholder=True)``.
+        
+        To summarize:
+        
+        |   Simple                         |   Equivalent                                                   |
+        | -------------------------------- | -------------------------------------------------------------- |
+        | `Label("A")`                     | `Label(Target.Fixed("A"))`                                     |
+        | `Label()`                        | `Label(Target.Placeholder(TargetPlaceholder(base_label="L")))` |
+        | `Label("A", placeholder=True)`   | `Label(Target.Placeholder(TargetPlaceholder(base_label="A")))` |
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Load:
+class Load(Instruction):
+    __match_args__: tuple[builtins.str, builtins.str, builtins.str] = ('destination', 'source', 'offset')
     @property
     def destination(self) -> MemoryReference: ...
     @property
+    def left(self) -> builtins.str: ...
+    @property
     def offset(self) -> MemoryReference: ...
     @property
+    def right(self) -> MemoryReference: ...
+    @property
     def source(self) -> builtins.str: ...
+    @property
+    def target(self) -> MemoryReference: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[MemoryReference, builtins.str, MemoryReference]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, destination: MemoryReference, source: builtins.str, offset: MemoryReference) -> Load: ...
+    def __new__(cls, destination: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], source: builtins.str, offset: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> Load: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class MeasureCalibrationDefinition:
+class MeasureCalibrationDefinition(Instruction):
     @property
     def identifier(self) -> MeasureCalibrationIdentifier: ...
     @identifier.setter
     def identifier(self, value: MeasureCalibrationIdentifier) -> None: ...
     @property
+    def instrs(self) -> builtins.list[Instruction]: ...
+    @property
     def instructions(self) -> builtins.list[Instruction]: ...
     @instructions.setter
     def instructions(self, value: typing.Sequence[Instruction]) -> None: ...
+    @property
+    def memory_reference(self) -> typing.Optional[MemoryReference]: ...
     @property
     def name(self) -> typing.Optional[builtins.str]:
         r"""
@@ -1564,12 +2117,29 @@ class MeasureCalibrationDefinition:
         result to, if this is a measurement for record.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[MeasureCalibrationIdentifier, builtins.list[Instruction]]: ...
-    def __new__(cls, identifier: MeasureCalibrationIdentifier, instructions: typing.Sequence[Instruction]) -> MeasureCalibrationDefinition: ...
+    def __getnewargs__(self) -> tuple[Qubit, typing.Optional[MemoryReference], builtins.list[Instruction]]: ...
+    def __new__(cls, qubit: Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str, memory_reference: typing.Optional[MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]], instructions: typing.Optional[typing.Sequence[Instruction]] = None, *, instrs: typing.Optional[typing.Sequence[Instruction]] = None) -> MeasureCalibrationDefinition: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def from_calibration(identifier: MeasureCalibrationIdentifier, instructions: typing.Sequence[Instruction]) -> MeasureCalibrationDefinition: ...
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -1594,7 +2164,7 @@ class MeasureCalibrationIdentifier:
         The qubit which is being measured.
         """
     @qubit.setter
-    def qubit(self, value: Qubit) -> None:
+    def qubit(self, value: Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str) -> None:
         r"""
         The qubit which is being measured.
         """
@@ -1615,11 +2185,8 @@ class MeasureCalibrationIdentifier:
         If this is missing, this is a calibration for a measurement for effect.
         """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs_ex__(self) -> builtins.tuple[
-            builtins.tuple[Qubit, typing.Optional[builtins.str]],
-            builtins.dict[builtins.str, typing.Optional[builtins.str]]
-        ]: ...
-    def __new__(cls, qubit: Qubit, target: typing.Optional[builtins.str], *, name: typing.Optional[builtins.str] = None) -> MeasureCalibrationIdentifier: ...
+    def __getnewargs_ex__(self) -> tuple[tuple[Qubit, typing.Optional[builtins.str]], builtins.dict[builtins.str, typing.Optional[builtins.str]]]: ...
+    def __new__(cls, qubit: Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str, target: typing.Optional[builtins.str], *, name: typing.Optional[builtins.str] = None) -> MeasureCalibrationIdentifier: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1628,7 +2195,7 @@ class MeasureCalibrationIdentifier:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Measurement:
+class Measurement(Instruction):
     @property
     def name(self) -> typing.Optional[builtins.str]: ...
     @property
@@ -1636,57 +2203,189 @@ class Measurement:
     @property
     def target(self) -> typing.Optional[MemoryReference]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs_ex__(self) -> builtins.tuple[
-            builtins.tuple[Qubit, typing.Optional[MemoryReference]],
-            builtins.dict[builtins.str, typing.Optional[builtins.str]]
-        ]: ...
+    def __getnewargs_ex__(self) -> tuple[tuple[Qubit, typing.Optional[MemoryReference]], builtins.dict[builtins.str, typing.Optional[builtins.str]]]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, qubit: Qubit, target: typing.Optional[MemoryReference], *, name: typing.Optional[builtins.str] = None) -> Measurement: ...
+    def __new__(cls, qubit: Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str, target: typing.Optional[MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]] = None, *, name: typing.Optional[builtins.str] = None, classical_reg: typing.Optional[MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]] = None) -> Measurement: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def get_qubit_indices(self) -> builtins.set[builtins.int]: ...
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class MemoryReference:
+    r"""
+    Representation of a reference to a classical memory address.
+    """
     @property
-    def index(self) -> builtins.int: ...
+    def declared_size(self) -> None: ...
     @property
-    def name(self) -> builtins.str: ...
+    def index(self) -> builtins.int:
+        r"""
+        The offset into the memory region.
+        """
+    @property
+    def name(self) -> builtins.str:
+        r"""
+        The name of the variable.
+        """
+    @property
+    def offset(self) -> builtins.int: ...
+    def __add__(self, other: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str) -> expression.Expression: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __getitem__(self, index: builtins.int) -> MemoryReference:
+        r"""
+        Return a new `MemoryReference` with the given `index`.
+        
+        This requires that `self` has an `index` of 0.
+        """
     def __getnewargs__(self) -> tuple[builtins.str, builtins.int]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, name: builtins.str, index: builtins.int) -> MemoryReference: ...
+    def __mul__(self, other: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str) -> expression.Expression: ...
+    def __neg__(self) -> expression.Expression: ...
+    def __new__(cls, name: builtins.str, index: typing.Optional[builtins.int] = None, declared_size: typing.Optional[builtins.int] = None, *, offset: typing.Optional[builtins.int] = None) -> MemoryReference:
+        r"""
+        Construct a new `MemoryReference`.
+        
+        The `declared_size` parameter is deprecated and no longer used.
+        Previously, it was only used to pretty-print `MemoryReference`s
+        by hiding the square brackets (``[]``) when they weren't technically necessary.
+        If the parameter is passed or the attribute accessed,
+        it'll issue a ``DeprecationWarning``.
+        
+        Note that `offset` is an older (deprecated) term for `index`.
+        New code should use `index`, but using `offset` as a keyword argument is still accepted.
+        """
+    def __pow__(self, exponent: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str, modulo: typing.Optional[typing.Any] = None) -> expression.Expression: ...
+    def __radd__(self, other: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str) -> expression.Expression: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __rmul__(self, other: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str) -> expression.Expression: ...
+    def __rpow__(self, base: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str, modulo: typing.Optional[typing.Any] = None) -> expression.Expression: ...
+    def __rsub__(self, other: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str) -> expression.Expression: ...
+    def __rtruediv__(self, other: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str) -> expression.Expression: ...
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def __sub__(self, other: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str) -> expression.Expression: ...
+    def __truediv__(self, other: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str) -> expression.Expression: ...
+    @staticmethod
+    def _from_parameter_str(memory_reference_str: builtins.str) -> MemoryReference: ...
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     @staticmethod
     def parse(string: builtins.str) -> MemoryReference: ...
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Move:
+class Move(Instruction):
+    __match_args__: tuple[builtins.str, builtins.str] = ('destination', 'source')
     @property
     def destination(self) -> MemoryReference: ...
+    @property
+    def left(self) -> MemoryReference:
+        r"""
+        Get the destination [`MemoryReference`] for this operation.
+        """
+    @property
+    def right(self) -> ArithmeticOperand:
+        r"""
+        Get the source [`ArithmeticOperand`] for this operation.
+        """
     @property
     def source(self) -> ArithmeticOperand: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[MemoryReference, ArithmeticOperand]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, destination: MemoryReference, source: ArithmeticOperand) -> Move: ...
+    def __new__(cls, destination: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], source: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> Move: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
+    def to_quil(self) -> builtins.str: ...
+    def to_quil_or_debug(self) -> builtins.str: ...
+
+@typing.final
+class NopType(Instruction):
+    r"""
+    The type of the `Nop` [`Instruction`].
+    """
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __hash__(self) -> builtins.int: ...
+    def __new__(cls) -> NopType:
+        r"""
+        Get a reference to the singleton instance of this type.
+        """
+    def __reduce__(self) -> str:
+        r"""
+        Returns the name of the singleton instance relative its module.
+        
+        Enables [`pickling`][] of singleton instances.
+        
+        [`pickling`]: https://docs.python.org/3/library/pickle.html#object.__reduce__
+        """
+    def __repr__(self) -> builtins.str: ...
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Offset:
+    __match_args__: tuple[builtins.str, builtins.str] = ('offset', 'data_type')
     @property
     def data_type(self) -> ScalarType: ...
     @property
@@ -1715,60 +2414,462 @@ class ParseMemoryReferenceError(_quil.QuilError):
     """
     ...
 
+@typing.final
+class PauliArgIter:
+    r"""
+    An iterator over the qubit indices and Pauli operators in a [`PauliTerm`].
+    """
+    def __iter__(self) -> PauliArgIter: ...
+    def __next__(self) -> builtins.tuple[PauliGate, builtins.str]: ...
+
 class PauliSum:
     @property
     def arguments(self) -> builtins.list[builtins.str]: ...
     @property
     def terms(self) -> builtins.list[PauliTerm]: ...
+    def __add__(self, other: typing.Any) -> typing.Any: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[builtins.list[builtins.str], builtins.list[PauliTerm]]: ...
+    def __getitem__(self, index: builtins.int) -> typing.Any: ...
+    def __getnewargs__(self) -> tuple[builtins.list[PauliTerm], builtins.list[builtins.str]]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, arguments: typing.Sequence[builtins.str], terms: typing.Sequence[PauliTerm]) -> PauliSum: ...
+    def __iter__(self) -> PauliTermIter:
+        r"""
+        Iterate over the [`PauliTerm`]s in this [`PauliSum`].
+        """
+    def __len__(self) -> builtins.int:
+        r"""
+        Return the number of terms in this [`PauliSum`].
+        """
+    def __mul__(self, other: typing.Any) -> typing.Any: ...
+    @typing.overload
+    def __new__(cls, terms: collections.abc.Sequence[PauliTerm], arguments: collections.abc.Sequence[PauliTargetDesignator] | None = None) -> PauliSum:
+        r"""
+        Construct a new `PauliSum` from a list of `PauliTerm`s
+        and an optional list of arguments.
+        """
+    @typing.overload
+    def __new__(cls, arguments: collections.abc.Sequence[PauliTargetDesignator], terms: collections.abc.Sequence[PauliTerm]) -> PauliSum:
+        r"""
+        Construct a new `PauliSum` from arguments and `PauliTerm`s.
+        
+        This constructor is deprecated; use `(terms, arguments)` instead.
+        """
+    @typing.overload
+    def __new__(cls, terms_or_args: typing.Optional[typing.Sequence[PauliTerm]  |  typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str  |  builtins.int  |  builtins.str]] = None, /, terms: typing.Optional[typing.Sequence[PauliTerm]  |  typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str  |  builtins.int  |  builtins.str]] = None, arguments: typing.Optional[typing.Sequence[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str  |  builtins.int  |  builtins.str]] = None) -> PauliSum:
+        r"""
+        Construct a new `PauliSum` from a list of `PauliTerm`s and an optional list of arguments.
+        
+        For backwards compatibility, this constructor supports `(arguments, terms)`,
+        but if `arguments` are given, the preferred order is `(terms, arguments)`,
+        and the other order will issue a deprecation warning.
+        If not given, `arguments` are inferred from the `PauliTerm`s.
+        """
+    def __pow__(self, exponent: builtins.int, modulo: typing.Optional[typing.Any] = None) -> PauliSum: ...
+    def __radd__(self, other: typing.Any) -> typing.Any: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __rmul__(self, other: typing.Any) -> typing.Any: ...
+    def __rsub__(self, other: typing.Any) -> typing.Any: ...
+    def __str__(self) -> builtins.str:
+        r"""
+        Return a string representation of the PauliSum.
+        """
+    def __sub__(self, other: typing.Any) -> typing.Any: ...
+    def get_qubits(self) -> builtins.list[builtins.str]:
+        r"""
+        Get a list of all the qubits in the sum of the terms.
         """
 
 class PauliTerm:
+    r"""
+    A `PauliTerm` is a coefficient multiplied by the tensor product of Pauli operators
+    operating on different qubit indices.
+    
+    # Python Users
+    
+    For Python users, `PauliTerm`s and [`PauliSum`]s support several mathematical operations
+    that allow you to manipulate instances in a natural way;
+    except where otherwise noted, these methods may rearrange and/or simplify terms,
+    which may change the observable behavior of a program when executed on a QPU.
+    The simplifications and rearrangements are not guaranteed to be stable across versions,
+    so if you wish to specify an exact order of operations,
+    you must use the `PauliTerm` and `PauliSum` constructors directly.
+    """
+    @property
+    def _ops(self) -> dict:
+        r"""
+        Supported for backwards compatibility, though only for use within PyQuil itself.
+        This is not part of the public API and may be removed or changed at any time.
+        """
     @property
     def arguments(self) -> builtins.list[tuple[PauliGate, builtins.str]]: ...
     @property
+    def coefficient(self) -> expression.Expression:
+        r"""
+        Return a copy of the coefficient [`Expression`] of the [`PauliTerm`],
+        aka its `expression` property.
+        """
+    @property
     def expression(self) -> expression.Expression: ...
+    @property
+    def program(self) -> program.Program:
+        r"""
+        Create [`Program`] from the [`PauliTerm`].
+        """
+    @typing.overload
+    def __add__(self, other: _quil.expression.ExpressionDesignator) -> PauliTerm: ...
+    @typing.overload
+    def __add__(self, other: PauliTerm | PauliSum) -> PauliSum: ...
+    @typing.overload
+    def __add__(self, other: typing.Any) -> typing.Any: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> builtins.tuple[
-            builtins.list[builtins.tuple[PauliGate, builtins.str]],
-            _quil.expression.Expression
-        ]: ...
+    def __getitem__(self, argument: builtins.str) -> PauliGate:
+        r"""
+        Get the [`PauliGate`] matching the argument in the [`PauliTerm`],
+        or [`PauliGate::I`] if the argument is not present in the term.
+        """
+    def __getnewargs__(self) -> tuple[builtins.list[tuple[PauliGate, builtins.str]], _quil.expression.Expression]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, arguments: typing.Sequence[tuple[PauliGate, builtins.str]], expression: _quil.expression.Expression) -> PauliTerm: ...
+    def __iter__(self) -> PauliArgIter:
+        r"""
+        Iterate over the arguments in this [`PauliTerm`].
+        """
+    def __len__(self) -> builtins.int:
+        r"""
+        Length of the PauliTerm is the number of Pauli operators in the term.
+        
+        A term that consists of only a scalar has a length of zero.
+        """
+    @typing.overload
+    def __mul__(self, other: PauliTerm | _quil.expression.ExpressionDesignator) -> PauliTerm: ...
+    @typing.overload
+    def __mul__(self, other: PauliSum) -> PauliSum: ...
+    @typing.overload
+    def __mul__(self, other: typing.Any) -> typing.Any:
+        r"""
+        Return the product of this [`PauliTerm`] with another `PauliTerm`,
+        [`PauliSum`], or number according to the Pauli algebra rules.
+        """
+    @typing.overload
+    def __new__(cls, op: typing.Literal[PauliGate.I] | typing.Literal["I"], index: PauliTargetDesignator | None, coefficient: _quil.expression.ExpressionDesignator = 1) -> PauliTerm:
+        r"""
+        Construct a `PauliTerm` for a single Identity operator.
+        """
+    @typing.overload
+    def __new__(cls, op: PauliGate | str, index: PauliTargetDesignator | None, coefficient: _quil.expression.ExpressionDesignator = 1) -> PauliTerm:
+        r"""
+        Construct a `PauliTerm` for a single operator and argument.
+        """
+    @typing.overload
+    def __new__(cls, arguments: collections.abc.Sequence[tuple[PauliGate | str, PauliTargetDesignator]], expression: _quil.expression.ExpressionDesignator = 1) -> PauliTerm:
+        r"""
+        Construct a `PauliTerm` from a sequence of arguments.
+        """
+    @typing.overload
+    def __new__(cls, op: typing.Optional[PauliGate  |  typing.Sequence[tuple[PauliGate, Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str  |  builtins.int  |  builtins.str]]] = None, index: typing.Optional[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str  |  builtins.int  |  builtins.str  |  expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str] = None, coefficient: typing.Optional[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str] = None, arguments: typing.Optional[typing.Sequence[tuple[PauliGate, Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str  |  builtins.int  |  builtins.str]]] = None, expression: typing.Optional[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str] = None) -> PauliTerm:
+        r"""
+        Construct a new `PauliTerm` from a single operator and qubit index.
+        
+        To construct a `PauliTerm`, provide a `PauliGate` operator and an argument string.
+        As a special case, if `op` is the identity operator, the argument may be `None`.
+        Additionally, the argument parameter can be derived automatically
+        from a non-placeholder `Qubit` instance or from a non-negative integer;
+        in the latter case, the argument will be formatted as ``"q{index}"``
+        to generate a valid Quil argument string.
+        Optionally, you can provide a `coefficient`,
+        either directly as an `Expression` or as a numeric literal.
+        
+        ```python
+        from quil.instructions import PauliTerm, PauliGate
+        term = PauliTerm("X", 0, 1.5) * PauliTerm(PauliGate.Y, "q") * PauliTerm("I", None)
+        ```
+        
+        At present and for compatibility purposes,
+        you can construct a `PauliTerm` using a sequence of `(operator, qubit)` pairs,
+        but doing so is deprecated in favor of the `PauliTerm.from_list` static method.
+        
+        ```python
+        # This will raise a deprecation warning in PyQuil v5.
+        term = PauliTerm([(PauliGate.X, 0), (PauliGate.Y, "q"), ("I", None)], 1.5)
+        # Prefer this form:
+        term = PauliTerm.from_list([(PauliGate.X, 0), (PauliGate.Y, "q"), ("I", None)], 1.5)
+        ```
+        
+        Note that to be valid `quil`, the  `coefficient` must be real-valued
+        and only reference real numeric literals or parameters.
+        """
+    @typing.overload
+    def __pow__(self, exponent: builtins.int, modulo: None = None) -> PauliTerm:
+        r"""
+        Compute an integer power of this `PauliTerm`.
+        
+        Integer exponents can be computed efficiently into a single `PauliTerm`.
+        See the documentation on [`PauliTerm::__pow__`] for more information.
+        """
+    @typing.overload
+    def __pow__(self, exponent: _quil.expression.Expression | builtins.str, modulo: None = None) -> PauliSum:
+        r"""
+        Compute the power of this `PauliTerm`.
+        
+        Note: This method additionally supports `float`, but cannot be typed as such
+        due a limitation within [the Python type system specification][type_spec]
+        concerning the [special case for `float` and `complex`][special_case].
+        Type checkers like `mypy` and Pyright implement that special case unsoundly
+        by treating `float := int | float` and `complex := int | float | complex`,
+        causing errors when diverging overloads dependent on `float` or `complex`.
+        In other words, if this specified the `exponent` could be a `float | complex`,
+        then those type checkers would report that they overlap with the `int` case.
+        
+        If we don't `@overload` the integer case, when a user writes `term ** some_int`,
+        the type checker will say the result is a `PauliSum`,
+        even though it will actually be a single `PauliTerm`.
+        Because (non-Expression) integers are the more likely value to be used as an exponent,
+        and because users should (correctly) assume the result can be a single `PauliTerm`,
+        we choose to `@overload` the integer case and report that the result is a `PauliTerm`.
+        
+        As a consequence, users who do write `term ** some_float` will get a type error.
+        They can ignore the type error by appending `# pyright:ignore[reportOperatorIssue]`,
+        but if they know the `float` can be represented as an `int`, they should cast it,
+        or wrap the `float` in an `Expression` to get a `PauliSum` result.
+        
+        For more discussion, see:
+        https://discuss.python.org/t/clarifying-the-float-int-complex-special-case/54018/71
+        
+        [type_spec]: https://typing.python.org/en/latest/spec/type-system.html
+        [special_case]: https://typing.python.org/en/latest/spec/special-types.html#special-cases-for-float-and-complex
+        """
+    @typing.overload
+    def __pow__(self, exponent: typing.Any, modulo: typing.Any) -> typing.NoReturn:
+        r"""
+        Raising a `PauliTerm` with a `modulo` argument is not supported.
+        """
+    @typing.overload
+    def __pow__(self, exponent: int | str | _quil.expression.Expression, modulo: typing.Optional[typing.Any] = None) -> PauliTerm | PauliSum:
+        r"""
+        Compute the power of this [`PauliTerm`].
+        
+        This returns a new [`PauliTerm`] or [`PauliSum`]
+        representing the result of raising this term to the given exponent.
+        
+        As with other operations on this type,
+        the arguments and coefficient may be rearranged and/or simplified,
+        so logically equivalent results may not be identical one another.
+        The simplifications and rearrangements are not guaranteed to be stable across versions,
+        and may change the observable behavior of a program when executed on a QPU.
+        
+        In the common case that the exponent is a small integer, this returns a [`PauliTerm`].
+        To handle more general exponents, this returns a two-term [`PauliSum`].
+        
+        # General Mathematical Explanation
+        
+        To be specific, for a scaled Pauli operator `T = cP` and complex `k`, `T^k = c^k * P^k`.
+        Note that for Pauli operators, `P^2 = I` with eigenvalues `+1` and `-1`, so we can write
+        `P^k = (1/2)(I+P)(1^k) + (1/2)(I-P)((-1)^k) = (1/2)(1+(-1)^k)*I + (1/2)(1-(-1)^k)*P`.
+        Define `a = (1/2)(1+(-1)^k)` and `b = (1/2)(1-(-1)^k)`, so that `P^k = aI + bP`,
+        and we can write `T^k = c^k * P^k = c^k * (aI + bP) = (c^k * a)I + (c^k * b)P`.
+        Thus, the result is a two-term `PauliSum` with coefficients `c^k * a` and `c^k * b`.
+        
+        # Special Cases for Integer Exponents
+        
+        When `k` is an even integer, `(-1)^k = 1`, so `a = 1`, `b = 0`, and `T^k = c^k * I`.
+        When `k` is an odd integer,  `(-1)^k = 0`, so `a = 0`, `b = 1`, and `T^k = c^k * P`.
+        Thus, we can simplify the result to a single `PauliTerm` when given an integer exponent.
+        If the existing term's coefficient is numeric, we simplify the result to its numeric form.
+        
+        Note that this only applies to exponents given as integers that fit in an `i32`;
+        integers with larger magnitudes are converted to [`Expression::Number`]s,
+        and [`Expression`]-based exponents are treated as described below.
+        
+        # Large Integer, Complex Numbers, and General Expressions
+        
+        Large integers, floats, and complex numbers are converted to [`Expression::Number`]s,
+        and `str`s are converted to [`Expression::Variable`]s.
+        and general [`Expression`]s are used directly.
+        
+        General [`Expression`]s are supported via the above substitutions, processed symbolically.
+        The exact [`Expression`]s are not formally part of the API and may change between versions.
+        At present, we evaluate `(-1)^k` with the principal branch `exp(i * pi * k)`,
+        resulting in `a = (1 + exp(i * pi * k)) / 2` and `b = (1 - exp(i * pi * k)) / 2`;
+        as with the numeric case, the exact [`Expression`]s produced may be simplified
+        when the existing term's coefficient is numeric.
+        
+        For non-integer exponents, we
+        
+        evaluated via the principal branch
+        which in general results in complex coefficients,
+        and hence the two-term `PauliSum` result.
+        
+        Note that a valid Quil ``DEFGATE ... AS PAULI-SUM`` requires coefficient expressions
+        to be real-valued and reference only real numeric literals or gate-defined parameters.
+        
+        If called with Python's 3-argument `pow` function, the `modulo` argument is not supported,
+        and will raise a `NotImplementedError` if provided.
+        
+        Note: As explained above, this method returns `PauliTerm` for (most) integer exponents,
+        and a `PauliSum` for (most) non-integer exponents, and accepts `float` and `complex`.
+        Despite this, due to the way Python and type-checkers special-case them,
+        it is not possible to express this accurately as a type annotation overload.
+        Consequently, this is typed with an expectation that integers are the most common numbers,
+        and also are likely to be in the range of a 32-bit signed integer,
+        in which case the result is a `PauliTerm`.
+        Although it cannot be annotated as such, it is valid to pass a `float` or `complex`,
+        and the result will be a `PauliSum` (as will be true for `Expression`s and large ints).
+        If you find yourself running into type-checking errors when passing a `float` or `complex`,
+        you can work around it by wrapping the argument in an `Expression`.
+        
+        This arises because Python specifies that `int` is assignable to `float` and `complex`
+        and that `float` is assignable to `complex`, and from the definition of `assignable`
+        (see: https://typing.python.org/en/latest/spec/glossary.html#term-assignable),
+        the consequence is that `int` is treated as a subtype of `float` and `complex`,
+        leading to all kinds of unsoundness in type-checking vs actual runtime behavior.
+        For more information, see this discussion:
+        https://discuss.python.org/t/clarifying-the-float-int-complex-special-case/54018/71
+        """
+    @typing.overload
+    def __radd__(self, other: _quil.expression.ExpressionDesignator) -> PauliTerm: ...
+    @typing.overload
+    def __radd__(self, other: PauliTerm | PauliSum) -> PauliSum: ...
+    @typing.overload
+    def __radd__(self, other: typing.Any) -> typing.Any: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __rmul__(self, other: typing.Any) -> typing.Any: ...
+    def __rsub__(self, other: typing.Any) -> typing.Any: ...
+    def __str__(self) -> builtins.str:
+        r"""
+        Return a string representation of the PauliTerm.
+        """
+    def __sub__(self, other: typing.Any) -> typing.Any: ...
+    def compact_str(self) -> builtins.str:
+        r"""
+        Return a compact string representation of the PauliTerm.
+        """
+    def copy(self) -> PauliTerm:
+        r"""
+        Create a new copy of this [`PauliTerm`].
+        """
+    @staticmethod
+    def from_compact_str(str_pauli_term: builtins.str) -> PauliTerm: ...
+    @staticmethod
+    def from_list(terms_list: typing.Sequence[tuple[PauliGate, Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str  |  builtins.int  |  builtins.str]], coefficient: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str = (1+0j)) -> PauliTerm:
+        r"""
+        Construct a new `PauliTerm` from a list of operators and an optional coefficient.
+        
+        If the given arguments are disjoint (as required by a well-formed Quil `PauliTerm`),
+        the resulting `PauliTerm` will preserve that order and use the given coefficient as-is.
+        
+        Otherwise, operations on the same argument are combined via Pauli algebra rules,
+        and the coefficient is multiplied by any resulting complex phase,
+        and the resulting `PauliTerm` may have a different order of arguments than the input list.
+        """
+    def get_qubits(self) -> builtins.list[Qubit]:
+        r"""
+        Get the arguments of the [`PauliTerm`] as [`Qubit`]s.
+        """
+    def id(self, sort_ops: builtins.bool = False, /, delimiter: builtins.str = '') -> builtins.str:
+        r"""
+        Return an identifier string for the PauliTerm (ignoring the coefficient).
+        
+        For example, ``PauliTerm.from_list([("X", 0), ("Y", "q")]).id() == "Xq0Yq"``.
+        
+        If an argument contains a character that would otherwise be interpreted as a Pauli operator
+        (i.e., `X`, `Y`, or `Z`), its wrapped in parentheses to avoid ambiguity. For example,
+        ``PauliTerm.from_list([("X", "X0")]).id() == "X(X0)"``.
+        
+        Don't use this to compare terms (use ``pt0 == pt1`` or ``hash(pt0)`` for that).
+        You can pass ``sort_ops=True`` to sort arguments by qubit.
+        
+        Note that if the term has no operators, this function will return ``"I"``.
+        If you need to check for identity, use ``term.is_identity()`` instead.
+        """
+    def is_identity(self) -> builtins.bool:
+        r"""
+        Return `True` if and only if all operators are identity,
+        including the case in which the list of operators is empty.
+        """
+    def operations_as_set(self) -> builtins.frozenset[builtins.tuple[PauliGate, builtins.str]]:
+        r"""
+        Return a frozenset of operations in this term.
+        
+        Use this in place of `id` if the order of operations in the term does not matter.
+        """
+    def pauli_string(self, qubits: typing.Optional[typing.Sequence[builtins.int]] = None) -> builtins.str:
+        r"""
+        Return a string representation of the PauliTerm without its coefficient
+        and with implicit qubit indices.
+        
+        If an iterable of qubits is provided, each character in the resulting string
+        represents the Pauli operator acting on the corresponding qubit.
+        
+        ```python
+        >>> p = PauliTerm("X", 0) * PauliTerm("Y", 1, 1.0j)
+        >>> p.pauli_string()
+        'XY'
+        >>> p.pauli_string(qubits=[0])
+        'X'
+        >>> p.pauli_string(qubits=[0, 2])
+        'XI'
+        ```
+        """
 
-class Pragma:
+@typing.final
+class PauliTermIter:
+    r"""
+    An iterator over the [`PauliTerm`]s of a [`PauliSum`].
+    """
+    def __iter__(self) -> PauliTermIter: ...
+    def __next__(self) -> PauliTerm: ...
+
+class Pragma(Instruction):
     @property
     def arguments(self) -> builtins.list[PragmaArgument]: ...
     @property
+    def command(self) -> builtins.str: ...
+    @property
     def data(self) -> typing.Optional[builtins.str]: ...
+    @property
+    def freeform_string(self) -> typing.Optional[builtins.str]: ...
     @property
     def name(self) -> builtins.str: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[builtins.str, builtins.list[PragmaArgument], typing.Optional[builtins.str]]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, name: builtins.str, arguments: typing.Sequence[PragmaArgument], data: typing.Optional[builtins.str]) -> Pragma: ...
+    def __new__(cls, name: typing.Optional[builtins.str] = None, args: typing.Sequence[PragmaArgument  |  builtins.str  |  builtins.int] = [], data: typing.Optional[builtins.str] = None, *, command: typing.Optional[builtins.str] = None, freeform_string: typing.Optional[builtins.str] = None) -> Pragma:
+        r"""
+        Initialize a new PRAGMA instruction.
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class PragmaArgument:
-    def __getnewargs__(self) -> builtins.tuple[builtins.int | builtins.str]: ...
+    def __getnewargs__(self) -> builtins.tuple[builtins.str | builtins.int]: ...
+    def __new__(cls, arg: PragmaArgument  |  builtins.str  |  builtins.int, /) -> PragmaArgument: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -1795,7 +2896,7 @@ class PragmaArgument:
         def __new__(cls, _0: builtins.int) -> PragmaArgument.Integer: ...
     
 
-class Pulse:
+class Pulse(Instruction):
     @property
     def blocking(self) -> builtins.bool: ...
     @blocking.setter
@@ -1805,58 +2906,83 @@ class Pulse:
     @frame.setter
     def frame(self, value: FrameIdentifier) -> None: ...
     @property
+    def nonblocking(self) -> builtins.bool: ...
+    @property
     def waveform(self) -> WaveformInvocation: ...
     @waveform.setter
     def waveform(self, value: WaveformInvocation) -> None: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[builtins.bool, FrameIdentifier, WaveformInvocation]: ...
-    def __new__(cls, blocking: builtins.bool, frame: FrameIdentifier, waveform: WaveformInvocation) -> Pulse: ...
+    def __getnewargs_ex__(self) -> tuple[tuple[FrameIdentifier, WaveformInvocation], builtins.dict[builtins.str, builtins.bool]]: ...
+    def __new__(cls, frame: FrameIdentifier, waveform: WaveformInvocation, *, blocking: typing.Optional[builtins.bool] = None, nonblocking: typing.Optional[builtins.bool] = None) -> Pulse: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def get_qubit_indices(self) -> builtins.set[builtins.int]:
+        r"""
+        Return the fixed qubit indices used by this instruction's `frame`.
+        
+        Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Qubit:
-    def __getnewargs__(self) -> builtins.tuple[builtins.int | builtins.str | QubitPlaceholder]: ...
-    def __repr__(self) -> builtins.str:
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __ge__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __gt__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __hash__(self) -> builtins.int: ...
+    def __le__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __lt__(self, other: builtins.object, /) -> builtins.bool: ...
+    @typing.overload
+    def __new__(cls, qubit: builtins.int | FixedQubit) -> FixedQubit:
         r"""
-        Implements `__repr__` for Python in terms of the Rust
-        [`Debug`](std::fmt::Debug) implementation.
+        Create a new `FixedQubit` from an integer or existing `FixedQubit`.
         """
+    @typing.overload
+    def __new__(cls, qubit: builtins.str | FormalArgument) -> FormalArgument:
+        r"""
+        Create a new `FormalArgument` from a string or existing `FormalArgument`.
+        """
+    @typing.overload
+    def __new__(cls, qubit: QubitPlaceholder | None = None) -> QubitPlaceholder:
+        r"""
+        Copy the reference to an existing `QubitPlaceholder`,
+        or create a new `QubitPlaceholder` when the argument is `None`.
+        """
+    @typing.overload
+    def __new__(cls, qubit: typing.Optional[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str] = None, /) -> typing.Any:
+        r"""
+        Create a new `Qubit` from an existing one or something that can be converted into one.
+        
+        Existing `Qubit` instances result in a new `Qubit` with the same value,
+        or in the case of a `QubitPlaceholder`, a reference to the same placeholder.
+        
+        The value `None` or values of type `int` or `str` are converted into new `Qubit`s
+        of type `QubitPlaceholder`, `FixedQubit`, or `FormalArgument`, respectively.
+        """
+    def __repr__(self) -> builtins.str: ...
+    def out(self) -> builtins.str: ...
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
-    @typing.final
-    class Fixed(Qubit):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> builtins.int: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: builtins.int) -> Qubit.Fixed: ...
-    
-    @typing.final
-    class Placeholder(Qubit):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> QubitPlaceholder: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: QubitPlaceholder) -> Qubit.Placeholder: ...
-    
-    @typing.final
-    class Variable(Qubit):
-        __match_args__ = ("_0",)
-        @property
-        def _0(self) -> builtins.str: ...
-        def __getitem__(self, key: builtins.int, /) -> typing.Any: ...
-        def __len__(self) -> builtins.int: ...
-        def __new__(cls, _0: builtins.str) -> Qubit.Variable: ...
-    
 
-class QubitPlaceholder:
+class QubitPlaceholder(Qubit):
     r"""
     An opaque placeholder for a qubit whose index may be assigned at a later time.
     """
@@ -1877,8 +3003,13 @@ class QubitPlaceholder:
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    @staticmethod
+    def register(n: builtins.int) -> builtins.list[QubitPlaceholder]:
+        r"""
+        Return a 'register' of ``n`` qubit placeholders.
+        """
 
-class RawCapture:
+class RawCapture(Instruction):
     @property
     def blocking(self) -> builtins.bool: ...
     @property
@@ -1887,51 +3018,128 @@ class RawCapture:
     def frame(self) -> FrameIdentifier: ...
     @property
     def memory_reference(self) -> MemoryReference: ...
+    @property
+    def memory_region(self) -> MemoryReference: ...
+    @property
+    def nonblocking(self) -> builtins.bool: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[builtins.bool, FrameIdentifier, expression.Expression, MemoryReference]: ...
+    def __getnewargs_ex__(self) -> builtins.tuple[
+            builtins.tuple[FrameIdentifier, expression.Expression, MemoryReference],
+            builtins.dict[builtins.str, builtins.bool]
+        ]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, blocking: builtins.bool, frame: FrameIdentifier, duration: expression.Expression, memory_reference: MemoryReference) -> RawCapture: ...
+    def __new__(cls, frame: FrameIdentifier, duration: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str, memory_region: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], *, blocking: typing.Optional[builtins.bool] = None, nonblocking: typing.Optional[builtins.bool] = None) -> RawCapture: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def get_qubit_indices(self) -> builtins.set[builtins.int]:
+        r"""
+        Return the fixed qubit indices used by this instruction's `frame`.
+        
+        Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Reset:
+class Reset(Instruction):
+    __match_args__: tuple[builtins.str] = ('qubit',)
     @property
     def qubit(self) -> typing.Optional[Qubit]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[typing.Optional[Qubit]]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, qubit: typing.Optional[Qubit]) -> Reset: ...
+    def __new__(cls, qubit: typing.Optional[Qubit  |  QubitPlaceholder  |  FixedQubit  |  FormalArgument  |  builtins.int  |  builtins.str] = None) -> Reset:
+        r"""
+        Initialize a new reset instruction, optionally targeting a specific qubit.
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def get_qubit_indices(self) -> typing.Optional[builtins.set[builtins.int]]:
+        r"""
+        Return `None` if the `Reset` has no `Qubit`,
+        or return a set containing the index of the `Qubit` if it is a `Fixed` qubit;
+        otherwise, raise a `ValueError`.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class SetFrequency:
+class SetFrequency(Instruction):
     @property
     def frame(self) -> FrameIdentifier: ...
+    @property
+    def freq(self) -> expression.Expression: ...
     @property
     def frequency(self) -> expression.Expression: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[FrameIdentifier, expression.Expression]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, frame: FrameIdentifier, frequency: expression.Expression) -> SetFrequency: ...
+    def __new__(cls, frame: FrameIdentifier, frequency: typing.Optional[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str] = None, *, freq: typing.Optional[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str] = None) -> SetFrequency: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def get_qubit_indices(self) -> builtins.set[builtins.int]:
+        r"""
+        Return the fixed qubit indices used by this instruction's `frame`.
+        
+        Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class SetPhase:
+class SetPhase(Instruction):
+    __match_args__: tuple[builtins.str, builtins.str] = ('frame', 'phase')
     @property
     def frame(self) -> FrameIdentifier: ...
     @property
@@ -1939,16 +3147,38 @@ class SetPhase:
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[FrameIdentifier, expression.Expression]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, frame: FrameIdentifier, phase: expression.Expression) -> SetPhase: ...
+    def __new__(cls, frame: FrameIdentifier, phase: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str) -> SetPhase: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def get_qubit_indices(self) -> builtins.set[builtins.int]:
+        r"""
+        Return the fixed qubit indices used by this instruction's `frame`.
+        
+        Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class SetScale:
+class SetScale(Instruction):
+    __match_args__: tuple[builtins.str, builtins.str] = ('frame', 'scale')
     @property
     def frame(self) -> FrameIdentifier: ...
     @property
@@ -1956,16 +3186,38 @@ class SetScale:
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[FrameIdentifier, expression.Expression]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, frame: FrameIdentifier, scale: expression.Expression) -> SetScale: ...
+    def __new__(cls, frame: FrameIdentifier, scale: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str) -> SetScale: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def get_qubit_indices(self) -> builtins.set[builtins.int]:
+        r"""
+        Return the fixed qubit indices used by this instruction's `frame`.
+        
+        Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Sharing:
+    __match_args__: tuple[builtins.str, builtins.str] = ('name', 'offsets')
     @property
     def name(self) -> builtins.str: ...
     @property
@@ -1980,24 +3232,48 @@ class Sharing:
         [`Debug`](std::fmt::Debug) implementation.
         """
 
-class ShiftFrequency:
+class ShiftFrequency(Instruction):
     @property
     def frame(self) -> FrameIdentifier: ...
+    @property
+    def freq(self) -> expression.Expression: ...
     @property
     def frequency(self) -> expression.Expression: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[FrameIdentifier, expression.Expression]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, frame: FrameIdentifier, frequency: expression.Expression) -> ShiftFrequency: ...
+    def __new__(cls, frame: FrameIdentifier, frequency: typing.Optional[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str] = None, *, freq: typing.Optional[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str] = None) -> ShiftFrequency: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def get_qubit_indices(self) -> builtins.set[builtins.int]:
+        r"""
+        Return the fixed qubit indices used by this instruction's `frame`.
+        
+        Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class ShiftPhase:
+class ShiftPhase(Instruction):
+    __match_args__: tuple[builtins.str, builtins.str] = ('frame', 'phase')
     @property
     def frame(self) -> FrameIdentifier: ...
     @property
@@ -2005,35 +3281,82 @@ class ShiftPhase:
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[FrameIdentifier, expression.Expression]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, frame: FrameIdentifier, phase: expression.Expression) -> ShiftPhase: ...
+    def __new__(cls, frame: FrameIdentifier, phase: expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str) -> ShiftPhase: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def get_qubit_indices(self) -> builtins.set[builtins.int]:
+        r"""
+        Return the fixed qubit indices used by this instruction's `frame`.
+        
+        Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class Store:
+class Store(Instruction):
+    __match_args__: tuple[builtins.str, builtins.str, builtins.str] = ('destination', 'offset', 'source')
     @property
     def destination(self) -> builtins.str: ...
     @property
+    def left(self) -> MemoryReference: ...
+    @property
     def offset(self) -> MemoryReference: ...
     @property
+    def right(self) -> ArithmeticOperand: ...
+    @property
     def source(self) -> ArithmeticOperand: ...
+    @property
+    def target(self) -> builtins.str: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[builtins.str, MemoryReference, ArithmeticOperand]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, destination: builtins.str, offset: MemoryReference, source: ArithmeticOperand) -> Store: ...
+    def __new__(cls, destination: builtins.str, offset: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int], source: ArithmeticOperand  |  builtins.int  |  builtins.float  |  MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> Store: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
-class SwapPhases:
+class SwapPhases(Instruction):
+    @property
+    def frameA(self) -> FrameIdentifier: ...
+    @property
+    def frameB(self) -> FrameIdentifier: ...
     @property
     def frame_1(self) -> FrameIdentifier: ...
     @property
@@ -2041,21 +3364,53 @@ class SwapPhases:
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[FrameIdentifier, FrameIdentifier]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, frame_1: FrameIdentifier, frame_2: FrameIdentifier) -> SwapPhases: ...
+    def __new__(cls, frame_1: typing.Optional[FrameIdentifier] = None, frame_2: typing.Optional[FrameIdentifier] = None, *, frameA: typing.Optional[FrameIdentifier] = None, frameB: typing.Optional[FrameIdentifier] = None) -> SwapPhases: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def get_qubit_indices(self) -> builtins.set[builtins.int]:
+        r"""
+        Return the fixed qubit indices used by this instruction's `frame`.
+        
+        Raises a ``ValueError`` if the frame operates on any non-fixed qubits.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Target:
-    def __getnewargs__(self) -> builtins.tuple[builtins.str | TargetPlaceholder]: ...
+    def __getnewargs__(self) -> builtins.tuple[builtins.str  |  TargetPlaceholder  |  Label]: ...
+    def __new__(cls, target: Target  |  builtins.str  |  TargetPlaceholder  |  Label) -> Target: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -2085,37 +3440,77 @@ class TargetPlaceholder:
     """
     @property
     def base_label(self) -> builtins.str: ...
+    @property
+    def prefix(self) -> builtins.str:
+        r"""
+        Get the `Placeholder`'s `base_label`.
+        
+        This is deprecated; use `base_label` instead.
+        """
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __ge__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __getnewargs__(self) -> tuple[builtins.str]: ...
     def __gt__(self, other: builtins.object, /) -> builtins.bool: ...
     def __hash__(self) -> builtins.int: ...
     def __le__(self, other: builtins.object, /) -> builtins.bool: ...
     def __lt__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __new__(cls, base_label: builtins.str) -> TargetPlaceholder: ...
+    def __new__(cls, base_label: builtins.str = 'L', *, prefix: typing.Optional[builtins.str] = None, placeholder: typing.Optional[TargetPlaceholder] = None) -> TargetPlaceholder:
+        r"""
+        Create a new `TargetPlaceholder`.
+        
+        If you are only constructing a `TargetPlaceholder` to pass to the `Label` constructor,
+        note that you can use ``Label()`` or ``Label("L", placeholder=True)``
+        and access the ``target`` attribute instead.
+        
+        The keyword-only `prefix` and `placeholder` parameters are deprecated,
+        but made available to ease the transition from PyQuil v4's `LabelPlaceholder`.
+        New code should use ``Label("L", placeholder=True)`` instead.
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
 
-class UnaryLogic:
+class UnaryLogic(Instruction):
+    __match_args__: tuple[builtins.str, builtins.str] = ('operator', 'operand')
+    @property
+    def op(self) -> UnaryOperator: ...
     @property
     def operand(self) -> MemoryReference: ...
     @property
     def operator(self) -> UnaryOperator: ...
+    @property
+    def target(self) -> MemoryReference: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[UnaryOperator, MemoryReference]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, operator: UnaryOperator, operand: MemoryReference) -> UnaryLogic: ...
+    def __new__(cls, operator: UnaryOperator, operand: MemoryReference  |  DeclarationAt  |  Declaration  |  tuple[builtins.str, builtins.int]) -> UnaryLogic: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
 class Vector:
+    __match_args__: tuple[builtins.str, builtins.str] = ('data_type', 'length')
     @property
     def data_type(self) -> ScalarType: ...
     @property
@@ -2132,6 +3527,44 @@ class Vector:
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
+@typing.final
+class WaitType(Instruction):
+    r"""
+    The type of the `Wait` [`Instruction`].
+    """
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __hash__(self) -> builtins.int: ...
+    def __new__(cls) -> WaitType:
+        r"""
+        Get a reference to the singleton instance of this type.
+        """
+    def __reduce__(self) -> str:
+        r"""
+        Returns the name of the singleton instance relative its module.
+        
+        Enables [`pickling`][] of singleton instances.
+        
+        [`pickling`]: https://docs.python.org/3/library/pickle.html#object.__reduce__
+        """
+    def __repr__(self) -> builtins.str: ...
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
+        """
+    def to_quil(self) -> builtins.str: ...
+    def to_quil_or_debug(self) -> builtins.str: ...
+
 class Waveform:
     @property
     def matrix(self) -> builtins.list[expression.Expression]: ...
@@ -2139,26 +3572,56 @@ class Waveform:
     def parameters(self) -> builtins.list[builtins.str]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, matrix: typing.Sequence[expression.Expression], parameters: typing.Sequence[builtins.str]) -> Waveform: ...
+    def __new__(cls, matrix: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str], parameters: typing.Sequence[builtins.str]) -> Waveform: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
 
-class WaveformDefinition:
+class WaveformDefinition(Instruction):
     @property
     def definition(self) -> Waveform: ...
     @property
+    def entries(self) -> builtins.list[expression.Expression]:
+        r"""
+        Get the entries of the waveform definition.
+        """
+    @property
     def name(self) -> builtins.str: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
-    def __getnewargs__(self) -> tuple[builtins.str, Waveform]: ...
+    def __getnewargs__(self) -> tuple[builtins.str, builtins.list[builtins.str], builtins.list[expression.Expression]]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, name: builtins.str, definition: Waveform) -> WaveformDefinition: ...
+    def __new__(cls, name: builtins.str, parameters: typing.Sequence[expression.Parameter  |  builtins.str], entries: typing.Sequence[expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]) -> WaveformDefinition:
+        r"""
+        Construct a new `WaveformDefinition` from a name, list of parameters, and list of entries.
+        
+        See `WaveformDefinition.from_waveform` to construct one directly from a `Waveform` object.
+        """
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    @staticmethod
+    def from_waveform(name: builtins.str, definition: Waveform) -> WaveformDefinition:
+        r"""
+        Construct a `WaveformDefinition` directly from a `name` and existing waveform `definition`.
+        """
+    @staticmethod
+    def is_quil_t() -> builtins.bool:
+        r"""
+        Returns true if the instruction is a Quil-T instruction.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -2170,11 +3633,21 @@ class WaveformInvocation:
     def parameters(self) -> builtins.dict[builtins.str, expression.Expression]: ...
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[builtins.str, builtins.dict[builtins.str, expression.Expression]]: ...
-    def __new__(cls, name: builtins.str, parameters: typing.Mapping[builtins.str, expression.Expression]) -> WaveformInvocation: ...
+    def __new__(cls, name: builtins.str, parameters: typing.Optional[typing.Mapping[builtins.str, expression.Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  MemoryReference  |  builtins.str]] = None) -> WaveformInvocation: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
+        """
+    def __str__(self) -> builtins.str:
+        r"""
+        Get a Quil-like representation as a string.
+        """
+    def out(self) -> builtins.str:
+        r"""
+        Get a Quil representation as a string.
+        
+        This method is deprecated; you should use `to_quil` instead.
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
@@ -2186,6 +3659,7 @@ class ArithmeticOperator(enum.Enum):
     DIVIDE = ...
     MULTIPLY = ...
 
+    def __reduce__(self) -> str: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -2238,6 +3712,7 @@ class BinaryOperator(enum.Enum):
     existing top bit of the word.
     """
 
+    def __reduce__(self) -> str: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -2254,6 +3729,7 @@ class ComparisonOperator(enum.Enum):
     LESS_THAN_OR_EQUAL = ...
     LESS_THAN = ...
 
+    def __reduce__(self) -> str: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -2282,11 +3758,14 @@ class GateModifier(enum.Enum):
     of a qubit.
     """
 
+    def __reduce__(self) -> str: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
         [`Debug`](std::fmt::Debug) implementation.
         """
+    @staticmethod
+    def from_str(modifier: builtins.str) -> GateModifier: ...
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
 
@@ -2300,6 +3779,7 @@ class GateType(enum.Enum):
     PAULI_SUM = ...
     SEQUENCE = ...
 
+    def __reduce__(self) -> str: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -2315,6 +3795,8 @@ class PauliGate(enum.Enum):
     Y = ...
     Z = ...
 
+    def __new__(cls, input: builtins.str) -> PauliGate: ...
+    def __reduce__(self) -> str: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -2335,6 +3817,7 @@ class ScalarType(enum.Enum):
     OCTET = ...
     REAL = ...
 
+    def __reduce__(self) -> str: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -2348,6 +3831,7 @@ class UnaryOperator(enum.Enum):
     NEG = ...
     NOT = ...
 
+    def __reduce__(self) -> str: ...
     def __repr__(self) -> builtins.str:
         r"""
         Implements `__repr__` for Python in terms of the Rust
@@ -2355,4 +3839,12 @@ class UnaryOperator(enum.Enum):
         """
     def to_quil(self) -> builtins.str: ...
     def to_quil_or_debug(self) -> builtins.str: ...
+
+def unpack_classical_reg(obj: typing.Any) -> MemoryReference:
+    r"""
+    Get the address for a classical register.
+    
+    This can be used to convert a `(str, int)` or `[str, int]` into a `MemoryReference`,
+    or to convert a `DeclarationAt` or `Declaration` into a `MemoryReference`.
+    """
 

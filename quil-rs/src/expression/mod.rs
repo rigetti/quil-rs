@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use crate::{
+    expression::consts::PI_NUMERIC,
     floating_point_eq, imag,
     instruction::MemoryReference,
     parser::{lex, parse_expression, ParseError},
@@ -41,14 +42,12 @@ use std::{
 #[cfg(test)]
 use proptest_derive::Arbitrary;
 
-#[cfg(not(feature = "python"))]
-use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{
-    gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum, gen_stub_pymethods,
-};
+use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_enum};
 #[cfg(feature = "python")]
 pub(crate) mod quilpy;
+#[cfg(feature = "python")]
+use quilpy::PyExpression;
 
 mod simplification;
 
@@ -84,26 +83,36 @@ pub enum EvaluationError {
 ///
 /// Note that when comparing Quil expressions, any embedded NaNs are treated as *equal* to other
 /// NaNs, not unequal, in contravention of the IEEE 754 spec.
+// Developer note: This enum is no longer exposed directly as a PyO3 "complex enum".
+// Instead, each variant has a corresponding Python-exposed type that extends `PyExpression`
+// (see `quilpy.rs` for the Python bindings), mirroring the `Instruction`/`PyInstruction`
+// pattern. This allows Python users to directly use it and its subclasses more fluently.
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(module = "quil._quil.expression", eq, frozen, hash, from_py_object)
-)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub enum Expression {
     Address(MemoryReference),
     FunctionCall(FunctionCallExpression),
     Infix(InfixExpression),
     Number(Complex64),
-    // Developer note: In Rust, this could be just `PiConstant`,
-    // but to be compatible with PyO3's "complex enums",
-    // it has to be an empty tuple variant.
-    // The same restriction applies to empty tuples in `Instruction`.
-    #[pyo3(name = "Pi")]
-    PiConstant(),
+    // TODO(migration-guide): PiConstant in Rust is a Unit variant again.
+    PiConstant,
     Prefix(PrefixExpression),
     Variable(String),
+}
+
+/// Useful constant [`Expression`]s.
+pub mod consts {
+    use num_complex::Complex64;
+    use std::f64::consts::PI;
+
+    use super::Expression;
+
+    pub const ONE: Expression = Expression::Number(Complex64::ONE);
+    pub const ZERO: Expression = Expression::Number(Complex64::ZERO);
+    pub const IMAGINARY_UNIT: Expression = Expression::Number(Complex64::I);
+
+    /// An `Expression::Number` with a close approximation of the mathematical constant π.
+    /// Note that `Expression` also has a `PiConstant` variant, used when parsing Quil.
+    pub const PI_NUMERIC: Expression = Expression::Number(Complex64::new(PI, 0.0));
 }
 
 #[cfg(test)]
@@ -134,6 +143,7 @@ impl proptest::prelude::Arbitrary for Expression {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.expression",
+        extends = PyExpression,
         eq,
         frozen,
         hash,
@@ -141,7 +151,7 @@ impl proptest::prelude::Arbitrary for Expression {
         from_py_object
     )
 )]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
+#[cfg_attr(not(feature = "python"), optipy::strip_pyo3)]
 pub struct FunctionCallExpression {
     #[pyo3(get)]
     pub function: ExpressionFunction,
@@ -154,6 +164,12 @@ impl FunctionCallExpression {
             function,
             expression,
         }
+    }
+}
+
+impl From<FunctionCallExpression> for Expression {
+    fn from(val: FunctionCallExpression) -> Self {
+        Expression::FunctionCall(val)
     }
 }
 
@@ -171,6 +187,7 @@ impl FunctionCallExpression {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.expression",
+        extends = PyExpression,
         eq,
         frozen,
         hash,
@@ -178,7 +195,7 @@ impl FunctionCallExpression {
         from_py_object
     )
 )]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
+#[cfg_attr(not(feature = "python"), optipy::strip_pyo3)]
 pub struct InfixExpression {
     pub left: ArcIntern<Expression>,
     #[pyo3(get)]
@@ -200,6 +217,12 @@ impl InfixExpression {
     }
 }
 
+impl From<InfixExpression> for Expression {
+    fn from(val: InfixExpression) -> Self {
+        Expression::Infix(val)
+    }
+}
+
 /// The type of prefix Quil expressions, e.g. `-e`.
 ///
 /// Quil expressions take advantage of *structural sharing*, which is why the `expression` here is
@@ -213,6 +236,7 @@ impl InfixExpression {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.expression",
+        extends = PyExpression,
         eq,
         frozen,
         hash,
@@ -220,7 +244,7 @@ impl InfixExpression {
         from_py_object
     )
 )]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
+#[cfg_attr(not(feature = "python"), optipy::strip_pyo3)]
 pub struct PrefixExpression {
     #[pyo3(get)]
     pub operator: PrefixOperator,
@@ -236,8 +260,14 @@ impl PrefixExpression {
     }
 }
 
+impl From<PrefixExpression> for Expression {
+    fn from(val: PrefixExpression) -> Self {
+        Expression::Prefix(val)
+    }
+}
+
 // TODO (#458): PartialEq/Eq is inconsistent with Hash.
-impl PartialEq for Expression {
+impl PartialEq for ExpressionView<'_> {
     // Implemented by hand since we can't derive with f64s hidden inside.
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -249,7 +279,7 @@ impl PartialEq for Expression {
             (Self::Prefix(left), Self::Prefix(right)) => left == right,
             (Self::FunctionCall(left), Self::FunctionCall(right)) => left == right,
             (Self::Variable(left), Self::Variable(right)) => left == right,
-            (Self::PiConstant(), Self::PiConstant()) => true,
+            (Self::PiConstant, Self::PiConstant) => true,
 
             // This explicit or-pattern ensures that we'll get a compilation error if
             // `Expression` grows another constructor.
@@ -260,17 +290,30 @@ impl PartialEq for Expression {
                 | Self::Prefix(_)
                 | Self::FunctionCall(_)
                 | Self::Variable(_)
-                | Self::PiConstant(),
+                | Self::PiConstant,
                 _,
             ) => false,
         }
     }
 }
 
+impl PartialEq for Expression {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_view() == other.as_view()
+    }
+}
+
 // Implemented by hand since we can't derive with f64s hidden inside.
 impl Eq for Expression {}
+impl Eq for ExpressionView<'_> {}
 
 impl Hash for Expression {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.as_view().hash(state);
+    }
+}
+
+impl Hash for ExpressionView<'_> {
     // Implemented by hand since we can't derive with f64s hidden inside.
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
@@ -300,8 +343,8 @@ impl Hash for Expression {
                 "Number".hash(state);
                 floating_point_eq::complex64::hash(*n, state);
             }
-            Self::PiConstant() => {
-                "PiConstant()".hash(state);
+            Self::PiConstant => {
+                "PiConstant".hash(state);
             }
             Self::Prefix(p) => {
                 "Prefix".hash(state);
@@ -354,7 +397,7 @@ macro_rules! impl_expr_op {
         impl $name_assign for Expression {
             fn $function_assign(&mut self, other: Self) {
                 // Move out of self to avoid potentially cloning a large value
-                let temp = ::std::mem::replace(self, Self::PiConstant());
+                let temp = ::std::mem::replace(self, Self::PiConstant);
                 *self = temp.$function(other);
             }
         }
@@ -362,7 +405,7 @@ macro_rules! impl_expr_op {
         impl $name_assign<ArcIntern<Expression>> for Expression {
             fn $function_assign(&mut self, other: ArcIntern<Expression>) {
                 // Move out of self to avoid potentially cloning a large value
-                let temp = ::std::mem::replace(self, Self::PiConstant());
+                let temp = ::std::mem::replace(self, Self::PiConstant);
                 *self = temp.$function(other);
             }
         }
@@ -422,6 +465,17 @@ fn is_small(x: f64) -> bool {
     x.abs() < 1e-16
 }
 
+/// A trait to provide a memory value when substituting memory references.
+pub trait MemoryMapper {
+    fn get(&self, index: usize) -> Option<&f64>;
+}
+
+impl MemoryMapper for Vec<f64> {
+    fn get(&self, index: usize) -> Option<&f64> {
+        <[f64]>::get(self, index)
+    }
+}
+
 impl Expression {
     /// Simplify the expression as much as possible, in-place.
     ///
@@ -440,8 +494,8 @@ impl Expression {
     pub fn simplify(&mut self) {
         match self {
             Expression::Address(_) | Expression::Number(_) | Expression::Variable(_) => {}
-            Expression::PiConstant() => {
-                *self = Expression::Number(Complex64::from(PI));
+            Expression::PiConstant => {
+                *self = PI_NUMERIC.clone();
             }
             _ => *self = simplification::run(self),
         }
@@ -488,14 +542,32 @@ impl Expression {
     ///
     /// assert_eq!(evaluated, Complex64::from(3.0))
     /// ```
-    pub fn evaluate<K1, K2>(
+    pub fn evaluate<K1, K2, M>(
         &self,
         variables: &HashMap<K1, Complex64>,
-        memory_references: &HashMap<K2, Vec<f64>>,
+        memory_references: &HashMap<K2, M>,
     ) -> Result<Complex64, EvaluationError>
     where
         K1: Borrow<str> + Hash + Eq,
         K2: Borrow<str> + Hash + Eq,
+        M: MemoryMapper,
+    {
+        match self.evaluate_partial(variables, memory_references) {
+            Expression::Number(value) => Ok(value),
+            Expression::PiConstant => Ok(Complex64::from(PI)),
+            _ => Err(EvaluationError::Incomplete),
+        }
+    }
+
+    pub(crate) fn evaluate_partial<K1, K2, M>(
+        &self,
+        variables: &HashMap<K1, Complex64>,
+        memory_references: &HashMap<K2, M>,
+    ) -> Expression
+    where
+        K1: Borrow<str> + Hash + Eq,
+        K2: Borrow<str> + Hash + Eq,
+        M: MemoryMapper,
     {
         use Expression::*;
 
@@ -503,44 +575,78 @@ impl Expression {
             FunctionCall(FunctionCallExpression {
                 function,
                 expression,
-            }) => {
-                let evaluated = expression.evaluate(variables, memory_references)?;
-                Ok(calculate_function(*function, evaluated))
-            }
+            }) => match expression.evaluate_partial(variables, memory_references) {
+                Expression::Number(value) => {
+                    Expression::Number(calculate_function(*function, value))
+                }
+                Expression::PiConstant => {
+                    Expression::Number(calculate_function(*function, Complex64::from(PI)))
+                }
+                other => Expression::FunctionCall(FunctionCallExpression {
+                    function: *function,
+                    expression: ArcIntern::new(other),
+                }),
+            },
             Infix(InfixExpression {
                 left,
                 operator,
                 right,
             }) => {
-                let left_evaluated = left.evaluate(variables, memory_references)?;
-                let right_evaluated = right.evaluate(variables, memory_references)?;
-                Ok(calculate_infix(left_evaluated, *operator, right_evaluated))
+                let left = left.evaluate_partial(variables, memory_references);
+                let right = right.evaluate_partial(variables, memory_references);
+                match (left, right) {
+                    (Expression::Number(left), Expression::Number(right)) => {
+                        Expression::Number(calculate_infix(left, *operator, right))
+                    }
+                    (Expression::Number(left), Expression::PiConstant) => {
+                        Expression::Number(calculate_infix(left, *operator, Complex64::from(PI)))
+                    }
+                    (Expression::PiConstant, Expression::Number(right)) => {
+                        Expression::Number(calculate_infix(Complex64::from(PI), *operator, right))
+                    }
+                    (Expression::PiConstant, Expression::PiConstant) => Expression::Number(
+                        calculate_infix(Complex64::from(PI), *operator, Complex64::from(PI)),
+                    ),
+                    (left, right) => Expression::Infix(InfixExpression {
+                        left: ArcIntern::new(left),
+                        operator: *operator,
+                        right: ArcIntern::new(right),
+                    }),
+                }
             }
             Prefix(PrefixExpression {
                 operator,
                 expression,
             }) => {
                 use PrefixOperator::*;
-                let value = expression.evaluate(variables, memory_references)?;
-                if matches!(operator, Minus) {
-                    Ok(-value)
-                } else {
-                    Ok(value)
+                match (
+                    expression.evaluate_partial(variables, memory_references),
+                    operator,
+                ) {
+                    (Number(value), Plus) => Number(value),
+                    (Number(value), Minus) => Number(-value),
+                    // Leave positive pi as a pi constant;
+                    // if it's needed in a function, it will be converted to a number then.
+                    (Expression::PiConstant, Minus) => Number(-Complex64::from(PI)),
+                    (expression, operator) => Prefix(PrefixExpression {
+                        operator: *operator,
+                        expression: ArcIntern::new(expression),
+                    }),
                 }
             }
             Variable(identifier) => match variables.get(identifier) {
-                Some(&value) => Ok(value),
-                None => Err(EvaluationError::Incomplete),
+                Some(&value) => Expression::Number(value),
+                None => Variable(identifier.clone()),
             },
             Address(memory_reference) => memory_references
                 .get(memory_reference.name.as_str())
                 .and_then(|values| {
                     let value = values.get(memory_reference.index as usize)?;
-                    Some(real!(*value))
+                    Some(Expression::Number(real!(*value)))
                 })
-                .ok_or(EvaluationError::Incomplete),
-            PiConstant() => Ok(real!(PI)),
-            Number(number) => Ok(*number),
+                .unwrap_or_else(|| Expression::Address((*memory_reference).clone())),
+            PiConstant => Expression::PiConstant,
+            Number(number) => Expression::Number(*number),
         }
     }
 
@@ -564,9 +670,18 @@ impl Expression {
     /// assert_eq!(evaluated, Expression::from_str("1.0 + %y").unwrap())
     /// ```
     #[must_use]
-    pub fn substitute_variables<K>(&self, variable_values: &HashMap<K, Expression>) -> Self
+    pub fn substitute_variables<K>(&self, variable_values: &'_ HashMap<K, Expression>) -> Self
     where
         K: Borrow<str> + Hash + Eq,
+    {
+        self.substitute_variables_impl(variable_values)
+    }
+
+    #[must_use]
+    pub(crate) fn substitute_variables_impl<K, V>(&self, variable_values: &'_ HashMap<K, V>) -> Self
+    where
+        K: Borrow<str> + Hash + Eq,
+        V: Into<Expression> + Clone,
     {
         use Expression::*;
 
@@ -576,15 +691,15 @@ impl Expression {
                 expression,
             }) => Expression::FunctionCall(FunctionCallExpression {
                 function: *function,
-                expression: expression.substitute_variables(variable_values).into(),
+                expression: expression.substitute_variables_impl(variable_values).into(),
             }),
             Infix(InfixExpression {
                 left,
                 operator,
                 right,
             }) => {
-                let left = left.substitute_variables(variable_values).into();
-                let right = right.substitute_variables(variable_values).into();
+                let left = left.substitute_variables_impl(variable_values).into();
+                let right = right.substitute_variables_impl(variable_values).into();
                 Infix(InfixExpression {
                     left,
                     operator: *operator,
@@ -596,25 +711,21 @@ impl Expression {
                 expression,
             }) => Prefix(PrefixExpression {
                 operator: *operator,
-                expression: expression.substitute_variables(variable_values).into(),
+                expression: expression.substitute_variables_impl(variable_values).into(),
             }),
             Variable(identifier) => match variable_values.get(identifier) {
-                Some(value) => value.clone(),
+                Some(value) => value.clone().into(),
                 None => Variable(identifier.clone()),
             },
             other => other.clone(),
         }
     }
-}
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg_attr(feature = "python", pyo3::pymethods)]
-impl Expression {
     /// If this is a number with imaginary part "equal to" zero (of _small_ absolute value), return
     /// that number. Otherwise, error with an evaluation error of a descriptive type.
     pub fn to_real(&self) -> Result<f64, EvaluationError> {
         match self {
-            Expression::PiConstant() => Ok(PI),
+            Expression::PiConstant => Ok(PI),
             Expression::Number(x) if is_small(x.im) => Ok(x.re),
             Expression::Number(_) => Err(EvaluationError::NumberNotReal),
             _ => Err(EvaluationError::NotANumber),
@@ -679,16 +790,61 @@ pub(crate) fn format_complex(value: &Complex64) -> String {
     }
 }
 
+/// Trait for types which offer a view into an [`Expression`].
+///
+/// This makes it easier to share [`Expression`] implementations with Python bindings.
+pub(crate) trait AsView: std::fmt::Debug {
+    /// Return a view into the [`Expression`].
+    fn as_view(&self) -> ExpressionView<'_>;
+}
+
+/// A view into an [`Expression`], which provides borrows of each enum variants.
+#[derive(Debug)]
+pub(crate) enum ExpressionView<'a> {
+    Address(&'a MemoryReference),
+    FunctionCall(&'a FunctionCallExpression),
+    Infix(&'a InfixExpression),
+    Number(Complex64),
+    Prefix(&'a PrefixExpression),
+    Variable(&'a str),
+    PiConstant,
+}
+
+impl AsView for Expression {
+    fn as_view(&self) -> ExpressionView<'_> {
+        match self {
+            Expression::Address(memory_reference) => ExpressionView::Address(memory_reference),
+            Expression::FunctionCall(function_call) => ExpressionView::FunctionCall(function_call),
+            Expression::Infix(infix) => ExpressionView::Infix(infix),
+            Expression::Number(value) => ExpressionView::Number(*value),
+            Expression::Prefix(prefix) => ExpressionView::Prefix(prefix),
+            Expression::Variable(identifier) => ExpressionView::Variable(identifier.as_str()),
+            Expression::PiConstant => ExpressionView::PiConstant,
+        }
+    }
+}
+
 impl Quil for Expression {
     fn write(
         &self,
         f: &mut impl std::fmt::Write,
         fall_back_to_debug: bool,
     ) -> Result<(), crate::quil::ToQuilError> {
-        use Expression::*;
+        self.as_view().write(f, fall_back_to_debug)
+    }
+}
+
+impl Quil for ExpressionView<'_> {
+    fn write(
+        &self,
+        f: &mut impl std::fmt::Write,
+        fall_back_to_debug: bool,
+    ) -> Result<(), crate::quil::ToQuilError> {
         match self {
-            Address(memory_reference) => memory_reference.write(f, fall_back_to_debug),
-            FunctionCall(FunctionCallExpression {
+            ExpressionView::Address(memory_reference) => {
+                memory_reference.write(f, fall_back_to_debug)
+            }
+            ExpressionView::FunctionCall(FunctionCallExpression {
                 function,
                 expression,
             }) => {
@@ -697,7 +853,7 @@ impl Quil for Expression {
                 write!(f, ")")?;
                 Ok(())
             }
-            Infix(InfixExpression {
+            ExpressionView::Infix(InfixExpression {
                 left,
                 operator,
                 right,
@@ -706,16 +862,18 @@ impl Quil for Expression {
                 write!(f, "{operator}")?;
                 format_inner_expression(f, fall_back_to_debug, right)
             }
-            Number(value) => write!(f, "{}", format_complex(value)).map_err(Into::into),
-            PiConstant() => write!(f, "pi").map_err(Into::into),
-            Prefix(PrefixExpression {
+            ExpressionView::Number(value) => {
+                write!(f, "{}", format_complex(value)).map_err(Into::into)
+            }
+            ExpressionView::PiConstant => write!(f, "pi").map_err(Into::into),
+            ExpressionView::Prefix(PrefixExpression {
                 operator,
                 expression,
             }) => {
                 write!(f, "{operator}")?;
                 format_inner_expression(f, fall_back_to_debug, expression)
             }
-            Variable(identifier) => write!(f, "%{identifier}").map_err(Into::into),
+            ExpressionView::Variable(identifier) => write!(f, "%{identifier}").map_err(Into::into),
         }
     }
 }
@@ -765,7 +923,7 @@ mod test {
             })),
             operator: InfixOperator::Star,
             right: ArcIntern::new(Expression::Infix(InfixExpression {
-                left: ArcIntern::new(Expression::PiConstant()),
+                left: ArcIntern::new(Expression::PiConstant),
                 operator: InfixOperator::Slash,
                 right: ArcIntern::new(Expression::Number(real!(2f64))),
             })),
@@ -780,6 +938,7 @@ mod test {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(
     feature = "python",
+    derive(strum::EnumString),
     pyo3::pyclass(
         module = "quil._quil.expression",
         eq,
@@ -820,6 +979,7 @@ impl fmt::Display for ExpressionFunction {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(
     feature = "python",
+    derive(strum::EnumString),
     pyo3::pyclass(
         module = "quil._quil.expression",
         eq,
@@ -855,6 +1015,7 @@ impl fmt::Display for PrefixOperator {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_enum)]
 #[cfg_attr(
     feature = "python",
+    derive(strum::EnumString),
     pyo3::pyclass(
         module = "quil._quil.expression",
         eq,
@@ -898,7 +1059,7 @@ pub mod interned {
     use super::*;
 
     macro_rules! atoms {
-        ($($func:ident: $ctor:ident($($typ:ty)?)),+ $(,)?) => {
+        ($($func:ident: $ctor:ident$(($typ:ty))?),+ $(,)?) => {
             $(
                 #[doc = concat!(
                     "A wrapper around [`Expression::",
@@ -908,8 +1069,9 @@ pub mod interned {
                 #[inline(always)]
                 pub fn $func($(value: $typ)?) -> ArcIntern<Expression> {
                     // Using `std::convert::identity` lets us refer to `$typ` and thus make the
-                    // constructor argument optional
-                    ArcIntern::new(Expression::$ctor($(std::convert::identity::<$typ>(value))?))
+                    // constructor argument optional. Note that `$ctor` may be a unit variant
+                    // (no parens) when there's no `$typ`, since `PiConstant` isn't tuple-like.
+                    ArcIntern::new(Expression::$ctor$((std::convert::identity::<$typ>(value)))?)
                 }
             )+
         };
@@ -994,7 +1156,7 @@ pub mod interned {
         address: Address(MemoryReference),
         function_call_expr: FunctionCall(FunctionCallExpression),
         infix_expr: Infix(InfixExpression),
-        pi: PiConstant(),
+        pi: PiConstant,
         number: Number(Complex64),
         prefix_expr: Prefix(PrefixExpression),
         variable: Variable(String),
@@ -1084,7 +1246,7 @@ pub mod proptest_helpers {
         let leaf = prop_oneof![
             arb_memory_reference().prop_map(Address),
             arb_complex64().prop_map(Number),
-            Just(PiConstant()),
+            Just(PiConstant),
             arb_variable().prop_map(Variable),
         ];
         leaf.prop_recursive(
@@ -1257,7 +1419,7 @@ mod tests {
                 parenthesized(right)
             ),
             Number(value) => format!("({})", format_complex(value)),
-            PiConstant() => "pi".to_string(),
+            PiConstant => "pi".to_string(),
             Prefix(PrefixExpression {
                 operator,
                 expression,
@@ -1315,7 +1477,7 @@ mod tests {
         }
 
         #[test]
-        fn no_other_exps_are_real(expr in any::<Expression>().prop_filter("Not numbers", |e| !matches!(e, Expression::Number(_) | Expression::PiConstant()))) {
+        fn no_other_exps_are_real(expr in any::<Expression>().prop_filter("Not numbers", |e| !matches!(e, Expression::Number(_) | Expression::PiConstant))) {
             prop_assert_eq!(expr.to_real(), Err(EvaluationError::NotANumber))
         }
 
@@ -1472,7 +1634,7 @@ mod tests {
     #[test]
     fn specific_to_real_tests() {
         for (input, expected) in [
-            (Expression::PiConstant(), Ok(PI)),
+            (Expression::PiConstant, Ok(PI)),
             (Expression::Number(Complex64 { re: 1.0, im: 0.0 }), Ok(1.0)),
             (
                 Expression::Number(Complex64 { re: 1.0, im: 1.0 }),

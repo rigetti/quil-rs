@@ -1,25 +1,31 @@
 import pickle
-from quil.instructions import Instruction, Gate, MemoryReference, Qubit
+from quil.instructions import Gate, MemoryReference, Nop, Qubit, Halt, Wait
 
 class TestPickle:
     def test_gate(self):
-        q0 = Qubit.Fixed(0)
-        g = Gate("H", [], [q0], [])
-
+        g = Gate("H", (), (Qubit(0),))
         p = pickle.dumps(g)
         g2 = pickle.loads(p)
         assert g == g2
 
-        i = Instruction.Gate(g)
-        p2 = pickle.dumps(i)
-        i2 = pickle.loads(p2)
-        assert i == i2
-
     def test_halt(self):
-        h = Instruction.Halt()
+        h = Halt
         p = pickle.dumps(h)
         q = pickle.loads(p)
         assert q == h
+
+    def test_nop(self):
+        h = Nop
+        p = pickle.dumps(h)
+        q = pickle.loads(p)
+        assert q == h
+
+    def test_wait(self):
+        h = Wait
+        p = pickle.dumps(h)
+        q = pickle.loads(p)
+        assert q == h
+
 
 class TestParse:
     def test_memory_ref(self):

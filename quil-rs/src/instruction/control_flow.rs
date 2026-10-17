@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyInstruction;
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
@@ -17,6 +19,7 @@ use crate::{
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -29,9 +32,9 @@ pub struct Label {
     pub target: Target,
 }
 
-pickleable_new! {
-    impl Label {
-        pub fn new(target: Target);
+impl Label {
+    pub fn new(target: Target) -> Self {
+        Self { target }
     }
 }
 
@@ -109,24 +112,23 @@ type TargetPlaceholderInner = Arc<String>;
 )]
 pub struct TargetPlaceholder(TargetPlaceholderInner);
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg_attr(feature = "python", pyo3::pymethods)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl TargetPlaceholder {
-    #[new]
     pub fn new(base_label: String) -> Self {
         Self(Arc::new(base_label))
     }
 
-    #[getter(base_label)]
-    pub fn as_inner(&self) -> &str {
-        &self.0
+    fn address(&self) -> usize {
+        &*self.0 as *const _ as usize
     }
 }
 
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[cfg_attr(feature = "python", pyo3::pymethods)]
+#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl TargetPlaceholder {
-    fn address(&self) -> usize {
-        &*self.0 as *const _ as usize
+    #[getter(base_label)]
+    pub fn as_inner(&self) -> &str {
+        &self.0
     }
 }
 
@@ -160,6 +162,7 @@ impl PartialEq for TargetPlaceholder {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         get_all,
         set_all,
@@ -183,9 +186,9 @@ impl Quil for Jump {
     }
 }
 
-pickleable_new! {
-    impl Jump {
-        pub fn new(target: Target);
+impl Jump {
+    pub fn new(target: Target) -> Self {
+        Self { target }
     }
 }
 
@@ -195,6 +198,7 @@ pickleable_new! {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         get_all,
         set_all,
@@ -207,9 +211,9 @@ pub struct JumpWhen {
     pub condition: MemoryReference,
 }
 
-pickleable_new! {
-    impl JumpWhen {
-        pub fn new(target: Target, condition: MemoryReference);
+impl JumpWhen {
+    pub fn new(target: Target, condition: MemoryReference) -> Self {
+        Self { target, condition }
     }
 }
 
@@ -232,6 +236,7 @@ impl Quil for JumpWhen {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         get_all,
         set_all,
@@ -244,9 +249,9 @@ pub struct JumpUnless {
     pub condition: MemoryReference,
 }
 
-pickleable_new! {
-    impl JumpUnless {
-        pub fn new(target: Target, condition: MemoryReference);
+impl JumpUnless {
+    pub fn new(target: Target, condition: MemoryReference) -> Self {
+        Self { target, condition }
     }
 }
 

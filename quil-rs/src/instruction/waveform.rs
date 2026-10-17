@@ -1,13 +1,12 @@
 use indexmap::IndexMap;
 
-#[cfg(not(feature = "python"))]
-use optipy::strip_pyo3;
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyInstruction;
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
+use pyo3_stub_gen::derive::gen_stub_pyclass;
 
 use crate::{
     expression::Expression,
-    pickleable_new,
     quil::{write_join_quil, Quil, INDENT},
 };
 
@@ -32,11 +31,7 @@ pub struct Waveform {
     pub parameters: Vec<String>,
 }
 
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[cfg_attr(feature = "python", pyo3::pymethods)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
 impl Waveform {
-    #[new]
     pub fn new(matrix: Vec<Expression>, parameters: Vec<String>) -> Self {
         Self { matrix, parameters }
     }
@@ -48,6 +43,7 @@ impl Waveform {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -61,9 +57,9 @@ pub struct WaveformDefinition {
     pub definition: Waveform,
 }
 
-pickleable_new! {
-    impl WaveformDefinition {
-        pub fn new(name: String, definition: Waveform);
+impl WaveformDefinition {
+    pub fn new(name: String, definition: Waveform) -> Self {
+        Self { name, definition }
     }
 }
 
@@ -116,6 +112,7 @@ mod test_waveform_definition {
 
 pub type WaveformParameters = IndexMap<String, Expression>;
 
+// TODO(migration-guide): This class is now frozen.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
@@ -134,9 +131,9 @@ pub struct WaveformInvocation {
     pub parameters: WaveformParameters,
 }
 
-pickleable_new! {
-    impl WaveformInvocation {
-        pub fn new(name: String, parameters: WaveformParameters);
+impl WaveformInvocation {
+    pub fn new(name: String, parameters: WaveformParameters) -> Self {
+        Self { name, parameters }
     }
 }
 
