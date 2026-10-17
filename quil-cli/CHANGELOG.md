@@ -1,26 +1,41 @@
-## 0.14.3 (2026-11-04)
+## 0.14.3-rc.1 (2026-10-17)
 
 ### Features
 
-- allow waveform durations to be 10% off of an integer number of samples instead of 1% (#537)
+- improve ergonomics for Expressions
+- migrate PyQuil Expression functions
 
-## 0.14.3-beta.0 (2026-11-04)
+### Fixes
+
+- program Python bindings and stubs
+- stubs for OneOrMore<AnyInstruction>
+- remove waveform/templates post-rebase
+- update AnyInstruction stubs
+- handle PiConstant from evaluate_partial
+- run cargo fix
+- add back accidentally removed imports
+- resolve PiConstant unit-variant syntax after PyExpression split
+- remove accidental non-module from stubs
+- add missing attribute to strip stubs
+
+## 0.14.3-rc.0 (2026-10-17)
 
 ### Features
 
-- allow waveform durations to be 10% off of an integer number of samples instead of 1% (#537)
+- improve ergonomics for Expressions
+- migrate PyQuil Expression functions
 
-## 0.14.3-rc.1 (2026-11-04)
+### Fixes
 
-### Features
-
-- allow waveform durations to be 10% off of an integer number of samples instead of 1% (#537)
-
-## 0.14.3-rc.0 (2026-10-27)
-
-### Features
-
-- allow waveform durations to be 10% off of an integer number of samples instead of 1% (#537)
+- program Python bindings and stubs
+- stubs for OneOrMore<AnyInstruction>
+- remove waveform/templates post-rebase
+- update AnyInstruction stubs
+- handle PiConstant from evaluate_partial
+- run cargo fix
+- add back accidentally removed imports
+- resolve PiConstant unit-variant syntax after PyExpression split
+- remove accidental non-module from stubs
 
 ## 0.14.2 (2026-08-20)
 
