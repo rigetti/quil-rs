@@ -17,7 +17,7 @@ use pyo3::{
     types::{
         IntoPyDict as _, PyComplex, PyDict, PyFloat, PyFrozenSet, PyInt, PyString, PyTuple, PyType,
     },
-    CastError, IntoPyObjectExt, PyTypeCheck, PyTypeInfo,
+    CastError, IntoPyObjectExt, PyTraverseError, PyTypeCheck, PyTypeInfo, PyVisit,
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -37,7 +37,6 @@ use crate::{
     },
     instruction::gate::GateSignature,
     pickleable_new,
-    quil::ToQuilError,
     quilpy::{
         aliased, deprecated_or_new, deprecated_param,
         errors::{self, PickleError},
@@ -470,12 +469,8 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ArithmeticOperandLike {
             ArithmeticOperand::LiteralInteger(val.extract()?)
         } else if let Ok(val) = obj.cast::<pyo3::types::PyFloat>() {
             ArithmeticOperand::LiteralReal(val.extract()?)
-        } else if let Ok(val) = obj.cast::<DeclarationAt>() {
-            ArithmeticOperand::MemoryReference(val.get().memref(obj.py()))
-        } else if let Ok(val) = obj.cast::<MemoryReference>() {
-            ArithmeticOperand::MemoryReference(val.get().clone())
-        } else if let Ok(val) = obj.cast::<Declaration>() {
-            ArithmeticOperand::MemoryReference(val.get().to_memory_reference(0))
+        } else if let Ok(val) = obj.extract::<PyMemRef<'py>>() {
+            ArithmeticOperand::MemoryReference(val.into())
         } else {
             return Err(CastError::new(
                 obj,
@@ -505,12 +500,8 @@ impl<'a, 'py> FromPyObject<'a, 'py> for BinaryOperandLike {
             operand.get().clone()
         } else if let Ok(int) = obj.cast::<PyInt>() {
             BinaryOperand::LiteralInteger(int.extract()?)
-        } else if let Ok(decl) = obj.cast::<DeclarationAt>() {
-            BinaryOperand::MemoryReference(decl.get().memref(obj.py()))
-        } else if let Ok(mem_ref) = obj.cast::<MemoryReference>() {
-            BinaryOperand::MemoryReference(mem_ref.borrow().clone())
-        } else if let Ok(decl) = obj.cast::<Declaration>() {
-            BinaryOperand::MemoryReference(decl.get().to_memory_reference(0))
+        } else if let Ok(val) = obj.extract::<PyMemRef<'py>>() {
+            BinaryOperand::MemoryReference(val.into())
         } else {
             return Err(CastError::new(
                 obj,
@@ -531,10 +522,8 @@ impl<'a, 'py> FromPyObject<'a, 'py> for BinaryOperandLike {
 pub(crate) enum ComparisonOperandLike<'py> {
     Int(i64),
     Float(f64),
+    MemoryReference(PyMemRef<'py>),
     Wrapped(ComparisonOperand),
-    DeclarationAt(Bound<'py, DeclarationAt>),
-    Declaration(Bound<'py, Declaration>),
-    MemoryReference(MemoryReference),
 }
 
 impl From<ComparisonOperandLike<'_>> for ComparisonOperand {
@@ -543,14 +532,8 @@ impl From<ComparisonOperandLike<'_>> for ComparisonOperand {
             ComparisonOperandLike::Int(i) => ComparisonOperand::LiteralInteger(i),
             ComparisonOperandLike::Float(f) => ComparisonOperand::LiteralReal(f),
             ComparisonOperandLike::Wrapped(op) => op,
-            ComparisonOperandLike::DeclarationAt(decl_at) => {
-                ComparisonOperand::MemoryReference(decl_at.get().memref(decl_at.py()))
-            }
-            ComparisonOperandLike::Declaration(decl) => {
-                ComparisonOperand::MemoryReference(decl.get().to_memory_reference(0))
-            }
             ComparisonOperandLike::MemoryReference(mem_ref) => {
-                ComparisonOperand::MemoryReference(mem_ref)
+                ComparisonOperand::MemoryReference(mem_ref.into())
             }
         }
     }
@@ -1909,6 +1892,12 @@ impl GateConstructorPartial {
             parameters,
         })
     }
+
+    #[gen_stub(skip)]
+    fn __traverse__(&self, visit: PyVisit<'_>) -> Result<(), PyTraverseError> {
+        visit.call(&self.definition)?;
+        Ok(())
+    }
 }
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
@@ -1926,6 +1915,12 @@ impl GateConstructor {
             qubits,
             vec![],
         )?)
+    }
+
+    #[gen_stub(skip)]
+    fn __traverse__(&self, visit: PyVisit<'_>) -> Result<(), PyTraverseError> {
+        visit.call(&self.definition)?;
+        Ok(())
     }
 }
 

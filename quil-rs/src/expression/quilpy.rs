@@ -3,7 +3,7 @@ use pyo3::{
     exceptions::{PyDeprecationWarning, PyNotImplementedError},
     prelude::*,
     types::{PyAnyMethods, PyComplex, PyFloat, PyInt},
-    CastError, IntoPyObjectExt, PyClass, PyTypeCheck,
+    CastError, IntoPyObjectExt, PyClass, PyTraverseError, PyTypeCheck, PyVisit,
 };
 use rigetti_pyo3::{create_init_submodule, impl_repr};
 
@@ -449,6 +449,10 @@ impl PyExpression {
         Ok(format!("{:?}", Expression::try_from(slf)?))
     }
 
+    fn __str__(slf: &Bound<'_, Self>) -> PyResult<String> {
+        Self::to_quil_or_debug(slf)
+    }
+
     /// Return a new expression derived from this one, simplified as much as possible.
     #[pyo3(name = "into_simplified")]
     fn py_into_simplified(slf: &Bound<'_, Self>) -> PyResult<Expression> {
@@ -467,8 +471,8 @@ impl PyExpression {
     #[pyo3(name = "evaluate", signature = (variables=None, memory_references=None, /, partial=false))]
     fn py_evaluate(
         slf: &Bound<'_, Self>,
-        variables: Option<HashMap<String, Complex64>>,
-        memory_references: Option<HashMap<String, Vec<f64>>>,
+        variables: Option<HashMap<Parameter, Complex64>>,
+        memory_references: Option<HashMap<MemRefKey<'_>, Vec<f64>>>,
         partial: bool,
     ) -> PyResult<Evaluated> {
         let variables = variables.unwrap_or_default();
@@ -491,7 +495,7 @@ impl PyExpression {
     #[pyo3(name = "substitute_variables")]
     fn py_substitute_variables(
         slf: &Bound<'_, Self>,
-        variable_values: HashMap<String, ExpressionLike>,
+        variable_values: HashMap<Parameter, ExpressionLike>,
     ) -> PyResult<Expression> {
         Ok(Expression::try_from(slf)?.substitute_variables_impl(&variable_values))
     }
@@ -519,27 +523,78 @@ impl PyExpression {
         // Split and validate the substitution dictionary.
         let d = d.unwrap_or_default();
         let mut variables = HashMap::new();
-        let mut memory_references = HashMap::new();
+        let mut memory_references: HashMap<_, MemoryMap> = HashMap::new();
         for (key, value) in d {
             match (key, value) {
-                (SubstitutionKey::Variable(name), SubstitutionValue::Variable(value)) => {
+                (
+                    SubstitutionKey::Str(name) | SubstitutionKey::Parameter(Parameter { name }),
+                    SubstitutionValue::Variable(value),
+                ) => {
                     variables.insert(name, value);
                 }
+                (SubstitutionKey::Str(name), SubstitutionValue::Memory(values)) => {
+                    memory_references.insert(name, MemoryMap::Contiguous(values));
+                }
                 (SubstitutionKey::MemoryReference(memref), SubstitutionValue::Memory(values)) => {
-                    memory_references.insert(memref.name, values);
+                    // We should probably handle the case where memref.index() != 0,
+                    // but for now, we'll assume it does.
+                    memory_references
+                        .insert(memref.name().to_string(), MemoryMap::Contiguous(values));
                 }
-                (SubstitutionKey::Variable(name), SubstitutionValue::Memory(values)) => {
-                    memory_references.insert(name, values);
+                (SubstitutionKey::MemoryReference(memref), SubstitutionValue::Variable(value)) => {
+                    if !(value.is_finite() && value.im == 0.0) {
+                        return Err(ValueError::new_err(format!(
+                            "Expected a real number for MemoryReference '{memref}', but got a complex number: {value}"
+                        )));
+                    }
+                    let value = value.re;
+                    let idx = memref.index() as usize;
+
+                    // See if we've already seen this memory reference in the substitutions.
+                    // If so, add this variable substitution to the existing mapping.
+                    // Otherwise, create a new mapping for this memory reference.
+                    memory_references
+                        .entry(memref.name().to_string())
+                        .and_modify(|existing| {
+                            match existing {
+                                MemoryMap::Contiguous(existing_values) => {
+                                    if idx == existing_values.len() {
+                                        existing_values.push(value);
+                                    } else if idx < existing_values.len() {
+                                        existing_values[idx] = value;
+                                    } else {
+                                        // Swap to a disjoint mapping if the index is not contiguous.
+                                        let mut new_map = HashMap::new();
+                                        for (i, v) in existing_values.iter().enumerate() {
+                                            new_map.insert(i, *v);
+                                        }
+                                        new_map.insert(idx, value);
+                                        *existing = MemoryMap::Disjoint(new_map);
+                                    }
+                                }
+                                MemoryMap::Disjoint(existing_values) => {
+                                    existing_values.insert(idx, value);
+                                }
+                            }
+                        })
+                        .or_insert_with(|| match memref.index() {
+                            0 => MemoryMap::Contiguous(vec![value]),
+                            _ => MemoryMap::Disjoint(HashMap::from([(idx, value)])),
+                        });
                 }
-                (SubstitutionKey::MemoryReference(memref), SubstitutionValue::Variable(_)) => {
+                (SubstitutionKey::Parameter(param), SubstitutionValue::Memory(_)) => {
                     return Err(ValueError::new_err(format!(
-                        "Expected a list of floats for memory reference '{memref}', but got a variable substitution"
+                        "Expected a single complex value for Parameter '{param}', but got a memory reference substitution"
                     )));
                 }
             }
         }
 
-        PyExpression::py_evaluate(slf, Some(variables), Some(memory_references), true)
+        match Expression::try_from(slf)?.evaluate_partial(&variables, &memory_references) {
+            Expression::PiConstant => Ok(Evaluated::Full(Complex64::new(PI, 0.0))),
+            Expression::Number(c) => Ok(Evaluated::Full(c)),
+            other => Ok(Evaluated::Partial(other)),
+        }
     }
 
     fn __add__(slf: &Bound<'_, Self>, other: ExpressionLike) -> PyResult<Expression> {
@@ -774,7 +829,7 @@ impl AsView for Bound<'_, PiType> {
 /// A Quil formal parameter within an expression, e.g. ``%theta``.
 ///
 /// This corresponds to the [`Expression::Variable`] variant.
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
@@ -782,7 +837,34 @@ impl AsView for Bound<'_, PiType> {
 )]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub(crate) struct Parameter {
-    name: String, // TODO: replace this with `Py<PyString>`.
+    name: String, // TODO: replace this with `Py<PyString>` if possible.
+}
+
+impl std::fmt::Display for Parameter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "%{}", self.name)
+    }
+}
+
+impl std::borrow::Borrow<str> for Parameter {
+    fn borrow(&self) -> &str {
+        &self.name
+    }
+}
+
+// Ensure that `Parameter` hashes and compares exactly like `String`.
+// This is a requirement for it to implement Borrow<str> in a valid way.
+impl std::hash::Hash for Parameter {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.name.hash(state)
+    }
+}
+
+impl Eq for Parameter {}
+impl PartialEq for Parameter {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name
+    }
 }
 
 /// Wrapper around [`Parameter`] with type stubs that indicate it the method accepts `str`s, too.
@@ -879,9 +961,9 @@ impl Parameter {
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub(crate) struct Address {
     /// The underlying memory reference, e.g. `theta[0]`.
-    memory_reference: Py<MemoryReference>,
+    pub(crate) memory_reference: Py<MemoryReference>,
 }
-// TODO: Can this be united with `DeclarationAt`?
+// TODO: Can this be united with `PyMemRef`?
 
 impl FromPyObject<'_, '_> for Address {
     type Error = PyErr;
@@ -909,13 +991,12 @@ impl Hash for Address {
     }
 }
 
+impl Eq for Address {}
 impl PartialEq for Address {
     fn eq(&self, other: &Self) -> bool {
         self.memory_reference.get() == other.memory_reference.get()
     }
 }
-
-impl Eq for Address {}
 
 impl From<Address> for Expression {
     fn from(val: Address) -> Self {
@@ -943,7 +1024,7 @@ impl Address {
     #[new]
     fn __new__<'py>(py: Python<'py>, memory_reference: PyMemRef<'py>) -> PyResult<Self> {
         let memref = memory_reference
-            .try_borrow()
+            .try_borrow(py)
             .map(|memref| Ok(memref.to_owned().unbind()))
             .unwrap_or_else(|| Py::new(py, MemoryReference::from(memory_reference)))?;
 
@@ -954,6 +1035,12 @@ impl Address {
 
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> (&Bound<'py, MemoryReference>,) {
         (self.memory_reference.bind(py),)
+    }
+
+    #[gen_stub(skip)]
+    fn __traverse__(&self, visit: PyVisit<'_>) -> Result<(), PyTraverseError> {
+        visit.call(&self.memory_reference)?;
+        Ok(())
     }
 }
 
@@ -1179,14 +1266,117 @@ impl InfixOperator {
     }
 }
 
+// TODO(migration-guide): In PyQuil v4, substitution maps were keyed on a combination of types,
+// including `MemoryReference`s; the latter type implemented its own `__hash__` method
+// as a combination of the name _and_ memory offset.
+// Substitution maps required that each individual memory offset was provided
+// as a distinct memory reference (with different offsets, that is).
+//
+
+/// Used to store memory reference values in a parameter substitution map.
+///
+/// In PyQuil v4, users could substitute arbitrary portions of an expression's memory references
+/// via individual `MemoryReference`s.
+/// Using that method now now will raise deprecation warnings, but it will still work for now.
+pub(crate) enum MemoryMap {
+    /// A contiguous slice of memory values, starting at offset 0.
+    /// We assume users will provide all values, and start with this initially.
+    Contiguous(Vec<f64>),
+    /// If, when processing their substitutions, we encounter a gap in memory,
+    /// we switch to this representation, which allows for arbitrary offsets.
+    Disjoint(HashMap<usize, f64>),
+}
+
+impl MemoryMapper for MemoryMap {
+    fn get(&self, index: usize) -> Option<&f64> {
+        match self {
+            MemoryMap::Contiguous(values) => values.get(index),
+            MemoryMap::Disjoint(map) => map.get(&index),
+        }
+    }
+}
+
+/// A MemoryReference key in a parameter substitution map.
+///
+/// This allows Python users to provide a bona fide [`MemoryReference`] object
+/// (and many things that can be converted into one, like a `MemoryReference`)
+/// _or_ just the name of a declared memory reference when calling `Expression.evaluate`.
+///
+/// In order to be useful in substitution maps, it has to borrow as `str`,
+/// which additionally requires it implements Hash and PartialEq/Eq in the same way.
+/// In particular, two [`MemRefKey`]s are considered equal
+/// exactly when the name they reference is equal,
+/// even if there are multiple distinct [`MemoryReference`] objects with the same name.
+#[derive(FromPyObject, Debug)]
+pub(crate) enum MemRefKey<'py> {
+    Str(String),
+    MemRef(PyMemRef<'py>),
+}
+
+impl std::borrow::Borrow<str> for MemRefKey<'_> {
+    fn borrow(&self) -> &str {
+        match self {
+            Self::Str(var) => var,
+            Self::MemRef(memref) => memref.name(),
+        }
+    }
+}
+
+impl std::hash::Hash for MemRefKey<'_> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let borrowed: &str = self.borrow();
+        borrowed.hash(state)
+    }
+}
+
+impl Eq for MemRefKey<'_> {}
+impl PartialEq for MemRefKey<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        let x: &str = self.borrow();
+        let y: &str = other.borrow();
+        x == y
+    }
+}
+
 /// A key in a parameter substitution map.
 ///
 /// This allows Python users to provide a single dictionary when calling `Expression.substitute`,
 /// rather than needing to provide separate dictionaries for variables versus memory references.
-#[derive(FromPyObject, Debug, Clone, Hash, PartialEq, Eq)]
-pub(crate) enum SubstitutionKey {
-    Variable(String),
-    MemoryReference(MemoryReference),
+///
+/// It is distinct from [`MemRefKey`] because when given a bare string,
+/// we need to know whether the value is a single complex number (for a variable)
+/// or a list of floats (for a memory reference).
+#[derive(FromPyObject, Debug)]
+pub(crate) enum SubstitutionKey<'py> {
+    Str(String),
+    Parameter(Parameter),
+    MemoryReference(PyMemRef<'py>),
+}
+
+impl std::borrow::Borrow<str> for SubstitutionKey<'_> {
+    fn borrow(&self) -> &str {
+        match self {
+            SubstitutionKey::Str(var) => var,
+            SubstitutionKey::Parameter(param) => param.borrow(),
+            SubstitutionKey::MemoryReference(memref) => memref.name(),
+        }
+    }
+}
+
+impl std::hash::Hash for SubstitutionKey<'_> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let borrowed: &str = self.borrow();
+        borrowed.hash(state)
+    }
+}
+
+impl Eq for SubstitutionKey<'_> {}
+impl PartialEq for SubstitutionKey<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        let x: &str = self.borrow();
+        let y: &str = other.borrow();
+        x == y
+    }
 }
 
 #[derive(FromPyObject, Debug, Clone)]
@@ -1195,11 +1385,13 @@ pub(crate) enum SubstitutionValue {
     Memory(Vec<f64>),
 }
 
-impl From<SubstitutionKey> for Expression {
+impl From<SubstitutionKey<'_>> for Expression {
     fn from(key: SubstitutionKey) -> Self {
         match key {
-            SubstitutionKey::Variable(name) => Expression::Variable(name),
-            SubstitutionKey::MemoryReference(memref) => Expression::Address(memref),
+            // This assumes bare strings are meant to be variable names, not memory references.
+            SubstitutionKey::Str(var) => Expression::Variable(var),
+            SubstitutionKey::Parameter(param) => Expression::Variable(param.name),
+            SubstitutionKey::MemoryReference(memref) => Expression::Address(memref.into()),
         }
     }
 }
@@ -1395,7 +1587,8 @@ pub(crate) mod stubs {
     // otherwise, the longer type string is likely more appropriate and helpful.
     impl_stub_type!(Expression = PyExpression);
     impl_stub_type!(ExpressionLike = ExpressionDesignator | MemoryReference | String);
-    impl_stub_type!(SubstitutionKey = MemoryReference | String);
+    impl_stub_type!(MemRefKey<'_> = PyMemRef<'_> | String);
+    impl_stub_type!(SubstitutionKey<'_> = Parameter | PyMemRef<'_> | String);
     impl_stub_type!(SubstitutionValue = Complex64 | Vec<Complex64>);
     impl_stub_type!(Evaluated = Expression | Complex64);
 

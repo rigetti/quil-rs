@@ -465,6 +465,17 @@ fn is_small(x: f64) -> bool {
     x.abs() < 1e-16
 }
 
+/// A trait to provide a memory value when substituting memory references.
+pub trait MemoryMapper {
+    fn get(&self, index: usize) -> Option<&f64>;
+}
+
+impl MemoryMapper for Vec<f64> {
+    fn get(&self, index: usize) -> Option<&f64> {
+        <[f64]>::get(self, index)
+    }
+}
+
 impl Expression {
     /// Simplify the expression as much as possible, in-place.
     ///
@@ -531,14 +542,15 @@ impl Expression {
     ///
     /// assert_eq!(evaluated, Complex64::from(3.0))
     /// ```
-    pub fn evaluate<K1, K2>(
+    pub fn evaluate<K1, K2, M>(
         &self,
         variables: &HashMap<K1, Complex64>,
-        memory_references: &HashMap<K2, Vec<f64>>,
+        memory_references: &HashMap<K2, M>,
     ) -> Result<Complex64, EvaluationError>
     where
         K1: Borrow<str> + Hash + Eq,
         K2: Borrow<str> + Hash + Eq,
+        M: MemoryMapper,
     {
         match self.evaluate_partial(variables, memory_references) {
             Expression::Number(value) => Ok(value),
@@ -547,14 +559,15 @@ impl Expression {
         }
     }
 
-    pub(crate) fn evaluate_partial<K1, K2>(
+    pub(crate) fn evaluate_partial<K1, K2, M>(
         &self,
         variables: &HashMap<K1, Complex64>,
-        memory_references: &HashMap<K2, Vec<f64>>,
+        memory_references: &HashMap<K2, M>,
     ) -> Expression
     where
         K1: Borrow<str> + Hash + Eq,
         K2: Borrow<str> + Hash + Eq,
+        M: MemoryMapper,
     {
         use Expression::*;
 

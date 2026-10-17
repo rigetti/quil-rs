@@ -140,9 +140,10 @@ class Expression:
     def __rpow__(self, base: Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  instructions.MemoryReference  |  builtins.str, modulo: typing.Optional[typing.Any] = None) -> Expression: ...
     def __rsub__(self, other: Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  instructions.MemoryReference  |  builtins.str) -> Expression: ...
     def __rtruediv__(self, other: Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  instructions.MemoryReference  |  builtins.str) -> Expression: ...
+    def __str__(self) -> builtins.str: ...
     def __sub__(self, other: Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  instructions.MemoryReference  |  builtins.str) -> Expression: ...
     def __truediv__(self, other: Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  instructions.MemoryReference  |  builtins.str) -> Expression: ...
-    def evaluate(self, variables: typing.Optional[typing.Mapping[builtins.str, builtins.complex]] = None, memory_references: typing.Optional[typing.Mapping[builtins.str, typing.Sequence[builtins.float]]] = None, /, partial: builtins.bool = False) -> Expression  |  builtins.complex:
+    def evaluate(self, variables: typing.Optional[typing.Mapping[Parameter, builtins.complex]] = None, memory_references: typing.Optional[typing.Mapping[instructions.MemoryReference  |  instructions.DeclarationAt  |  instructions.Declaration  |  tuple[builtins.str, builtins.int]  |  builtins.str, typing.Sequence[builtins.float]]] = None, /, partial: builtins.bool = False) -> Expression  |  builtins.complex:
         r"""
         Evaluate an expression, expecting that it may be fully reduced to a single complex number.
         
@@ -179,7 +180,7 @@ class Expression:
         
         Raises a ``ParseExpressionError`` error if the string isn't a valid Quil expression.
         """
-    def substitute(self, d: typing.Optional[typing.Mapping[instructions.MemoryReference  |  builtins.str, builtins.complex  |  typing.Sequence[builtins.complex]]] = None, /) -> Expression  |  builtins.complex:
+    def substitute(self, d: typing.Optional[typing.Mapping[Parameter  |  instructions.MemoryReference  |  instructions.DeclarationAt  |  instructions.Declaration  |  tuple[builtins.str, builtins.int]  |  builtins.str, builtins.complex  |  typing.Sequence[builtins.complex]]] = None, /) -> Expression  |  builtins.complex:
         r"""
         Explicitly evaluate as much of ``expr`` as possible, using substitutions from `d`.
         
@@ -193,7 +194,7 @@ class Expression:
         
         Returns a complex number (if possible) or a partially simplified `Expression`.
         """
-    def substitute_variables(self, variable_values: typing.Mapping[builtins.str, Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  instructions.MemoryReference  |  builtins.str]) -> Expression:
+    def substitute_variables(self, variable_values: typing.Mapping[Parameter, Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  instructions.MemoryReference  |  builtins.str]) -> Expression:
         r"""
         Substitute an expression in the place of each matching variable.
         """
