@@ -44,10 +44,10 @@
                                 <a class="variable" href="#BasicBlock.terminator">terminator</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BasicBlock.label">label</a>
+                                <a class="variable" href="#BasicBlock.instructions">instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BasicBlock.instructions">instructions</a>
+                                <a class="variable" href="#BasicBlock.label">label</a>
                         </li>
                 </ul>
 
@@ -239,10 +239,10 @@
                     <a class="class" href="#MemoryRegion">MemoryRegion</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
+                                <a class="variable" href="#MemoryRegion.size">size</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryRegion.size">size</a>
+                                <a class="variable" href="#MemoryRegion.sharing">sharing</a>
                         </li>
                 </ul>
 
@@ -332,7 +332,7 @@
                                 <a class="variable" href="#Program.frames">frames</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.instructions">instructions</a>
+                                <a class="variable" href="#Program.declarations">declarations</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.gate_definitions">gate_definitions</a>
@@ -341,7 +341,16 @@
                                 <a class="variable" href="#Program.waveforms">waveforms</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Program.body_instructions">body_instructions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.instructions">instructions</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Program.circuits">circuits</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Program.calibrations">calibrations</a>
@@ -350,16 +359,7 @@
                                 <a class="variable" href="#Program.used_qubits">used_qubits</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Program.declarations">declarations</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Program.pragma_extern_map">pragma_extern_map</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.memory_regions">memory_regions</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Program.circuits">circuits</a>
                         </li>
                 </ul>
 
@@ -407,10 +407,10 @@
                     <a class="class" href="#TimeSpanSeconds">TimeSpanSeconds</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#TimeSpanSeconds.end">end</a>
+                                <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
                         </li>
                         <li>
-                                <a class="variable" href="#TimeSpanSeconds.duration">duration</a>
+                                <a class="variable" href="#TimeSpanSeconds.end">end</a>
                         </li>
                         <li>
                                 <a class="variable" href="#TimeSpanSeconds.start">start</a>
@@ -538,6 +538,17 @@ for it to be counted in the depth.</li>
 
 
                             </div>
+                            <div id="BasicBlock.instructions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">instructions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#BasicBlock.instructions"></a>
+    
+    
+
+                            </div>
                             <div id="BasicBlock.label" class="classattr">
                                 <div class="attr variable">
             <span class="name">label</span>
@@ -551,17 +562,6 @@ for it to be counted in the depth.</li>
 <p>This is used to target this block in control flow.</p>
 </div>
 
-
-                            </div>
-                            <div id="BasicBlock.instructions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">instructions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#BasicBlock.instructions"></a>
-    
-    
 
                             </div>
                 </section>
@@ -1405,17 +1405,6 @@ within the resulting program's body instructions.</li>
     
     
 
-                            <div id="MemoryRegion.sharing" class="classattr">
-                                <div class="attr variable">
-            <span class="name">sharing</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MemoryRegion.sharing"></a>
-    
-    
-
-                            </div>
                             <div id="MemoryRegion.size" class="classattr">
                                 <div class="attr variable">
             <span class="name">size</span>
@@ -1423,6 +1412,17 @@ within the resulting program's body instructions.</li>
         
     </div>
     <a class="headerlink" href="#MemoryRegion.size"></a>
+    
+    
+
+                            </div>
+                            <div id="MemoryRegion.sharing" class="classattr">
+                                <div class="attr variable">
+            <span class="name">sharing</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MemoryRegion.sharing"></a>
     
     
 
@@ -2065,13 +2065,13 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
     
 
                             </div>
-                            <div id="Program.instructions" class="classattr">
+                            <div id="Program.declarations" class="classattr">
                                 <div class="attr variable">
-            <span class="name">instructions</span>
+            <span class="name">declarations</span>
 
         
     </div>
-    <a class="headerlink" href="#Program.instructions"></a>
+    <a class="headerlink" href="#Program.declarations"></a>
     
     
 
@@ -2098,6 +2098,17 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
     
 
                             </div>
+                            <div id="Program.memory_regions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">memory_regions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.memory_regions"></a>
+    
+    
+
+                            </div>
                             <div id="Program.body_instructions" class="classattr">
                                 <div class="attr variable">
             <span class="name">body_instructions</span>
@@ -2105,6 +2116,28 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
         
     </div>
     <a class="headerlink" href="#Program.body_instructions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.instructions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">instructions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.instructions"></a>
+    
+    
+
+                            </div>
+                            <div id="Program.circuits" class="classattr">
+                                <div class="attr variable">
+            <span class="name">circuits</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Program.circuits"></a>
     
     
 
@@ -2131,17 +2164,6 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
     
 
                             </div>
-                            <div id="Program.declarations" class="classattr">
-                                <div class="attr variable">
-            <span class="name">declarations</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.declarations"></a>
-    
-    
-
-                            </div>
                             <div id="Program.pragma_extern_map" class="classattr">
                                 <div class="attr variable">
             <span class="name">pragma_extern_map</span>
@@ -2149,28 +2171,6 @@ and <a href="Self::default_qubit_resolver"><code>default_qubit_resolver</code></
         
     </div>
     <a class="headerlink" href="#Program.pragma_extern_map"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.memory_regions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">memory_regions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.memory_regions"></a>
-    
-    
-
-                            </div>
-                            <div id="Program.circuits" class="classattr">
-                                <div class="attr variable">
-            <span class="name">circuits</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Program.circuits"></a>
     
     
 
@@ -2345,6 +2345,19 @@ each of which is assigned a start time and duration.</p>
 </div>
 
 
+                            <div id="TimeSpanSeconds.duration" class="classattr">
+                                <div class="attr variable">
+            <span class="name">duration</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TimeSpanSeconds.duration"></a>
+    
+            <div class="docstring"><p>The duration of the time span, in seconds.</p>
+</div>
+
+
+                            </div>
                             <div id="TimeSpanSeconds.end" class="classattr">
                                 <div class="attr variable">
             <span class="name">end</span>
@@ -2356,19 +2369,6 @@ each of which is assigned a start time and duration.</p>
             <div class="docstring"><p>The end time of the time span, in seconds.</p>
 
 <p>This is the sum of the start time and duration.</p>
-</div>
-
-
-                            </div>
-                            <div id="TimeSpanSeconds.duration" class="classattr">
-                                <div class="attr variable">
-            <span class="name">duration</span>
-
-        
-    </div>
-    <a class="headerlink" href="#TimeSpanSeconds.duration"></a>
-    
-            <div class="docstring"><p>The duration of the time span, in seconds.</p>
 </div>
 
 
