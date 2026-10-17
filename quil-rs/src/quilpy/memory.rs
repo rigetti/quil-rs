@@ -11,6 +11,7 @@ use pyo3::{
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
 use crate::{
+    expression::quilpy::Address,
     instruction::{
         quilpy::{ArithmeticOperandLike, BinaryOperandLike, ComparisonOperandLike},
         Arithmetic, ArithmeticOperand, ArithmeticOperator, BinaryLogic, BinaryOperator, Comparison,
@@ -22,10 +23,15 @@ use crate::{
 
 // TODO: This should probably be in a different module.
 /// A trait for types that might be able to provide a [`Borrowed`] to Python data.
-pub(crate) trait TryAsBorrowed<'py, T> {
-    fn try_borrow<'a>(&'a self) -> Option<Borrowed<'a, 'py, T>>;
+pub(crate) trait TryAsBorrowed<T> {
+    /// If `self` is a Python object that can be borrowed as a `T` return a [`Borrowed`] to it.
+    fn try_borrow<'a, 'py>(&'a self, py: Python<'py>) -> Option<Borrowed<'a, 'py, T>>;
 }
 
+/// Used to allow extraction of a [`MemoryReference`] from `[str, int]`/`(str, int)` pairs.
+///
+/// This concept is a bit questionable, but PyQuil v4 supported it,
+/// so we support it too, for backwards compatibility.
 #[derive(FromPyObject)]
 pub(crate) struct MemoryReferencePair {
     #[pyo3(item(0))]
@@ -41,12 +47,108 @@ pub(crate) struct MemoryReferencePair {
 /// See [`DeclarationAt`] for examples how these fit together for program building.
 ///
 /// Prefer this to `MemoryReferenceLike` if there would be value (e.g., for validation)
-/// in knowing the underlying [`Declaration`] it is meant to refer to,
-#[derive(FromPyObject)]
+/// in knowing the underlying [`Declaration`] it is a reference to.
+///
+/// *Importantly*, this type should probably only be used
+/// if the argument you're extracting is expected to used as a [`MemoryReference`],
+/// and probably _not_ to derive a new [`Declaration`] or [`DeclarationAt`].
+/// That said, this type does implement [`TryAsBorrowed`] for [`Declaration`],
+/// allow you to get the underlying [`Declaration`] if it exists.
+/// This means it can be used to opportunistically provide additional validation
+/// while allowing a user to provide a plain [`MemoryReference`], if that's all they've got.
+#[derive(Debug, FromPyObject)]
+#[cfg_attr(feature = "stubs", derive(IntoPyObject))]
 pub(crate) enum PyMemRef<'py> {
     DeclarationAt(Bound<'py, DeclarationAt>),
     Declaration(Bound<'py, Declaration>),
     MemoryReference(Bound<'py, MemoryReference>),
+    Address(Bound<'py, Address>),
+}
+
+impl std::fmt::Display for PyMemRef<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}[{}]", self.name(), self.index())
+    }
+}
+
+impl PyMemRef<'_> {
+    /// Get a reference to the name of the memory region this `PyMemRef` refers to.
+    pub(crate) fn name(&self) -> &str {
+        match self {
+            PyMemRef::DeclarationAt(decl_at) => decl_at
+                .get()
+                .declaration
+                .bind_borrowed(decl_at.py())
+                .get()
+                .name
+                .as_str(),
+            PyMemRef::Declaration(decl) => decl.get().name.as_str(),
+            PyMemRef::MemoryReference(mem_ref) => mem_ref.get().name.as_str(),
+            PyMemRef::Address(addr) => addr.get().memory_reference.get().name.as_str(),
+        }
+    }
+
+    /// Get the index of the memory reference this `PyMemRef` refers to.
+    ///
+    /// Note that for a `PyMemRef` derived from a [`Declaration`], this will always return `0`.
+    pub(crate) fn index(&self) -> u64 {
+        match self {
+            PyMemRef::DeclarationAt(decl_at) => decl_at.get().index,
+            PyMemRef::Declaration(_) => 0,
+            PyMemRef::MemoryReference(mem_ref) => mem_ref.get().index,
+            PyMemRef::Address(addr) => addr.get().memory_reference.get().index,
+        }
+    }
+}
+
+impl std::convert::AsRef<str> for PyMemRef<'_> {
+    fn as_ref(&self) -> &str {
+        self.name()
+    }
+}
+
+impl From<PyMemRef<'_>> for MemoryReference {
+    fn from(value: PyMemRef<'_>) -> Self {
+        match value {
+            PyMemRef::DeclarationAt(decl_at) => decl_at.get().memref(decl_at.py()),
+            PyMemRef::Declaration(decl) => decl.get().memref(0),
+            PyMemRef::MemoryReference(mem_ref) => mem_ref.borrow().clone(),
+            PyMemRef::Address(addr) => addr.get().memory_reference.get().clone(),
+        }
+    }
+}
+
+impl PartialEq for PyMemRef<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (PyMemRef::DeclarationAt(lhs), PyMemRef::DeclarationAt(rhs)) => {
+                lhs.get().declaration.bind(lhs.py()).get()
+                    == rhs.get().declaration.bind(rhs.py()).get()
+            }
+            (PyMemRef::Declaration(lhs), PyMemRef::Declaration(rhs)) => lhs.get() == rhs.get(),
+            (PyMemRef::MemoryReference(lhs), PyMemRef::MemoryReference(rhs)) => {
+                lhs.get() == rhs.get()
+            }
+            (PyMemRef::Address(lhs), PyMemRef::Address(rhs)) => {
+                lhs.get().memory_reference.get() == rhs.get().memory_reference.get()
+            }
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<MemoryReference> for PyMemRef<'_> {
+    fn eq(&self, other: &MemoryReference) -> bool {
+        match self {
+            PyMemRef::DeclarationAt(decl_at) => {
+                let d = decl_at.get();
+                d.index == other.index && d.declaration.bind(decl_at.py()).get().name == other.name
+            }
+            PyMemRef::Declaration(decl) => 0 == other.index && decl.get().name == other.name,
+            PyMemRef::MemoryReference(mem_ref) => mem_ref.get() == other,
+            PyMemRef::Address(addr) => addr.get().memory_reference.get() == other,
+        }
+    }
 }
 
 // Generally we don't want to return this as a Python type,
@@ -62,7 +164,7 @@ impl From<MemoryReferenceLike> for MemoryReference {
 
 impl Declaration {
     /// Create a `MemoryReference` from `self`, copying the underlying `Declaration`'s name.
-    pub(crate) fn to_memory_reference(&self, index: u64) -> MemoryReference {
+    pub(crate) fn memref(&self, index: u64) -> MemoryReference {
         MemoryReference::new(self.name.clone(), index)
     }
 }
@@ -135,16 +237,14 @@ impl DeclarationAt {
     ///
     /// This makes a clone the `Declaration`'s name.
     pub fn memref<'py>(&self, py: Python<'py>) -> MemoryReference {
-        self.declaration
-            .bind(py)
-            .get()
-            .to_memory_reference(self.index)
+        self.declaration.bind(py).get().memref(self.index)
     }
 
     /// Return an error if a comparison instruction for `self := a <op> b`
     /// is known to produce invalid Quil.
     pub fn check_comparison<'py>(
         &self,
+        py: Python<'py>,
         a: &PyMemRef<'py>,
         b: &ComparisonOperandLike<'py>,
     ) -> PyResult<()> {
@@ -155,7 +255,7 @@ impl DeclarationAt {
             ));
         }
 
-        if matches!(same_type(a, b), Some(false)) {
+        if matches!(same_type(py, a, b), Some(false)) {
             return Err(errors::ValueError::new_err(
                 "the left-hand side and right-hand side of a comparison must have the same type",
             ));
@@ -368,7 +468,7 @@ impl DeclarationAt {
         a: PyMemRef<'py>,
         b: ComparisonOperandLike<'py>,
     ) -> PyResult<Comparison> {
-        self.check_comparison(&a, &b)?;
+        self.check_comparison(py, &a, &b)?;
         Ok(Comparison::new(
             ComparisonOperator::Equal,
             self.memref(py),
@@ -384,7 +484,7 @@ impl DeclarationAt {
         a: PyMemRef<'py>,
         b: ComparisonOperandLike<'py>,
     ) -> PyResult<Comparison> {
-        self.check_comparison(&a, &b)?;
+        self.check_comparison(py, &a, &b)?;
         Ok(Comparison::new(
             ComparisonOperator::GreaterThan,
             self.memref(py),
@@ -400,7 +500,7 @@ impl DeclarationAt {
         a: PyMemRef<'py>,
         b: ComparisonOperandLike<'py>,
     ) -> PyResult<Comparison> {
-        self.check_comparison(&a, &b)?;
+        self.check_comparison(py, &a, &b)?;
         Ok(Comparison::new(
             ComparisonOperator::GreaterThanOrEqual,
             self.memref(py),
@@ -416,7 +516,7 @@ impl DeclarationAt {
         a: PyMemRef<'py>,
         b: ComparisonOperandLike<'py>,
     ) -> PyResult<Comparison> {
-        self.check_comparison(&a, &b)?;
+        self.check_comparison(py, &a, &b)?;
         Ok(Comparison::new(
             ComparisonOperator::LessThan,
             self.memref(py),
@@ -432,7 +532,7 @@ impl DeclarationAt {
         a: PyMemRef<'py>,
         b: ComparisonOperandLike<'py>,
     ) -> PyResult<Comparison> {
-        self.check_comparison(&a, &b)?;
+        self.check_comparison(py, &a, &b)?;
         Ok(Comparison::new(
             ComparisonOperator::LessThanOrEqual,
             self.memref(py),
@@ -461,7 +561,7 @@ impl<'a, 'py> FromPyObject<'a, 'py> for MemoryReferenceLike {
             decl.get().memref(obj.py())
         } else if let Ok(decl) = obj.cast::<Declaration>() {
             // Create a new `MemoryReference` from a `Declaration` assuming an index of 0.
-            decl.get().to_memory_reference(0)
+            decl.get().memref(0)
         } else if let Ok(s) = obj.cast::<PyTuple>() {
             // Create a new `MemoryReference` from a tuple of `(str, int)` pair.
             let (name, index) = s.extract()?;
@@ -487,60 +587,49 @@ impl<'a, 'py> FromPyObject<'a, 'py> for MemoryReferenceLike {
     }
 }
 
-impl From<PyMemRef<'_>> for MemoryReference {
-    fn from(value: PyMemRef<'_>) -> Self {
-        match value {
-            PyMemRef::DeclarationAt(decl_at) => decl_at.get().memref(decl_at.py()),
-            PyMemRef::Declaration(decl) => decl.get().to_memory_reference(0),
-            PyMemRef::MemoryReference(mem_ref) => mem_ref.borrow().clone(),
-        }
-    }
-}
-
 /// Check if two values derived from [`Declaration`]s have the same data types.
 ///
 /// If the underlying [`Declaration`]s are known, this returns `Some(b)`,
 /// where `b` is true if the data types match and false otherwise.
 /// If we can't get the underlying [`Declaration`]s, this returns `None`.
-pub(crate) fn same_type<'py, T, U>(lhs: &T, rhs: &U) -> Option<bool>
+pub(crate) fn same_type<T, U>(py: Python<'_>, lhs: &T, rhs: &U) -> Option<bool>
 where
-    T: TryAsBorrowed<'py, Declaration>,
-    U: TryAsBorrowed<'py, Declaration>,
+    T: TryAsBorrowed<Declaration>,
+    U: TryAsBorrowed<Declaration>,
 {
-    lhs.try_borrow().and_then(|l| {
-        rhs.try_borrow()
+    lhs.try_borrow(py).and_then(|l| {
+        rhs.try_borrow(py)
             .map(|r| l.get().size.data_type == r.get().size.data_type)
     })
 }
 
-impl<'py> TryAsBorrowed<'py, Declaration> for ComparisonOperandLike<'py> {
-    fn try_borrow<'a>(&'a self) -> Option<Borrowed<'a, 'py, Declaration>> {
+impl TryAsBorrowed<Declaration> for ComparisonOperandLike<'_> {
+    fn try_borrow<'a, 'py>(&'a self, py: Python<'py>) -> Option<Borrowed<'a, 'py, Declaration>> {
         match self {
-            ComparisonOperandLike::Declaration(decl) => Some(decl.as_borrowed()),
-            ComparisonOperandLike::DeclarationAt(decl_at) => {
-                Some(decl_at.get().declaration.bind_borrowed(decl_at.py()))
-            }
+            ComparisonOperandLike::MemoryReference(memref) => memref.try_borrow(py),
             _ => None,
         }
     }
 }
 
-impl<'py> TryAsBorrowed<'py, Declaration> for PyMemRef<'py> {
-    fn try_borrow<'a>(&'a self) -> Option<Borrowed<'a, 'py, Declaration>> {
+impl TryAsBorrowed<Declaration> for PyMemRef<'_> {
+    fn try_borrow<'a, 'py>(&'a self, py: Python<'py>) -> Option<Borrowed<'a, 'py, Declaration>> {
         match self {
-            PyMemRef::Declaration(decl) => Some(decl.as_borrowed()),
-            PyMemRef::DeclarationAt(decl_at) => {
-                Some(decl_at.get().declaration.bind_borrowed(decl_at.py()))
-            }
-            _ => None,
+            PyMemRef::Declaration(decl) => Some(decl.as_unbound().bind_borrowed(py)),
+            PyMemRef::DeclarationAt(decl_at) => Some(decl_at.get().declaration.bind_borrowed(py)),
+            PyMemRef::Address(_) | PyMemRef::MemoryReference(_) => None,
         }
     }
 }
 
-impl<'py> TryAsBorrowed<'py, MemoryReference> for PyMemRef<'py> {
-    fn try_borrow<'a>(&'a self) -> Option<Borrowed<'a, 'py, MemoryReference>> {
+impl TryAsBorrowed<MemoryReference> for PyMemRef<'_> {
+    fn try_borrow<'a, 'py>(
+        &'a self,
+        py: Python<'py>,
+    ) -> Option<Borrowed<'a, 'py, MemoryReference>> {
         match self {
-            PyMemRef::MemoryReference(mem_ref) => Some(mem_ref.as_borrowed()),
+            PyMemRef::MemoryReference(mem_ref) => Some(mem_ref.as_unbound().bind_borrowed(py)),
+            PyMemRef::Address(addr) => Some(addr.get().memory_reference.bind_borrowed(py)),
             PyMemRef::DeclarationAt(_) | PyMemRef::Declaration(_) => None,
         }
     }
