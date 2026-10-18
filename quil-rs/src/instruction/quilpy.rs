@@ -32,7 +32,8 @@ use crate::{
     expression::{
         consts::{IMAGINARY_UNIT, ONE, ZERO},
         quilpy::{
-            quil_exp, ExpressionLike, Parameter, ParameterLike, PyExpression, QualifiedExpression,
+            quil_exp, Address, ExpressionLike, Parameter, ParameterLike, PyExpression,
+            QualifiedExpression,
         },
     },
     instruction::gate::GateSignature,
@@ -176,15 +177,29 @@ pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("LabelTargetParameter", union!(py, PyString, Target, Label)?)?;
     m.add(
         "MemoryReferenceDesignator",
-        union!(py, MemoryReference, DeclarationAt, Declaration, PyTuple)?,
+        union!(
+            py,
+            MemoryReference,
+            Address,
+            DeclarationAt,
+            Declaration,
+            PyTuple
+        )?,
     )?;
     m.add(
         "QubitDesignator",
-        union!(py, PyQubit, QubitPlaceholder, PyInt, PyString)?,
+        union!(
+            py,
+            FixedQubit,
+            FormalArgument,
+            QubitPlaceholder,
+            PyInt,
+            PyString
+        )?,
     )?;
     m.add(
         "PauliTargetDesignator",
-        union!(py, PyQubit, PyInt, PyString)?,
+        union!(py, FixedQubit, FormalArgument, PyInt, PyString)?,
     )?;
 
     Ok(())
@@ -3562,19 +3577,31 @@ impl PauliTerm {
 
     /// Get the [`PauliGate`] matching the argument in the [`PauliTerm`],
     /// or [`PauliGate::I`] if the argument is not present in the term.
-    fn __getitem__(&self, argument: &str) -> PauliGate {
-        self.arguments
+    ///
+    /// As a special case for backwards compatibility, this accepts integer arguments
+    /// and `Qubit::Fixed` instances, which are converted into a string of the form ``"q{index}"``.
+    fn __getitem__(&self, argument: PauliArg) -> PyResult<PauliGate> {
+        let argument = match argument.0 {
+            Qubit::Variable(v) => v,
+            Qubit::Fixed(v) => format!("q{v}"),
+            Qubit::Placeholder(_) => {
+                return Err(errors::ValueError::new_err(
+                    "QubitPlaceholders are not supported",
+                ));
+            }
+        };
+
+        Ok(self
+            .arguments
             .iter()
-            .find_map(
-                |(gate, qubit)| {
-                    if qubit == argument {
-                        Some(*gate)
-                    } else {
-                        None
-                    }
-                },
-            )
-            .unwrap_or(PauliGate::I)
+            .find_map(|(gate, qubit)| {
+                if *qubit == argument {
+                    Some(*gate)
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(PauliGate::I))
     }
 
     /// Iterate over the arguments in this [`PauliTerm`].
@@ -3987,9 +4014,11 @@ impl PauliTerm {
                 // using a HashMap<Qubit, PauliGate> rather than the Quil-specific representation.
                 let mut qubit_map: HashMap<u64, PauliGate> = HashMap::new();
                 for (gate, qubit) in &self.arguments {
-                    if let Ok(index) = qubit.parse::<u64>() {
-                        qubit_map.insert(index, *gate);
-                    }
+                    qubit
+                        .strip_prefix('q')
+                        .and_then(|q| q.parse::<u64>().ok())
+                        .or_else(|| qubit.parse::<u64>().ok())
+                        .map(|index| qubit_map.insert(index, *gate));
                 }
                 qubits
                     .iter()
@@ -4038,36 +4067,50 @@ impl PauliTerm {
     }
 }
 
+#[expect(non_snake_case)]
+impl PauliTerm {
+    fn ID() -> Self {
+        PauliTerm::new(Vec::new(), ONE)
+    }
+
+    fn ZERO() -> Self {
+        PauliTerm::new(Vec::new(), ZERO)
+    }
+
+    fn IDx(x: Expression) -> Self {
+        PauliTerm::new(Vec::new(), x)
+    }
+}
+
 impl std::ops::Add<Expression> for PauliTerm {
-    type Output = PauliTerm;
+    type Output = PauliSum;
 
     fn add(self, rhs: Expression) -> Self::Output {
-        PauliTerm {
-            arguments: self.arguments,
-            expression: simple!(self.expression + rhs),
-        }
+        self + PauliTerm::IDx(rhs)
+    }
+}
+
+impl std::ops::Add<PauliTerm> for Expression {
+    type Output = PauliSum;
+
+    fn add(self, rhs: PauliTerm) -> Self::Output {
+        PauliTerm::IDx(self) + rhs
     }
 }
 
 impl std::ops::Sub<Expression> for PauliTerm {
-    type Output = PauliTerm;
+    type Output = PauliSum;
 
     fn sub(self, rhs: Expression) -> Self::Output {
-        PauliTerm {
-            arguments: self.arguments,
-            expression: simple!(self.expression - rhs),
-        }
+        self - PauliTerm::IDx(rhs)
     }
 }
 
 impl std::ops::Sub<PauliTerm> for Expression {
-    type Output = PauliTerm;
+    type Output = PauliSum;
 
     fn sub(self, rhs: PauliTerm) -> Self::Output {
-        PauliTerm {
-            arguments: rhs.arguments,
-            expression: simple!(self - rhs.expression),
-        }
+        PauliTerm::IDx(self) - rhs
     }
 }
 
@@ -4156,10 +4199,7 @@ impl std::ops::Add<Expression> for PauliSum {
             arguments,
             mut terms,
         } = self;
-        terms.push(PauliTerm {
-            arguments: Vec::new(),
-            expression: rhs,
-        });
+        terms.push(PauliTerm::IDx(rhs));
         PauliSum { arguments, terms }
     }
 }
@@ -4210,10 +4250,9 @@ impl std::ops::Sub<Expression> for PauliSum {
             arguments,
             mut terms,
         } = self;
-        terms.push(PauliTerm {
-            arguments: Vec::new(),
-            expression: simple!(Expression::Number(-Complex64::ONE) * rhs),
-        });
+        terms.push(PauliTerm::IDx(simple!(
+            Expression::Number(-Complex64::ONE) * rhs
+        )));
         PauliSum { arguments, terms }
     }
 }
@@ -4556,6 +4595,8 @@ impl PauliSum {
         }
     }
 
+    // TODO: Ideally, we'd store `Qubit`s instead. We could use a Python-specific class,
+    // which has some advantages, or update the Rust version (as a breaking change).
     fn __getnewargs__(&self) -> (Vec<PauliTerm>, Vec<String>) {
         (self.terms.clone(), self.arguments.clone())
     }
@@ -6167,7 +6208,7 @@ mod macros {
 
 #[cfg(feature = "stubs")]
 mod stubs {
-    use crate::quilpy::impl_stub_enum;
+    use crate::{expression::quilpy::Address, quilpy::impl_stub_enum};
     use pyo3_stub_gen::{impl_stub_type, type_alias};
 
     #[allow(clippy::wildcard_imports)]
@@ -6179,9 +6220,10 @@ mod stubs {
     impl_stub_type!(GateModifierDesignator = GateModifier | String);
     impl_stub_type!(FrameAttributeValueLike = AttributeValue | ExpressionLike);
     impl_stub_type!(
-        MemoryReferenceLike = MemoryReference | DeclarationAt | Declaration | (String, u64)
+        MemoryReferenceLike =
+            MemoryReference | Address | DeclarationAt | Declaration | (String, u64)
     );
-    impl_stub_type!(PauliArg = Qubit | i64 | String);
+    impl_stub_type!(PauliArg = FixedQubit | FormalArgument | i64 | String);
     impl_stub_type!(PyMemRef<'_> = MemoryReferenceLike);
 
     // See docs on `TargetLike` and `LabelTargetLike` for why these are separate types.

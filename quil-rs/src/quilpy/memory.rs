@@ -556,6 +556,8 @@ impl<'a, 'py> FromPyObject<'a, 'py> for MemoryReferenceLike {
     fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
         let mem_ref = if let Ok(mem_ref) = obj.cast::<MemoryReference>() {
             mem_ref.borrow().clone()
+        } else if let Ok(address) = obj.cast::<Address>() {
+            address.get().memory_reference.get().clone()
         } else if let Ok(decl) = obj.cast::<DeclarationAt>() {
             // Create a new `MemoryReference` from an underlying `Declaration` and index.
             decl.get().memref(obj.py())
