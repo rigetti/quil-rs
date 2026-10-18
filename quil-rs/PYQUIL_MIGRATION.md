@@ -1,86 +1,3 @@
-
-## Three categories of changes
-
-- Immutable classes will break code that attempts to modify hashable objects in-place.
-- Some `isinstance` checks may need to be rewritten.
-- Some constructors signatures have been updated in a way that requires changes.
-
-### `isinstance` Checks
-
-PyQuil versions of `quil` classes have been migrated to their `quil` equivalents.
-
-PyQuil subclasses of `quil` classes (e.g., `ClassicalAdd`, `ClassicalAnd`, `ClassicalDiv`, etc.)
-have been redefined as deprecated functions
-that return the correct `quil` class with the appropriate parameters:
-
-This:
-  `isinstance(inst, ClassicalAdd)`
-must now be written as
-  `isinstance(inst, ArithmeticBinaryOp) and inst.op == ArithmeticOp.ADD`
-
-- Constructing them will issue a deprecation warning.
-- Some `isinstance` checks will now be flagged by static type checkers and will fail when called.
-
-- `MemoryReference` is no longer a subclass of `Expression`.
-- This:
-    `isinstance(expr, MemoryReference)`
-  continues to work, but is comparing against the `Instruction` subclass `MemoryReference`.
-  If you want to know if `expr` is an `Expression` around a `MemoryReference`, you should write:
-    `isinstance(expr, Expression.Address)`
-- `MemoryReference` implements all the `__add__`, `__sub__`, etc. methods
-  and returns an `Expression`, so this still works:
-    `MemoryReference("ro", 0) + 1`
-  and you get an `Expression.Address` around the `MemoryReference`.
-
-### Immutable classes will break code that attempts to modify hashable objects in-place.
-
-All `instruction` classes are now immutable.
-
-This:
-
-```python
-gate = Gate("X", qubits=[0])
-gate.qubits[0] = 1
-```
-
-will now raise an `AttributeError`, and must be rewritten as:
-
-```python
-gate = Gate("X", qubits=[0])
-gate = Gate(gate.name, qubits[1], params=gate.params)
-```
-
-### In a few cases, the PyQuil constructor needed breaking changes
-
-- The `nonblocking` parameter of `Capture`, `RawCapture`, and `Pulse` is now keyword-only.
-  This:
-    `Capture(qubit, memory_reference, True)`
-  must now be written as
-    `Capture(qubit, memory_reference, nonblocking=True)`
-  or preferably as
-    `Capture(qubit, memory_reference, blocking=False)`
-
------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # Migrating from PyQuil v4 to `quil` (Python bindings)
 
 This document collects the class-by-class and method-by-method changes needed
@@ -97,10 +14,60 @@ Unless noted otherwise, "PyQuil v4" refers to the old `pyquil.quilatom` /
 exposed by `quil.instructions` (and, in one case, `quil.instructions.Frame`
 at the Rust level for users of the `python` feature in `quil-rs` directly).
 
+## Three themes
+
+Most of the breaking changes below fall into one of three categories:
+
+1. **Immutability.** All `instruction` classes are now immutable (frozen)
+   from Python. Code that mutates a hashable object in place, e.g.:
+
+   ```python
+   gate = Gate("X", qubits=[0])
+   gate.qubits[0] = 1
+   ```
+
+   will now raise an `AttributeError`. Construct a new instance instead:
+
+   ```python
+   gate = Gate("X", qubits=[0])
+   gate = Gate(gate.name, parameters=gate.parameters, qubits=[1])
+   ```
+
+2. **`isinstance` checks.** PyQuil's own subclasses of the old `quilatom`
+   classes (e.g. `ClassicalAdd`, `ClassicalAnd`, `ClassicalEqual`) no longer
+   correspond to distinct `quil` types; they map onto the renamed/merged
+   classes described below (e.g. `Arithmetic`, `Comparison`), distinguished
+   by an `operator` attribute rather than by subclass. So, for instance:
+
+   ```python
+   isinstance(inst, ClassicalAdd)
+   ```
+
+   must become:
+
+   ```python
+   isinstance(inst, Arithmetic) and inst.operator == ArithmeticOperator.Add
+   ```
+
+   Separately, `MemoryReference` is no longer a subclass of `Expression`.
+   `isinstance(expr, MemoryReference)` still works, but now compares against
+   the `Instruction`-adjacent `MemoryReference` type directly. To check
+   whether an `Expression` wraps a `MemoryReference`, use
+   `isinstance(expr, Expression.Address)` instead. `MemoryReference` still
+   implements `__add__`, `__sub__`, etc., and returns an `Expression`, so
+   `MemoryReference("ro", 0) + 1` continues to work and yields an
+   `Expression.Address` wrapping the `MemoryReference`.
+
+3. **Constructor signature changes.** Several constructors changed
+   parameter names, order, or keyword-only-ness to resolve ambiguity between
+   the old PyQuil v4 and `quil` APIs. These are detailed class-by-class
+   below; deprecated aliases are provided wherever feasible, but some
+   changes (e.g. `Delay`, described below) require code changes.
+
 ## General
 
 - **Frozen classes.** `Frame` and `Waveform` are now frozen (immutable) from
-  Python.
+  Python, consistent with the other instruction classes.
 - **`FormalArgument`/`Parameter`.** PyQuil v4's `quilatom.FormalArgument`
   class (and, similarly, `Parameter`) has not been replaced with a dedicated
   type. These are wrappers around a `name: str` with special formatting
@@ -114,6 +81,51 @@ at the Rust level for users of the `python` feature in `quil-rs` directly).
   `MemoryReference`. Now, any place that requires a `MemoryReference` can
   extract one directly from those same forms, as well as from a
   `DeclarationAt` or a `Declaration` (or its `Instruction` wrapper).
+- **`Halt`, `Nop`, `Wait`, `PiConstant`.** These are unit variants again
+  (i.e. `Instruction.Halt()`/`Expression.PiConstant()` rather than bare
+  `Instruction.Halt`/`Expression.PiConstant`) to make them compatible with
+  PyO3's "complex enum" support. See [Unit
+  variants](README.md#unit-variants) in the README for the Rust-side impact.
+
+## `Qubit`
+
+Previously, `quil`'s `Qubit` class was a `#[pyclass]` directly on the Rust
+enum. Now `Qubit` has a base class with separate variant classes, which is
+easier to use overall (e.g. it enables proper type stubs/`match` support).
+Concretely:
+
+- Usage of `Qubit.Fixed(...)` and `Qubit.Variable(...)` should now directly
+  construct `Qubit(...)`/`FixedQubit(...)` or `FormalArgument(...)` instead.
+- Usage of `Qubit.Placeholder(QubitPlaceholder())` should now use
+  `QubitPlaceholder()` directly; `QubitPlaceholder` instances still satisfy
+  `isinstance(..., Qubit)` checks, which is what motivates this change.
+  `Qubit.Placeholder(QubitPlaceholder())` can be replaced directly with any
+  of `Qubit()`, `Qubit(None)`, or `QubitPlaceholder()`, which are all
+  equivalent.
+
+## `Expression`
+
+- **`Pi`.** PyQuil v4 had no dedicated type for the `Expression::PiConstant`
+  variant; code converted to/from it using `numpy.pi` (a `float`). The new
+  bindings expose a dedicated `Pi`/`PiType` singleton instead. Note that
+  `str(numpy.pi)`/`repr(numpy.pi)` printed the floating-point value
+  (`"3.14..."`), whereas `str(Pi)` now prints `"π"` and `repr(Pi)` prints
+  `"Pi"`.
+- **Substitution maps.** PyQuil v4 keyed parameter substitution maps on a
+  combination of types, including individual `MemoryReference`s (whose
+  `__hash__` combined the name *and* memory index/offset); each distinct
+  memory index had to be provided as its own entry. Substituting arbitrary
+  `MemoryReference`s this way still works for now, but issues a
+  `DeprecationWarning`.
+
+## `Program`
+
+- **`body_instructions` / `circuits`.** In PyQuil v4, the instructions
+  returned here used to include `circuits` (`CircuitDefinition`s). Those are
+  now tracked in a separate `circuits` field on `Program`, so
+  `body_instructions` no longer includes them. (PyQuil's own `Program`
+  class, which wraps but does not subclass `quil`'s, can restore the old
+  combined view if needed.)
 
 ## Renamed classes
 
@@ -139,53 +151,76 @@ simplified to `(destination, source)` (or similar), rather than exposing
 
 - `Declaration`'s constructor (`__new__`) has been adjusted to match PyQuil
   v4's `Declare` constructor.
-- `MemoryReference.offset` has been renamed `index`. The old `offset` getter
-  still works but is deprecated and issues a `PyDeprecationWarning`.
+- `MemoryReference`'s constructor now accepts `offset` as a deprecated,
+  keyword-only alias for `index` (PyQuil v4 used the term `offset`). New
+  code should use `index`.
+- `MemoryReference.offset` (the getter) has been renamed `index`. The old
+  `offset` getter still works but is deprecated and issues a
+  `PyDeprecationWarning`.
 - `MemoryReference.declared_size` has been removed. It was only used for
   pretty-printing and can't be inferred from parsing, so it always returns
-  `None` now (with a `PyDeprecationWarning`).
+  `None` now (and issues a `PyDeprecationWarning` if passed to the
+  constructor or accessed as an attribute).
 
 ## `Gate`
 
-- The `params` constructor keyword argument has been renamed `parameters`.
-  `params` is still accepted for backwards compatibility.
+- The constructor now accepts `params` as a deprecated alias for
+  `parameters`. Passing both `parameters` and `params` raises an error.
 
 ## `CalibrationDefinition`
 
 - PyQuil v4's constructor was `(name, parameters, qubits, instrs,
-  modifiers)`. The old positional/keyword form is still accepted for
-  compatibility, but issues a deprecation warning suggesting you use the new
-  `from_parts` constructor instead.
+  modifiers)`. Since that form is itself slated for deprecation (in favor of
+  the new `from_parts` static method), the old and new argument names are
+  *not* treated as simple aliases of one another; instead, you must pass a
+  fully old-style or fully new-style (`identifier`, `instructions`) set of
+  arguments&mdash;mixing the two raises a `ValueError`. Type stub overloads
+  are provided for both valid call shapes.
 
 ## `CircuitDefinition`
 
 - The constructor keyword `qubit_variables` was renamed just `qubits` in
-  PyQuil v4's version. The new constructor also no longer requires inputs be
-  wrapped in `Parameter`/`FormalArgument` instances&mdash;plain `str`s are
-  accepted directly.
+  PyQuil v4's version; `qubits` is accepted as an alias.
 
 ## `MeasureCalibrationDefinition`
 
-- The constructor now matches the PyQuil v4 signature, except that the
-  `instrs` parameter has been renamed `instructions` (the old name is still
-  accepted for compatibility). Direct `quil` users can also migrate to the
-  new `from_calibration` constructor.
+- The constructor accepts the PyQuil v4 signature, including `instrs` as a
+  deprecated alias for `instructions`. For explicit construction from parts,
+  use the existing `from_calibration` static method (a dedicated
+  `from_parts`-style constructor analogous to `CalibrationDefinition`'s may
+  be added, and deprecation warnings for the old-style constructor call are
+  still forthcoming).
 
-## `Label` / `LabelPlaceholder` / `TargetPlaceholder`
+## `Measurement`
+
+- PyQuil v4's signature was `(qubit, classical_reg)`. The new constructor
+  renames this parameter `target`, but still accepts `classical_reg` as a
+  deprecated keyword-only alias; because of this, `target` is now optional
+  (to support old code that passed `classical_reg` as a keyword argument).
+
+## `Label` / `LabelPlaceholder` / `TargetPlaceholder` / `Target`
 
 In `quil-rs`, `Label` represents a Quil `LABEL` instruction, and its
 behavior is driven by the `Target` enum (`Target.Fixed(str)` or
-`Target.Placeholder(TargetPlaceholder)`). PyQuil v4 had separate
-`quilatom.Label` and `quilatom.LabelPlaceholder` classes, each of which
-really just wrapped a `Target` (the former always `Fixed`, the latter always
-`Placeholder`)&mdash;neither was the actual `quil.Label` type. In the new
-version, `LabelPlaceholder` is gone; use `Label` directly and construct it
-from an existing `Target`, from a `str`, or from `None`, letting the
-constructor build the right `Target` variant for you. To explicitly control
-the `TargetPlaceholder`'s `base_label`, pass a `str` along with the
-keyword-only `placeholder=True` argument.
+`Target.Placeholder(TargetPlaceholder)`). PyQuil v4 had `quilatom.Label` and
+`quilatom.LabelPlaceholder` classes, each of which really just wrapped a
+`Target` (the former always `Fixed`, the latter always
+`Placeholder`)&mdash;neither was the actual label-the-instruction type.
+That role was instead played by `quilbase.JumpTarget`, which subclassed
+`quilatom.Label` and wrapped a `quilatom.Label`/`quilatom.LabelPlaceholder`.
+In other words:
 
-Migration table for old usages:
+- `quilatom.Label` corresponds to `quil.Target.Fixed`
+- `quilatom.LabelPlaceholder` corresponds to `quil.Target.Placeholder`
+- `quilbase.JumpTarget` corresponds to `quil.Label`
+
+In the new version, `LabelPlaceholder` is gone; use `Label` directly and
+construct it from an existing `Target`, from a `str`, or from `None`,
+letting the constructor build the right `Target` variant for you. To
+explicitly control the `TargetPlaceholder`'s `base_label`, pass a `str` and
+use the keyword-only `placeholder=True` argument.
+
+Migration table for old `quil` usages:
 
 | Deprecated Usage                   | Updated Usage                           |
 | ----------------------------------- | ---------------------------------------- |
@@ -195,12 +230,20 @@ Migration table for old usages:
 | `LabelPlaceholder("L")`             | `Label("L", placeholder=True)`           |
 | `LabelPlaceholder(prefix="L")`      | `Label(target="L", placeholder=True)`    |
 | `LabelPlaceholder(placeholder=p)`   | `Label(target=p)`                        |
+| `LabelPlaceholder("L", placeholder=p)` | Raises `TypeError` (see note below)  |
 
 Note: `LabelPlaceholder("L", placeholder=p)` was technically legal in v4,
 but the `prefix` argument was silently ignored, so it was equivalent to just
 passing `placeholder=p`. Since `placeholder` is now repurposed as a `bool`
 in the new `Label` constructor, that call pattern is no longer valid and
 will raise a `TypeError`.
+
+For old PyQuil v4 usages, the following aliases currently exist so that
+`JumpTarget(Label("jump-target"))`-style code keeps working for now:
+
+- `quilatom.JumpTarget` &rarr; `quil.Label`
+- `quilatom.Label` &rarr; `quil.Target.Fixed`
+- `quilatom.LabelPlaceholder` &rarr; `quil.Target.Placeholder`
 
 Additionally, `TargetPlaceholder` (the type replacing `LabelPlaceholder`)
 uses `base_label` in place of the old `prefix` parameter. It still accepts
@@ -267,7 +310,9 @@ Key impacts:
 
 - Users who called the `Delay` constructor directly in PyQuil v4 will get
   errors, but users of `DelayFrames`/`DelayQubits` (the more common usage)
-  will see no behavioral change.
+  will see no behavioral change. This is the one case among these changes
+  that requires actual code changes rather than relying on a deprecated
+  alias, since the parameter *types* (not just names/order) changed.
 - `quil` users will also get constructor errors, as the parameter order for
   `frame_names` and `qubits` has been swapped; the type differences should
   make mismatches obvious.
@@ -307,9 +352,9 @@ Key impacts:
 
 ## `FrameIdentifier`
 
-The `FrameIdentifier` corresponds to PyQuil's `quilatom.Frame`. Its
-constructor parameter order is swapped relative to PyQuil's
-`quilatom.Frame`.
+`FrameIdentifier` corresponds to PyQuil's `quilatom.Frame`. Its Python
+constructor takes `(qubits, name)`&mdash;note that this order is swapped
+relative to the struct's own field order (`name`, then `qubits`).
 
 ## `PauliTerm` / `PauliSum`
 
@@ -391,8 +436,8 @@ constructor parameter order is swapped relative to PyQuil's
 PyQuil v4's `DefWaveform` took `parameters` (a list of `Parameter`s, here
 just their names as `str`s) and `entries` directly, building the underlying
 `quil_rs.Waveform` internally. The new constructor no longer accepts those;
-use `WaveformDefinition.quil` to construct one directly from a `name` and a
-`definition` (a `Waveform`).
+use the new `WaveformDefinition.from_waveform` static method to construct
+one directly from a `name` and a `definition` (a `Waveform`).
 
 ## Rust (`quil-rs` with the `python` feature)
 
@@ -400,9 +445,13 @@ Most of the above notes describe Python-visible behavior. Rust callers of
 the underlying types (e.g. via the `python` feature) should additionally be
 aware of:
 
-- `FrameIdentifier::new`'s parameter order is swapped relative to PyQuil's
-  `quilatom.Frame` (see [`FrameIdentifier`](#frameidentifier) above).
+- `FrameIdentifier`'s Python-facing `__new__` takes `(qubits, name)`, the
+  reverse of the Rust struct's own field order (see
+  [`FrameIdentifier`](#frameidentifier) above).
 - `Frame` and `Waveform` are now frozen/immutable (see [General](#general)).
 - `PauliTerm`'s `__new__`, exposed to Python, is used directly by Rust
   callers relying on the `python` feature and should be reviewed for the
   constructor changes described above.
+- `PauliSum::new` is no longer shared directly with Python; Python callers
+  go through the compatibility constructor described under
+  [`PauliTerm`/`PauliSum`](#paulitermpaulisum) above.
