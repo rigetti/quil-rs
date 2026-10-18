@@ -47,13 +47,13 @@
                                 <a class="function" href="#Arithmetic.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Arithmetic.left">left</a>
+                                <a class="variable" href="#Arithmetic.operator">operator</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Arithmetic.right">right</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Arithmetic.operator">operator</a>
+                                <a class="variable" href="#Arithmetic.left">left</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Arithmetic.destination">destination</a>
@@ -161,19 +161,19 @@
                                 <a class="function" href="#BinaryLogic.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BinaryLogic.destination">destination</a>
+                                <a class="variable" href="#BinaryLogic.operator">operator</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#BinaryLogic.left">left</a>
                         </li>
                         <li>
                                 <a class="variable" href="#BinaryLogic.right">right</a>
                         </li>
                         <li>
-                                <a class="variable" href="#BinaryLogic.operator">operator</a>
+                                <a class="variable" href="#BinaryLogic.destination">destination</a>
                         </li>
                         <li>
                                 <a class="variable" href="#BinaryLogic.source">source</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#BinaryLogic.left">left</a>
                         </li>
                 </ul>
 
@@ -251,7 +251,10 @@
                                 <a class="function" href="#CalibrationDefinition.from_parts">from_parts</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationDefinition.instrs">instrs</a>
+                                <a class="variable" href="#CalibrationDefinition.identifier">identifier</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#CalibrationDefinition.name">name</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CalibrationDefinition.parameters">parameters</a>
@@ -260,16 +263,13 @@
                                 <a class="variable" href="#CalibrationDefinition.instructions">instructions</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationDefinition.modifiers">modifiers</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#CalibrationDefinition.identifier">identifier</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#CalibrationDefinition.qubits">qubits</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationDefinition.name">name</a>
+                                <a class="variable" href="#CalibrationDefinition.modifiers">modifiers</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#CalibrationDefinition.instrs">instrs</a>
                         </li>
                 </ul>
 
@@ -284,16 +284,16 @@
                                 <a class="function" href="#CalibrationIdentifier.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CalibrationIdentifier.modifiers">modifiers</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#CalibrationIdentifier.qubits">qubits</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#CalibrationIdentifier.name">name</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CalibrationIdentifier.parameters">parameters</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#CalibrationIdentifier.modifiers">modifiers</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#CalibrationIdentifier.qubits">qubits</a>
                         </li>
                 </ul>
 
@@ -314,10 +314,10 @@
                                 <a class="function" href="#Call.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Call.arguments">arguments</a>
+                                <a class="variable" href="#Call.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Call.name">name</a>
+                                <a class="variable" href="#Call.arguments">arguments</a>
                         </li>
                 </ul>
 
@@ -377,9 +377,6 @@
                                 <a class="function" href="#Capture.is_quil_t">is_quil_t</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Capture.frame">frame</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Capture.blocking">blocking</a>
                         </li>
                         <li>
@@ -390,6 +387,9 @@
                         </li>
                         <li>
                                 <a class="variable" href="#Capture.memory_reference">memory_reference</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Capture.frame">frame</a>
                         </li>
                 </ul>
 
@@ -410,9 +410,6 @@
                                 <a class="function" href="#CircuitDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#CircuitDefinition.instructions">instructions</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#CircuitDefinition.qubit_variables">qubit_variables</a>
                         </li>
                         <li>
@@ -420,6 +417,9 @@
                         </li>
                         <li>
                                 <a class="variable" href="#CircuitDefinition.parameters">parameters</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#CircuitDefinition.instructions">instructions</a>
                         </li>
                 </ul>
 
@@ -440,10 +440,10 @@
                                 <a class="function" href="#Comparison.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Comparison.left">left</a>
+                                <a class="variable" href="#Comparison.target">target</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Comparison.right">right</a>
+                                <a class="variable" href="#Comparison.left">left</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Comparison.lhs">lhs</a>
@@ -452,16 +452,16 @@
                                 <a class="variable" href="#Comparison.rhs">rhs</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Comparison.op">op</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Comparison.destination">destination</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Comparison.operator">operator</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Comparison.target">target</a>
+                                <a class="variable" href="#Comparison.op">op</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Comparison.right">right</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Comparison.destination">destination</a>
                         </li>
                 </ul>
 
@@ -539,16 +539,16 @@
                                 <a class="function" href="#Convert.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Convert.right">right</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Convert.source">source</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Convert.destination">destination</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Convert.right">right</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Convert.left">left</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Convert.source">source</a>
                         </li>
                 </ul>
 
@@ -575,19 +575,19 @@
                                 <a class="function" href="#Declaration.out">out</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Declaration.shared_region">shared_region</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Declaration.memory_size">memory_size</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Declaration.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Declaration.sharing">sharing</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Declaration.shared_region">shared_region</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Declaration.size">size</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Declaration.sharing">sharing</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Declaration.memory_type">memory_type</a>
@@ -662,10 +662,10 @@
                     <a class="class" href="#DefGateSequence">DefGateSequence</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#DefGateSequence.gates">gates</a>
+                                <a class="variable" href="#DefGateSequence.qubits">qubits</a>
                         </li>
                         <li>
-                                <a class="variable" href="#DefGateSequence.qubits">qubits</a>
+                                <a class="variable" href="#DefGateSequence.gates">gates</a>
                         </li>
                 </ul>
 
@@ -698,16 +698,16 @@
                                 <a class="function" href="#Delay.is_quil_t">is_quil_t</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Delay.duration">duration</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Delay.qubits">qubits</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Delay.frames">frames</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Delay.frame_names">frame_names</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Delay.duration">duration</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Delay.qubits">qubits</a>
                         </li>
                 </ul>
 
@@ -803,10 +803,10 @@
                                 <a class="function" href="#ExternSignature.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ExternSignature.return_type">return_type</a>
+                                <a class="variable" href="#ExternSignature.parameters">parameters</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ExternSignature.parameters">parameters</a>
+                                <a class="variable" href="#ExternSignature.return_type">return_type</a>
                         </li>
                 </ul>
 
@@ -875,10 +875,10 @@
                                 <a class="variable" href="#FrameDefinition.frame">frame</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameDefinition.identifier">identifier</a>
+                                <a class="variable" href="#FrameDefinition.attributes">attributes</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameDefinition.attributes">attributes</a>
+                                <a class="variable" href="#FrameDefinition.identifier">identifier</a>
                         </li>
                 </ul>
 
@@ -896,10 +896,10 @@
                                 <a class="function" href="#FrameIdentifier.out">out</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameIdentifier.name">name</a>
+                                <a class="variable" href="#FrameIdentifier.qubits">qubits</a>
                         </li>
                         <li>
-                                <a class="variable" href="#FrameIdentifier.qubits">qubits</a>
+                                <a class="variable" href="#FrameIdentifier.name">name</a>
                         </li>
                 </ul>
 
@@ -935,10 +935,10 @@
                                 <a class="function" href="#Gate.is_quil_t">is_quil_t</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Gate.modifiers">modifiers</a>
+                                <a class="variable" href="#Gate.parameters">parameters</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Gate.parameters">parameters</a>
+                                <a class="variable" href="#Gate.modifiers">modifiers</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Gate.params">params</a>
@@ -986,10 +986,13 @@
                                 <a class="function" href="#GateDefinition.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#GateDefinition.arguments">arguments</a>
+                                <a class="variable" href="#GateDefinition.specification">specification</a>
                         </li>
                         <li>
                                 <a class="variable" href="#GateDefinition.matrix">matrix</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#GateDefinition.parameters">parameters</a>
                         </li>
                         <li>
                                 <a class="variable" href="#GateDefinition.name">name</a>
@@ -998,16 +1001,13 @@
                                 <a class="variable" href="#GateDefinition.body">body</a>
                         </li>
                         <li>
-                                <a class="variable" href="#GateDefinition.signature">signature</a>
+                                <a class="variable" href="#GateDefinition.arguments">arguments</a>
                         </li>
                         <li>
                                 <a class="variable" href="#GateDefinition.permutation">permutation</a>
                         </li>
                         <li>
-                                <a class="variable" href="#GateDefinition.specification">specification</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#GateDefinition.parameters">parameters</a>
+                                <a class="variable" href="#GateDefinition.signature">signature</a>
                         </li>
                 </ul>
 
@@ -1223,10 +1223,10 @@
                                 <a class="function" href="#JumpUnless.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#JumpUnless.condition">condition</a>
+                                <a class="variable" href="#JumpUnless.target">target</a>
                         </li>
                         <li>
-                                <a class="variable" href="#JumpUnless.target">target</a>
+                                <a class="variable" href="#JumpUnless.condition">condition</a>
                         </li>
                 </ul>
 
@@ -1271,13 +1271,13 @@
                                 <a class="function" href="#Label.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Label.target">target</a>
+                                <a class="variable" href="#Label.label">label</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Label.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Label.label">label</a>
+                                <a class="variable" href="#Label.target">target</a>
                         </li>
                 </ul>
 
@@ -1304,16 +1304,16 @@
                                 <a class="variable" href="#Load.source">source</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Load.offset">offset</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Load.target">target</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Load.left">left</a>
+                                <a class="variable" href="#Load.right">right</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Load.right">right</a>
+                                <a class="variable" href="#Load.offset">offset</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Load.left">left</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Load.destination">destination</a>
@@ -1340,25 +1340,25 @@
                                 <a class="function" href="#MeasureCalibrationDefinition.is_quil_t">is_quil_t</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MeasureCalibrationDefinition.name">name</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#MeasureCalibrationDefinition.target">target</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#MeasureCalibrationDefinition.qubit">qubit</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#MeasureCalibrationDefinition.memory_reference">memory_reference</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#MeasureCalibrationDefinition.identifier">identifier</a>
                         </li>
                         <li>
                                 <a class="variable" href="#MeasureCalibrationDefinition.instructions">instructions</a>
                         </li>
                         <li>
+                                <a class="variable" href="#MeasureCalibrationDefinition.memory_reference">memory_reference</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#MeasureCalibrationDefinition.qubit">qubit</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#MeasureCalibrationDefinition.instrs">instrs</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#MeasureCalibrationDefinition.name">name</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#MeasureCalibrationDefinition.identifier">identifier</a>
                         </li>
                 </ul>
 
@@ -1373,13 +1373,13 @@
                                 <a class="function" href="#MeasureCalibrationIdentifier.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MeasureCalibrationIdentifier.target">target</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#MeasureCalibrationIdentifier.name">name</a>
                         </li>
                         <li>
                                 <a class="variable" href="#MeasureCalibrationIdentifier.qubit">qubit</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#MeasureCalibrationIdentifier.target">target</a>
                         </li>
                 </ul>
 
@@ -1406,10 +1406,10 @@
                                 <a class="variable" href="#Measurement.qubit">qubit</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Measurement.target">target</a>
+                                <a class="variable" href="#Measurement.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Measurement.name">name</a>
+                                <a class="variable" href="#Measurement.target">target</a>
                         </li>
                 </ul>
 
@@ -1430,16 +1430,16 @@
                                 <a class="function" href="#MemoryReference.parse">parse</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryReference.offset">offset</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#MemoryReference.name">name</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryReference.index">index</a>
+                                <a class="variable" href="#MemoryReference.declared_size">declared_size</a>
                         </li>
                         <li>
-                                <a class="variable" href="#MemoryReference.declared_size">declared_size</a>
+                                <a class="variable" href="#MemoryReference.offset">offset</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#MemoryReference.index">index</a>
                         </li>
                 </ul>
 
@@ -1508,10 +1508,10 @@
                                 <a class="function" href="#Offset.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Offset.data_type">data_type</a>
+                                <a class="variable" href="#Offset.offset">offset</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Offset.offset">offset</a>
+                                <a class="variable" href="#Offset.data_type">data_type</a>
                         </li>
                 </ul>
 
@@ -1607,13 +1607,13 @@
                                 <a class="variable" href="#PauliTerm.expression">expression</a>
                         </li>
                         <li>
-                                <a class="variable" href="#PauliTerm.coefficient">coefficient</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#PauliTerm.program">program</a>
                         </li>
                         <li>
                                 <a class="variable" href="#PauliTerm.arguments">arguments</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#PauliTerm.coefficient">coefficient</a>
                         </li>
                 </ul>
 
@@ -1640,10 +1640,10 @@
                                 <a class="function" href="#Pragma.is_quil_t">is_quil_t</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Pragma.name">name</a>
+                                <a class="variable" href="#Pragma.command">command</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Pragma.command">command</a>
+                                <a class="variable" href="#Pragma.name">name</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Pragma.arguments">arguments</a>
@@ -1700,9 +1700,6 @@
                                 <a class="function" href="#Pulse.is_quil_t">is_quil_t</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Pulse.nonblocking">nonblocking</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Pulse.blocking">blocking</a>
                         </li>
                         <li>
@@ -1710,6 +1707,9 @@
                         </li>
                         <li>
                                 <a class="variable" href="#Pulse.waveform">waveform</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Pulse.nonblocking">nonblocking</a>
                         </li>
                 </ul>
 
@@ -1763,19 +1763,19 @@
                                 <a class="variable" href="#RawCapture.blocking">blocking</a>
                         </li>
                         <li>
-                                <a class="variable" href="#RawCapture.memory_reference">memory_reference</a>
+                                <a class="variable" href="#RawCapture.frame">frame</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#RawCapture.nonblocking">nonblocking</a>
                         </li>
                         <li>
                                 <a class="variable" href="#RawCapture.memory_region">memory_region</a>
                         </li>
                         <li>
-                                <a class="variable" href="#RawCapture.frame">frame</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#RawCapture.duration">duration</a>
                         </li>
                         <li>
-                                <a class="variable" href="#RawCapture.nonblocking">nonblocking</a>
+                                <a class="variable" href="#RawCapture.memory_reference">memory_reference</a>
                         </li>
                 </ul>
 
@@ -1847,13 +1847,13 @@
                                 <a class="function" href="#SetFrequency.is_quil_t">is_quil_t</a>
                         </li>
                         <li>
+                                <a class="variable" href="#SetFrequency.frequency">frequency</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#SetFrequency.freq">freq</a>
                         </li>
                         <li>
                                 <a class="variable" href="#SetFrequency.frame">frame</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#SetFrequency.frequency">frequency</a>
                         </li>
                 </ul>
 
@@ -1877,10 +1877,10 @@
                                 <a class="function" href="#SetPhase.is_quil_t">is_quil_t</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetPhase.phase">phase</a>
+                                <a class="variable" href="#SetPhase.frame">frame</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetPhase.frame">frame</a>
+                                <a class="variable" href="#SetPhase.phase">phase</a>
                         </li>
                 </ul>
 
@@ -1904,10 +1904,10 @@
                                 <a class="function" href="#SetScale.is_quil_t">is_quil_t</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetScale.frame">frame</a>
+                                <a class="variable" href="#SetScale.scale">scale</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SetScale.scale">scale</a>
+                                <a class="variable" href="#SetScale.frame">frame</a>
                         </li>
                 </ul>
 
@@ -1946,10 +1946,10 @@
                                 <a class="variable" href="#ShiftFrequency.frame">frame</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ShiftFrequency.frequency">frequency</a>
+                                <a class="variable" href="#ShiftFrequency.freq">freq</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ShiftFrequency.freq">freq</a>
+                                <a class="variable" href="#ShiftFrequency.frequency">frequency</a>
                         </li>
                 </ul>
 
@@ -1997,22 +1997,22 @@
                                 <a class="function" href="#Store.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Store.left">left</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#Store.right">right</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Store.source">source</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#Store.target">target</a>
                         </li>
                         <li>
                                 <a class="variable" href="#Store.destination">destination</a>
                         </li>
                         <li>
+                                <a class="variable" href="#Store.left">left</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Store.source">source</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#Store.offset">offset</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#Store.target">target</a>
                         </li>
                 </ul>
 
@@ -2039,13 +2039,13 @@
                                 <a class="variable" href="#SwapPhases.frameA">frameA</a>
                         </li>
                         <li>
-                                <a class="variable" href="#SwapPhases.frameB">frameB</a>
-                        </li>
-                        <li>
                                 <a class="variable" href="#SwapPhases.frame_1">frame_1</a>
                         </li>
                         <li>
                                 <a class="variable" href="#SwapPhases.frame_2">frame_2</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#SwapPhases.frameB">frameB</a>
                         </li>
                 </ul>
 
@@ -2081,10 +2081,10 @@
                     <a class="class" href="#TargetPlaceholder">TargetPlaceholder</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#TargetPlaceholder.base_label">base_label</a>
+                                <a class="variable" href="#TargetPlaceholder.prefix">prefix</a>
                         </li>
                         <li>
-                                <a class="variable" href="#TargetPlaceholder.prefix">prefix</a>
+                                <a class="variable" href="#TargetPlaceholder.base_label">base_label</a>
                         </li>
                 </ul>
 
@@ -2111,10 +2111,10 @@
                                 <a class="variable" href="#UnaryLogic.target">target</a>
                         </li>
                         <li>
-                                <a class="variable" href="#UnaryLogic.op">op</a>
+                                <a class="variable" href="#UnaryLogic.operand">operand</a>
                         </li>
                         <li>
-                                <a class="variable" href="#UnaryLogic.operand">operand</a>
+                                <a class="variable" href="#UnaryLogic.op">op</a>
                         </li>
                 </ul>
 
@@ -2147,10 +2147,10 @@
                                 <a class="function" href="#Vector.to_quil_or_debug">to_quil_or_debug</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Vector.data_type">data_type</a>
+                                <a class="variable" href="#Vector.length">length</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Vector.length">length</a>
+                                <a class="variable" href="#Vector.data_type">data_type</a>
                         </li>
                 </ul>
 
@@ -2207,13 +2207,13 @@
                                 <a class="function" href="#WaveformDefinition.is_quil_t">is_quil_t</a>
                         </li>
                         <li>
+                                <a class="variable" href="#WaveformDefinition.name">name</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#WaveformDefinition.definition">definition</a>
                         </li>
                         <li>
                                 <a class="variable" href="#WaveformDefinition.entries">entries</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#WaveformDefinition.name">name</a>
                         </li>
                 </ul>
 
@@ -2448,17 +2448,15 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="Arithmetic.left" class="classattr">
+                            <div id="Arithmetic.operator" class="classattr">
                                 <div class="attr variable">
-            <span class="name">left</span>
+            <span class="name">operator</span>
 
         
     </div>
-    <a class="headerlink" href="#Arithmetic.left"></a>
+    <a class="headerlink" href="#Arithmetic.operator"></a>
     
-            <div class="docstring"><p>Get the destination [<code><a href="#MemoryReference">MemoryReference</a></code>] for this arithmetic operation.</p>
-</div>
-
+    
 
                             </div>
                             <div id="Arithmetic.right" class="classattr">
@@ -2474,15 +2472,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="Arithmetic.operator" class="classattr">
+                            <div id="Arithmetic.left" class="classattr">
                                 <div class="attr variable">
-            <span class="name">operator</span>
+            <span class="name">left</span>
 
         
     </div>
-    <a class="headerlink" href="#Arithmetic.operator"></a>
+    <a class="headerlink" href="#Arithmetic.left"></a>
     
-    
+            <div class="docstring"><p>Get the destination [<code><a href="#MemoryReference">MemoryReference</a></code>] for this arithmetic operation.</p>
+</div>
+
 
                             </div>
                             <div id="Arithmetic.destination" class="classattr">
@@ -2910,13 +2910,24 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="BinaryLogic.destination" class="classattr">
+                            <div id="BinaryLogic.operator" class="classattr">
                                 <div class="attr variable">
-            <span class="name">destination</span>
+            <span class="name">operator</span>
 
         
     </div>
-    <a class="headerlink" href="#BinaryLogic.destination"></a>
+    <a class="headerlink" href="#BinaryLogic.operator"></a>
+    
+    
+
+                            </div>
+                            <div id="BinaryLogic.left" class="classattr">
+                                <div class="attr variable">
+            <span class="name">left</span>
+
+        
+    </div>
+    <a class="headerlink" href="#BinaryLogic.left"></a>
     
     
 
@@ -2932,13 +2943,13 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     
 
                             </div>
-                            <div id="BinaryLogic.operator" class="classattr">
+                            <div id="BinaryLogic.destination" class="classattr">
                                 <div class="attr variable">
-            <span class="name">operator</span>
+            <span class="name">destination</span>
 
         
     </div>
-    <a class="headerlink" href="#BinaryLogic.operator"></a>
+    <a class="headerlink" href="#BinaryLogic.destination"></a>
     
     
 
@@ -2950,17 +2961,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#BinaryLogic.source"></a>
-    
-    
-
-                            </div>
-                            <div id="BinaryLogic.left" class="classattr">
-                                <div class="attr variable">
-            <span class="name">left</span>
-
-        
-    </div>
-    <a class="headerlink" href="#BinaryLogic.left"></a>
     
     
 
@@ -3280,15 +3280,28 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="CalibrationDefinition.instrs" class="classattr">
+                            <div id="CalibrationDefinition.identifier" class="classattr">
                                 <div class="attr variable">
-            <span class="name">instrs</span>
+            <span class="name">identifier</span>
 
         
     </div>
-    <a class="headerlink" href="#CalibrationDefinition.instrs"></a>
+    <a class="headerlink" href="#CalibrationDefinition.identifier"></a>
     
     
+
+                            </div>
+                            <div id="CalibrationDefinition.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationDefinition.name"></a>
+    
+            <div class="docstring"><p>The gate name that this calibration definition is for.</p>
+</div>
+
 
                             </div>
                             <div id="CalibrationDefinition.parameters" class="classattr">
@@ -3315,30 +3328,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     
 
                             </div>
-                            <div id="CalibrationDefinition.modifiers" class="classattr">
-                                <div class="attr variable">
-            <span class="name">modifiers</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationDefinition.modifiers"></a>
-    
-            <div class="docstring"><p>The list of [<code><a href="#GateModifier">GateModifier</a></code>]s that this calibration definition is for.</p>
-</div>
-
-
-                            </div>
-                            <div id="CalibrationDefinition.identifier" class="classattr">
-                                <div class="attr variable">
-            <span class="name">identifier</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationDefinition.identifier"></a>
-    
-    
-
-                            </div>
                             <div id="CalibrationDefinition.qubits" class="classattr">
                                 <div class="attr variable">
             <span class="name">qubits</span>
@@ -3352,17 +3341,28 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="CalibrationDefinition.name" class="classattr">
+                            <div id="CalibrationDefinition.modifiers" class="classattr">
                                 <div class="attr variable">
-            <span class="name">name</span>
+            <span class="name">modifiers</span>
 
         
     </div>
-    <a class="headerlink" href="#CalibrationDefinition.name"></a>
+    <a class="headerlink" href="#CalibrationDefinition.modifiers"></a>
     
-            <div class="docstring"><p>The gate name that this calibration definition is for.</p>
+            <div class="docstring"><p>The list of [<code><a href="#GateModifier">GateModifier</a></code>]s that this calibration definition is for.</p>
 </div>
 
+
+                            </div>
+                            <div id="CalibrationDefinition.instrs" class="classattr">
+                                <div class="attr variable">
+            <span class="name">instrs</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationDefinition.instrs"></a>
+    
+    
 
                             </div>
                             <div class="inherited">
@@ -3419,32 +3419,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="CalibrationIdentifier.modifiers" class="classattr">
-                                <div class="attr variable">
-            <span class="name">modifiers</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationIdentifier.modifiers"></a>
-    
-            <div class="docstring"><p>The modifiers applied to the gate</p>
-</div>
-
-
-                            </div>
-                            <div id="CalibrationIdentifier.qubits" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubits</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CalibrationIdentifier.qubits"></a>
-    
-            <div class="docstring"><p>The qubits on which the gate is applied</p>
-</div>
-
-
-                            </div>
                             <div id="CalibrationIdentifier.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span>
@@ -3467,6 +3441,32 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     <a class="headerlink" href="#CalibrationIdentifier.parameters"></a>
     
             <div class="docstring"><p>The parameters of the gate - these are the variables in the calibration definition</p>
+</div>
+
+
+                            </div>
+                            <div id="CalibrationIdentifier.modifiers" class="classattr">
+                                <div class="attr variable">
+            <span class="name">modifiers</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationIdentifier.modifiers"></a>
+    
+            <div class="docstring"><p>The modifiers applied to the gate</p>
+</div>
+
+
+                            </div>
+                            <div id="CalibrationIdentifier.qubits" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qubits</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CalibrationIdentifier.qubits"></a>
+    
+            <div class="docstring"><p>The qubits on which the gate is applied</p>
 </div>
 
 
@@ -3564,19 +3564,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="Call.arguments" class="classattr">
-                                <div class="attr variable">
-            <span class="name">arguments</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Call.arguments"></a>
-    
-            <div class="docstring"><p>The arguments of the call instruction.</p>
-</div>
-
-
-                            </div>
                             <div id="Call.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span>
@@ -3586,6 +3573,19 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     <a class="headerlink" href="#Call.name"></a>
     
             <div class="docstring"><p>The name of the call instruction. This must be a valid user identifier.</p>
+</div>
+
+
+                            </div>
+                            <div id="Call.arguments" class="classattr">
+                                <div class="attr variable">
+            <span class="name">arguments</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Call.arguments"></a>
+    
+            <div class="docstring"><p>The arguments of the call instruction.</p>
 </div>
 
 
@@ -3856,17 +3856,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="Capture.frame" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frame</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Capture.frame"></a>
-    
-    
-
-                            </div>
                             <div id="Capture.blocking" class="classattr">
                                 <div class="attr variable">
             <span class="name">blocking</span>
@@ -3907,6 +3896,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#Capture.memory_reference"></a>
+    
+    
+
+                            </div>
+                            <div id="Capture.frame" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frame</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Capture.frame"></a>
     
     
 
@@ -3998,17 +3998,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="CircuitDefinition.instructions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">instructions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CircuitDefinition.instructions"></a>
-    
-    
-
-                            </div>
                             <div id="CircuitDefinition.qubit_variables" class="classattr">
                                 <div class="attr variable">
             <span class="name">qubit_variables</span>
@@ -4038,6 +4027,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#CircuitDefinition.parameters"></a>
+    
+    
+
+                            </div>
+                            <div id="CircuitDefinition.instructions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">instructions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CircuitDefinition.instructions"></a>
     
     
 
@@ -4129,6 +4129,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
+                            <div id="Comparison.target" class="classattr">
+                                <div class="attr variable">
+            <span class="name">target</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Comparison.target"></a>
+    
+    
+
+                            </div>
                             <div id="Comparison.left" class="classattr">
                                 <div class="attr variable">
             <span class="name">left</span>
@@ -4136,17 +4147,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#Comparison.left"></a>
-    
-    
-
-                            </div>
-                            <div id="Comparison.right" class="classattr">
-                                <div class="attr variable">
-            <span class="name">right</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Comparison.right"></a>
     
     
 
@@ -4173,28 +4173,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     
 
                             </div>
-                            <div id="Comparison.op" class="classattr">
-                                <div class="attr variable">
-            <span class="name">op</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Comparison.op"></a>
-    
-    
-
-                            </div>
-                            <div id="Comparison.destination" class="classattr">
-                                <div class="attr variable">
-            <span class="name">destination</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Comparison.destination"></a>
-    
-    
-
-                            </div>
                             <div id="Comparison.operator" class="classattr">
                                 <div class="attr variable">
             <span class="name">operator</span>
@@ -4206,13 +4184,35 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     
 
                             </div>
-                            <div id="Comparison.target" class="classattr">
+                            <div id="Comparison.op" class="classattr">
                                 <div class="attr variable">
-            <span class="name">target</span>
+            <span class="name">op</span>
 
         
     </div>
-    <a class="headerlink" href="#Comparison.target"></a>
+    <a class="headerlink" href="#Comparison.op"></a>
+    
+    
+
+                            </div>
+                            <div id="Comparison.right" class="classattr">
+                                <div class="attr variable">
+            <span class="name">right</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Comparison.right"></a>
+    
+    
+
+                            </div>
+                            <div id="Comparison.destination" class="classattr">
+                                <div class="attr variable">
+            <span class="name">destination</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Comparison.destination"></a>
     
     
 
@@ -4528,28 +4528,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="Convert.right" class="classattr">
-                                <div class="attr variable">
-            <span class="name">right</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Convert.right"></a>
-    
-    
-
-                            </div>
-                            <div id="Convert.source" class="classattr">
-                                <div class="attr variable">
-            <span class="name">source</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Convert.source"></a>
-    
-    
-
-                            </div>
                             <div id="Convert.destination" class="classattr">
                                 <div class="attr variable">
             <span class="name">destination</span>
@@ -4561,6 +4539,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     
 
                             </div>
+                            <div id="Convert.right" class="classattr">
+                                <div class="attr variable">
+            <span class="name">right</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Convert.right"></a>
+    
+    
+
+                            </div>
                             <div id="Convert.left" class="classattr">
                                 <div class="attr variable">
             <span class="name">left</span>
@@ -4568,6 +4557,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#Convert.left"></a>
+    
+    
+
+                            </div>
+                            <div id="Convert.source" class="classattr">
+                                <div class="attr variable">
+            <span class="name">source</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Convert.source"></a>
     
     
 
@@ -4689,6 +4689,19 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
+                            <div id="Declaration.shared_region" class="classattr">
+                                <div class="attr variable">
+            <span class="name">shared_region</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Declaration.shared_region"></a>
+    
+            <div class="docstring"><p>Get the memory region name this declaration is sharing with, if any.</p>
+</div>
+
+
+                            </div>
                             <div id="Declaration.memory_size" class="classattr">
                                 <div class="attr variable">
             <span class="name">memory_size</span>
@@ -4713,30 +4726,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     
 
                             </div>
-                            <div id="Declaration.sharing" class="classattr">
-                                <div class="attr variable">
-            <span class="name">sharing</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Declaration.sharing"></a>
-    
-    
-
-                            </div>
-                            <div id="Declaration.shared_region" class="classattr">
-                                <div class="attr variable">
-            <span class="name">shared_region</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Declaration.shared_region"></a>
-    
-            <div class="docstring"><p>Get the memory region name this declaration is sharing with, if any.</p>
-</div>
-
-
-                            </div>
                             <div id="Declaration.size" class="classattr">
                                 <div class="attr variable">
             <span class="name">size</span>
@@ -4744,6 +4733,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#Declaration.size"></a>
+    
+    
+
+                            </div>
+                            <div id="Declaration.sharing" class="classattr">
+                                <div class="attr variable">
+            <span class="name">sharing</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Declaration.sharing"></a>
     
     
 
@@ -5205,19 +5205,6 @@ See the Quil specification for more details on valid comparisons.</p>
 </div>
 
 
-                            <div id="DefGateSequence.gates" class="classattr">
-                                <div class="attr variable">
-            <span class="name">gates</span>
-
-        
-    </div>
-    <a class="headerlink" href="#DefGateSequence.gates"></a>
-    
-            <div class="docstring"><p>The list of <code><a href="#Gate">Gate</a></code> objects that make up the sequence.</p>
-</div>
-
-
-                            </div>
                             <div id="DefGateSequence.qubits" class="classattr">
                                 <div class="attr variable">
             <span class="name">qubits</span>
@@ -5227,6 +5214,19 @@ See the Quil specification for more details on valid comparisons.</p>
     <a class="headerlink" href="#DefGateSequence.qubits"></a>
     
             <div class="docstring"><p>The list of qubit variable names in the gate signature.</p>
+</div>
+
+
+                            </div>
+                            <div id="DefGateSequence.gates" class="classattr">
+                                <div class="attr variable">
+            <span class="name">gates</span>
+
+        
+    </div>
+    <a class="headerlink" href="#DefGateSequence.gates"></a>
+    
+            <div class="docstring"><p>The list of <code><a href="#Gate">Gate</a></code> objects that make up the sequence.</p>
 </div>
 
 
@@ -5369,28 +5369,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="Delay.duration" class="classattr">
-                                <div class="attr variable">
-            <span class="name">duration</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Delay.duration"></a>
-    
-    
-
-                            </div>
-                            <div id="Delay.qubits" class="classattr">
-                                <div class="attr variable">
-            <span class="name">qubits</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Delay.qubits"></a>
-    
-    
-
-                            </div>
                             <div id="Delay.frames" class="classattr">
                                 <div class="attr variable">
             <span class="name">frames</span>
@@ -5409,6 +5387,28 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#Delay.frame_names"></a>
+    
+    
+
+                            </div>
+                            <div id="Delay.duration" class="classattr">
+                                <div class="attr variable">
+            <span class="name">duration</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Delay.duration"></a>
+    
+    
+
+                            </div>
+                            <div id="Delay.qubits" class="classattr">
+                                <div class="attr variable">
+            <span class="name">qubits</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Delay.qubits"></a>
     
     
 
@@ -5832,19 +5832,6 @@ for details on how these signatures are formed.</p>
 
 
                             </div>
-                            <div id="ExternSignature.return_type" class="classattr">
-                                <div class="attr variable">
-            <span class="name">return_type</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ExternSignature.return_type"></a>
-    
-            <div class="docstring"><p>The return type of the extern signature, if any.</p>
-</div>
-
-
-                            </div>
                             <div id="ExternSignature.parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameters</span>
@@ -5854,6 +5841,19 @@ for details on how these signatures are formed.</p>
     <a class="headerlink" href="#ExternSignature.parameters"></a>
     
             <div class="docstring"><p>The parameters of the extern signature.</p>
+</div>
+
+
+                            </div>
+                            <div id="ExternSignature.return_type" class="classattr">
+                                <div class="attr variable">
+            <span class="name">return_type</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ExternSignature.return_type"></a>
+    
+            <div class="docstring"><p>The return type of the extern signature, if any.</p>
 </div>
 
 
@@ -6155,17 +6155,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="FrameDefinition.identifier" class="classattr">
-                                <div class="attr variable">
-            <span class="name">identifier</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameDefinition.identifier"></a>
-    
-    
-
-                            </div>
                             <div id="FrameDefinition.attributes" class="classattr">
                                 <div class="attr variable">
             <span class="name">attributes</span>
@@ -6173,6 +6162,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#FrameDefinition.attributes"></a>
+    
+    
+
+                            </div>
+                            <div id="FrameDefinition.identifier" class="classattr">
+                                <div class="attr variable">
+            <span class="name">identifier</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameDefinition.identifier"></a>
     
     
 
@@ -6246,17 +6246,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="FrameIdentifier.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#FrameIdentifier.name"></a>
-    
-    
-
-                            </div>
                             <div id="FrameIdentifier.qubits" class="classattr">
                                 <div class="attr variable">
             <span class="name">qubits</span>
@@ -6264,6 +6253,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#FrameIdentifier.qubits"></a>
+    
+    
+
+                            </div>
+                            <div id="FrameIdentifier.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#FrameIdentifier.name"></a>
     
     
 
@@ -6452,17 +6452,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="Gate.modifiers" class="classattr">
-                                <div class="attr variable">
-            <span class="name">modifiers</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Gate.modifiers"></a>
-    
-    
-
-                            </div>
                             <div id="Gate.parameters" class="classattr">
                                 <div class="attr variable">
             <span class="name">parameters</span>
@@ -6470,6 +6459,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#Gate.parameters"></a>
+    
+    
+
+                            </div>
+                            <div id="Gate.modifiers" class="classattr">
+                                <div class="attr variable">
+            <span class="name">modifiers</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Gate.modifiers"></a>
     
     
 
@@ -6672,19 +6672,15 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="GateDefinition.arguments" class="classattr">
+                            <div id="GateDefinition.specification" class="classattr">
                                 <div class="attr variable">
-            <span class="name">arguments</span>
+            <span class="name">specification</span>
 
         
     </div>
-    <a class="headerlink" href="#GateDefinition.arguments"></a>
+    <a class="headerlink" href="#GateDefinition.specification"></a>
     
-            <div class="docstring"><p>Get the arguments the gate takes, if it is defined by a [<code><a href="#PauliSum">PauliSum</a></code>].</p>
-
-<p>This raises an exception if the <code><a href="#GateDefinition">GateDefinition</a></code>'s <code><a href="#GateDefinition.specification">specification</a></code> is not a PauliSum.</p>
-</div>
-
+    
 
                             </div>
                             <div id="GateDefinition.matrix" class="classattr">
@@ -6698,6 +6694,23 @@ will be replaced with a <code>__repr__</code> representation of that component.<
             <div class="docstring"><p>Get the matrix that defines this <code><a href="#GateDefinition">GateDefinition</a></code>, if it has one.</p>
 
 <p>This raises an exception if the <code><a href="#GateDefinition">GateDefinition</a></code>'s <code><a href="#GateDefinition.specification">specification</a></code> is not a matrix.</p>
+</div>
+
+
+                            </div>
+                            <div id="GateDefinition.parameters" class="classattr">
+                                <div class="attr variable">
+            <span class="name">parameters</span>
+
+        
+    </div>
+    <a class="headerlink" href="#GateDefinition.parameters"></a>
+    
+            <div class="docstring"><p>Get the parameters this gate takes.</p>
+
+<p>Note that this allocates a new list each time it is called,
+and cannot be used to modify the definition;
+<code><a href="#GateDefinition">GateDefinition</a></code>s are immutable so they can be consistent with <code>__hash__</code>.</p>
 </div>
 
 
@@ -6728,15 +6741,19 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="GateDefinition.signature" class="classattr">
+                            <div id="GateDefinition.arguments" class="classattr">
                                 <div class="attr variable">
-            <span class="name">signature</span>
+            <span class="name">arguments</span>
 
         
     </div>
-    <a class="headerlink" href="#GateDefinition.signature"></a>
+    <a class="headerlink" href="#GateDefinition.arguments"></a>
     
-    
+            <div class="docstring"><p>Get the arguments the gate takes, if it is defined by a [<code><a href="#PauliSum">PauliSum</a></code>].</p>
+
+<p>This raises an exception if the <code><a href="#GateDefinition">GateDefinition</a></code>'s <code><a href="#GateDefinition.specification">specification</a></code> is not a PauliSum.</p>
+</div>
+
 
                             </div>
                             <div id="GateDefinition.permutation" class="classattr">
@@ -6754,32 +6771,15 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="GateDefinition.specification" class="classattr">
+                            <div id="GateDefinition.signature" class="classattr">
                                 <div class="attr variable">
-            <span class="name">specification</span>
+            <span class="name">signature</span>
 
         
     </div>
-    <a class="headerlink" href="#GateDefinition.specification"></a>
+    <a class="headerlink" href="#GateDefinition.signature"></a>
     
     
-
-                            </div>
-                            <div id="GateDefinition.parameters" class="classattr">
-                                <div class="attr variable">
-            <span class="name">parameters</span>
-
-        
-    </div>
-    <a class="headerlink" href="#GateDefinition.parameters"></a>
-    
-            <div class="docstring"><p>Get the parameters this gate takes.</p>
-
-<p>Note that this allocates a new list each time it is called,
-and cannot be used to modify the definition;
-<code><a href="#GateDefinition">GateDefinition</a></code>s are immutable so they can be consistent with <code>__hash__</code>.</p>
-</div>
-
 
                             </div>
                             <div class="inherited">
@@ -7742,17 +7742,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="JumpUnless.condition" class="classattr">
-                                <div class="attr variable">
-            <span class="name">condition</span>
-
-        
-    </div>
-    <a class="headerlink" href="#JumpUnless.condition"></a>
-    
-    
-
-                            </div>
                             <div id="JumpUnless.target" class="classattr">
                                 <div class="attr variable">
             <span class="name">target</span>
@@ -7760,6 +7749,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#JumpUnless.target"></a>
+    
+    
+
+                            </div>
+                            <div id="JumpUnless.condition" class="classattr">
+                                <div class="attr variable">
+            <span class="name">condition</span>
+
+        
+    </div>
+    <a class="headerlink" href="#JumpUnless.condition"></a>
     
     
 
@@ -7960,15 +7960,19 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="Label.target" class="classattr">
+                            <div id="Label.label" class="classattr">
                                 <div class="attr variable">
-            <span class="name">target</span>
+            <span class="name">label</span>
 
         
     </div>
-    <a class="headerlink" href="#Label.target"></a>
+    <a class="headerlink" href="#Label.label"></a>
     
-    
+            <div class="docstring"><p>Get a copy of the <code><a href="#Label">Label</a></code>'s <code><a href="#Label.target">target</a></code>.</p>
+
+<p>This is an alias of <code><a href="#Label.target">target</a></code>, the canonical name of this property.</p>
+</div>
+
 
                             </div>
                             <div id="Label.name" class="classattr">
@@ -7999,19 +8003,15 @@ and if so, get its name:</p>
 
 
                             </div>
-                            <div id="Label.label" class="classattr">
+                            <div id="Label.target" class="classattr">
                                 <div class="attr variable">
-            <span class="name">label</span>
+            <span class="name">target</span>
 
         
     </div>
-    <a class="headerlink" href="#Label.label"></a>
+    <a class="headerlink" href="#Label.target"></a>
     
-            <div class="docstring"><p>Get a copy of the <code><a href="#Label">Label</a></code>'s <code><a href="#Label.target">target</a></code>.</p>
-
-<p>This is an alias of <code><a href="#Label.target">target</a></code>, the canonical name of this property.</p>
-</div>
-
+    
 
                             </div>
                             <div class="inherited">
@@ -8124,17 +8124,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     
 
                             </div>
-                            <div id="Load.offset" class="classattr">
-                                <div class="attr variable">
-            <span class="name">offset</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Load.offset"></a>
-    
-    
-
-                            </div>
                             <div id="Load.target" class="classattr">
                                 <div class="attr variable">
             <span class="name">target</span>
@@ -8146,17 +8135,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     
 
                             </div>
-                            <div id="Load.left" class="classattr">
-                                <div class="attr variable">
-            <span class="name">left</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Load.left"></a>
-    
-    
-
-                            </div>
                             <div id="Load.right" class="classattr">
                                 <div class="attr variable">
             <span class="name">right</span>
@@ -8164,6 +8142,28 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#Load.right"></a>
+    
+    
+
+                            </div>
+                            <div id="Load.offset" class="classattr">
+                                <div class="attr variable">
+            <span class="name">offset</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Load.offset"></a>
+    
+    
+
+                            </div>
+                            <div id="Load.left" class="classattr">
+                                <div class="attr variable">
+            <span class="name">left</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Load.left"></a>
     
     
 
@@ -8281,19 +8281,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="MeasureCalibrationDefinition.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MeasureCalibrationDefinition.name"></a>
-    
-            <div class="docstring"><p>The Quil-T name of the measurement that this measure calibration definition is for, if any.</p>
-</div>
-
-
-                            </div>
                             <div id="MeasureCalibrationDefinition.target" class="classattr">
                                 <div class="attr variable">
             <span class="name">target</span>
@@ -8306,6 +8293,28 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 result to, if this is a measurement for record.</p>
 </div>
 
+
+                            </div>
+                            <div id="MeasureCalibrationDefinition.instructions" class="classattr">
+                                <div class="attr variable">
+            <span class="name">instructions</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MeasureCalibrationDefinition.instructions"></a>
+    
+    
+
+                            </div>
+                            <div id="MeasureCalibrationDefinition.memory_reference" class="classattr">
+                                <div class="attr variable">
+            <span class="name">memory_reference</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MeasureCalibrationDefinition.memory_reference"></a>
+    
+    
 
                             </div>
                             <div id="MeasureCalibrationDefinition.qubit" class="classattr">
@@ -8321,15 +8330,28 @@ result to, if this is a measurement for record.</p>
 
 
                             </div>
-                            <div id="MeasureCalibrationDefinition.memory_reference" class="classattr">
+                            <div id="MeasureCalibrationDefinition.instrs" class="classattr">
                                 <div class="attr variable">
-            <span class="name">memory_reference</span>
+            <span class="name">instrs</span>
 
         
     </div>
-    <a class="headerlink" href="#MeasureCalibrationDefinition.memory_reference"></a>
+    <a class="headerlink" href="#MeasureCalibrationDefinition.instrs"></a>
     
     
+
+                            </div>
+                            <div id="MeasureCalibrationDefinition.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MeasureCalibrationDefinition.name"></a>
+    
+            <div class="docstring"><p>The Quil-T name of the measurement that this measure calibration definition is for, if any.</p>
+</div>
+
 
                             </div>
                             <div id="MeasureCalibrationDefinition.identifier" class="classattr">
@@ -8339,28 +8361,6 @@ result to, if this is a measurement for record.</p>
         
     </div>
     <a class="headerlink" href="#MeasureCalibrationDefinition.identifier"></a>
-    
-    
-
-                            </div>
-                            <div id="MeasureCalibrationDefinition.instructions" class="classattr">
-                                <div class="attr variable">
-            <span class="name">instructions</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MeasureCalibrationDefinition.instructions"></a>
-    
-    
-
-                            </div>
-                            <div id="MeasureCalibrationDefinition.instrs" class="classattr">
-                                <div class="attr variable">
-            <span class="name">instrs</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MeasureCalibrationDefinition.instrs"></a>
     
     
 
@@ -8419,22 +8419,6 @@ result to, if this is a measurement for record.</p>
 
 
                             </div>
-                            <div id="MeasureCalibrationIdentifier.target" class="classattr">
-                                <div class="attr variable">
-            <span class="name">target</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MeasureCalibrationIdentifier.target"></a>
-    
-            <div class="docstring"><p>The name the definition uses for the variable it will write the measurement result to, if
-this is a measurement for record.</p>
-
-<p>If this is missing, this is a calibration for a measurement for effect.</p>
-</div>
-
-
-                            </div>
                             <div id="MeasureCalibrationIdentifier.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span>
@@ -8457,6 +8441,22 @@ this is a measurement for record.</p>
     <a class="headerlink" href="#MeasureCalibrationIdentifier.qubit"></a>
     
             <div class="docstring"><p>The qubit which is being measured.</p>
+</div>
+
+
+                            </div>
+                            <div id="MeasureCalibrationIdentifier.target" class="classattr">
+                                <div class="attr variable">
+            <span class="name">target</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MeasureCalibrationIdentifier.target"></a>
+    
+            <div class="docstring"><p>The name the definition uses for the variable it will write the measurement result to, if
+this is a measurement for record.</p>
+
+<p>If this is missing, this is a calibration for a measurement for effect.</p>
 </div>
 
 
@@ -8565,17 +8565,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     
 
                             </div>
-                            <div id="Measurement.target" class="classattr">
-                                <div class="attr variable">
-            <span class="name">target</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Measurement.target"></a>
-    
-    
-
-                            </div>
                             <div id="Measurement.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span>
@@ -8583,6 +8572,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#Measurement.name"></a>
+    
+    
+
+                            </div>
+                            <div id="Measurement.target" class="classattr">
+                                <div class="attr variable">
+            <span class="name">target</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Measurement.target"></a>
     
     
 
@@ -8673,17 +8673,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="MemoryReference.offset" class="classattr">
-                                <div class="attr variable">
-            <span class="name">offset</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MemoryReference.offset"></a>
-    
-    
-
-                            </div>
                             <div id="MemoryReference.name" class="classattr">
                                 <div class="attr variable">
             <span class="name">name</span>
@@ -8693,19 +8682,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     <a class="headerlink" href="#MemoryReference.name"></a>
     
             <div class="docstring"><p>The name of the variable.</p>
-</div>
-
-
-                            </div>
-                            <div id="MemoryReference.index" class="classattr">
-                                <div class="attr variable">
-            <span class="name">index</span>
-
-        
-    </div>
-    <a class="headerlink" href="#MemoryReference.index"></a>
-    
-            <div class="docstring"><p>The offset into the memory region.</p>
 </div>
 
 
@@ -8721,12 +8697,36 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     
 
                             </div>
+                            <div id="MemoryReference.offset" class="classattr">
+                                <div class="attr variable">
+            <span class="name">offset</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MemoryReference.offset"></a>
+    
+    
+
+                            </div>
+                            <div id="MemoryReference.index" class="classattr">
+                                <div class="attr variable">
+            <span class="name">index</span>
+
+        
+    </div>
+    <a class="headerlink" href="#MemoryReference.index"></a>
+    
+            <div class="docstring"><p>The offset into the memory region.</p>
+</div>
+
+
+                            </div>
                 </section>
                 <section id="MemoryReferenceDesignator">
                     <div class="attr variable">
             <span class="name">MemoryReferenceDesignator</span>        =
 <input id="MemoryReferenceDesignator-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
-            <label class="view-value-button pdoc-button" for="MemoryReferenceDesignator-view-value"></label><span class="default_value"><a href="#MemoryReference">MemoryReference</a> | <a href="#DeclarationAt">DeclarationAt</a> | <a href="#Declaration">Declaration</a> | tuple</span>
+            <label class="view-value-button pdoc-button" for="MemoryReferenceDesignator-view-value"></label><span class="default_value"><a href="#MemoryReference">MemoryReference</a> | quil._quil.expression.Address | <a href="#DeclarationAt">DeclarationAt</a> | <a href="#Declaration">Declaration</a> | tuple</span>
 
         
     </div>
@@ -9013,17 +9013,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="Offset.data_type" class="classattr">
-                                <div class="attr variable">
-            <span class="name">data_type</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Offset.data_type"></a>
-    
-    
-
-                            </div>
                             <div id="Offset.offset" class="classattr">
                                 <div class="attr variable">
             <span class="name">offset</span>
@@ -9031,6 +9020,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#Offset.offset"></a>
+    
+    
+
+                            </div>
+                            <div id="Offset.data_type" class="classattr">
+                                <div class="attr variable">
+            <span class="name">data_type</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Offset.data_type"></a>
     
     
 
@@ -9242,7 +9242,7 @@ will be replaced with a <code>__repr__</code> representation of that component.<
                 <section id="PauliTargetDesignator">
                     <div class="attr variable">
             <span class="name">PauliTargetDesignator</span>        =
-<span class="default_value"><a href="#Qubit">Qubit</a> | int | str</span>
+<span class="default_value"><a href="#FixedQubit">FixedQubit</a> | <a href="#FormalArgument">FormalArgument</a> | int | str</span>
 
         
     </div>
@@ -9459,20 +9459,6 @@ including the case in which the list of operators is empty.</p>
     
 
                             </div>
-                            <div id="PauliTerm.coefficient" class="classattr">
-                                <div class="attr variable">
-            <span class="name">coefficient</span>
-
-        
-    </div>
-    <a class="headerlink" href="#PauliTerm.coefficient"></a>
-    
-            <div class="docstring"><p>Return a copy of the coefficient [<code>Expression</code>] of the [<code><a href="#PauliTerm">PauliTerm</a></code>],
-aka its <code><a href="#PauliTerm.expression">expression</a></code> property.</p>
-</div>
-
-
-                            </div>
                             <div id="PauliTerm.program" class="classattr">
                                 <div class="attr variable">
             <span class="name">program</span>
@@ -9495,6 +9481,20 @@ aka its <code><a href="#PauliTerm.expression">expression</a></code> property.</p
     <a class="headerlink" href="#PauliTerm.arguments"></a>
     
     
+
+                            </div>
+                            <div id="PauliTerm.coefficient" class="classattr">
+                                <div class="attr variable">
+            <span class="name">coefficient</span>
+
+        
+    </div>
+    <a class="headerlink" href="#PauliTerm.coefficient"></a>
+    
+            <div class="docstring"><p>Return a copy of the coefficient [<code>Expression</code>] of the [<code><a href="#PauliTerm">PauliTerm</a></code>],
+aka its <code><a href="#PauliTerm.expression">expression</a></code> property.</p>
+</div>
+
 
                             </div>
                 </section>
@@ -9590,17 +9590,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="Pragma.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Pragma.name"></a>
-    
-    
-
-                            </div>
                             <div id="Pragma.command" class="classattr">
                                 <div class="attr variable">
             <span class="name">command</span>
@@ -9608,6 +9597,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#Pragma.command"></a>
+    
+    
+
+                            </div>
+                            <div id="Pragma.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Pragma.name"></a>
     
     
 
@@ -9842,17 +9842,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="Pulse.nonblocking" class="classattr">
-                                <div class="attr variable">
-            <span class="name">nonblocking</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Pulse.nonblocking"></a>
-    
-    
-
-                            </div>
                             <div id="Pulse.blocking" class="classattr">
                                 <div class="attr variable">
             <span class="name">blocking</span>
@@ -9882,6 +9871,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#Pulse.waveform"></a>
+    
+    
+
+                            </div>
+                            <div id="Pulse.nonblocking" class="classattr">
+                                <div class="attr variable">
+            <span class="name">nonblocking</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Pulse.nonblocking"></a>
     
     
 
@@ -9957,7 +9957,8 @@ will be replaced with a <code>__repr__</code> representation of that component.<
                 <section id="QubitDesignator">
                     <div class="attr variable">
             <span class="name">QubitDesignator</span>        =
-<span class="default_value"><a href="#Qubit">Qubit</a> | <a href="#QubitPlaceholder">QubitPlaceholder</a> | int | str</span>
+<input id="QubitDesignator-view-value" class="view-value-toggle-state" type="checkbox" aria-hidden="true" tabindex="-1">
+            <label class="view-value-button pdoc-button" for="QubitDesignator-view-value"></label><span class="default_value"><a href="#FixedQubit">FixedQubit</a> | <a href="#FormalArgument">FormalArgument</a> | <a href="#QubitPlaceholder">QubitPlaceholder</a> | int | str</span>
 
         
     </div>
@@ -10112,13 +10113,24 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     
 
                             </div>
-                            <div id="RawCapture.memory_reference" class="classattr">
+                            <div id="RawCapture.frame" class="classattr">
                                 <div class="attr variable">
-            <span class="name">memory_reference</span>
+            <span class="name">frame</span>
 
         
     </div>
-    <a class="headerlink" href="#RawCapture.memory_reference"></a>
+    <a class="headerlink" href="#RawCapture.frame"></a>
+    
+    
+
+                            </div>
+                            <div id="RawCapture.nonblocking" class="classattr">
+                                <div class="attr variable">
+            <span class="name">nonblocking</span>
+
+        
+    </div>
+    <a class="headerlink" href="#RawCapture.nonblocking"></a>
     
     
 
@@ -10134,17 +10146,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     
 
                             </div>
-                            <div id="RawCapture.frame" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frame</span>
-
-        
-    </div>
-    <a class="headerlink" href="#RawCapture.frame"></a>
-    
-    
-
-                            </div>
                             <div id="RawCapture.duration" class="classattr">
                                 <div class="attr variable">
             <span class="name">duration</span>
@@ -10156,13 +10157,13 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     
 
                             </div>
-                            <div id="RawCapture.nonblocking" class="classattr">
+                            <div id="RawCapture.memory_reference" class="classattr">
                                 <div class="attr variable">
-            <span class="name">nonblocking</span>
+            <span class="name">memory_reference</span>
 
         
     </div>
-    <a class="headerlink" href="#RawCapture.nonblocking"></a>
+    <a class="headerlink" href="#RawCapture.memory_reference"></a>
     
     
 
@@ -10477,6 +10478,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
+                            <div id="SetFrequency.frequency" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frequency</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SetFrequency.frequency"></a>
+    
+    
+
+                            </div>
                             <div id="SetFrequency.freq" class="classattr">
                                 <div class="attr variable">
             <span class="name">freq</span>
@@ -10495,17 +10507,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#SetFrequency.frame"></a>
-    
-    
-
-                            </div>
-                            <div id="SetFrequency.frequency" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frequency</span>
-
-        
-    </div>
-    <a class="headerlink" href="#SetFrequency.frequency"></a>
     
     
 
@@ -10614,17 +10615,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="SetPhase.phase" class="classattr">
-                                <div class="attr variable">
-            <span class="name">phase</span>
-
-        
-    </div>
-    <a class="headerlink" href="#SetPhase.phase"></a>
-    
-    
-
-                            </div>
                             <div id="SetPhase.frame" class="classattr">
                                 <div class="attr variable">
             <span class="name">frame</span>
@@ -10632,6 +10622,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#SetPhase.frame"></a>
+    
+    
+
+                            </div>
+                            <div id="SetPhase.phase" class="classattr">
+                                <div class="attr variable">
+            <span class="name">phase</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SetPhase.phase"></a>
     
     
 
@@ -10740,17 +10741,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="SetScale.frame" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frame</span>
-
-        
-    </div>
-    <a class="headerlink" href="#SetScale.frame"></a>
-    
-    
-
-                            </div>
                             <div id="SetScale.scale" class="classattr">
                                 <div class="attr variable">
             <span class="name">scale</span>
@@ -10758,6 +10748,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#SetScale.scale"></a>
+    
+    
+
+                            </div>
+                            <div id="SetScale.frame" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frame</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SetScale.frame"></a>
     
     
 
@@ -10912,17 +10913,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     
 
                             </div>
-                            <div id="ShiftFrequency.frequency" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frequency</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ShiftFrequency.frequency"></a>
-    
-    
-
-                            </div>
                             <div id="ShiftFrequency.freq" class="classattr">
                                 <div class="attr variable">
             <span class="name">freq</span>
@@ -10930,6 +10920,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#ShiftFrequency.freq"></a>
+    
+    
+
+                            </div>
+                            <div id="ShiftFrequency.frequency" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frequency</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ShiftFrequency.frequency"></a>
     
     
 
@@ -11147,17 +11148,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="Store.left" class="classattr">
-                                <div class="attr variable">
-            <span class="name">left</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Store.left"></a>
-    
-    
-
-                            </div>
                             <div id="Store.right" class="classattr">
                                 <div class="attr variable">
             <span class="name">right</span>
@@ -11165,28 +11155,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#Store.right"></a>
-    
-    
-
-                            </div>
-                            <div id="Store.source" class="classattr">
-                                <div class="attr variable">
-            <span class="name">source</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Store.source"></a>
-    
-    
-
-                            </div>
-                            <div id="Store.target" class="classattr">
-                                <div class="attr variable">
-            <span class="name">target</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Store.target"></a>
     
     
 
@@ -11202,6 +11170,28 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     
 
                             </div>
+                            <div id="Store.left" class="classattr">
+                                <div class="attr variable">
+            <span class="name">left</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Store.left"></a>
+    
+    
+
+                            </div>
+                            <div id="Store.source" class="classattr">
+                                <div class="attr variable">
+            <span class="name">source</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Store.source"></a>
+    
+    
+
+                            </div>
                             <div id="Store.offset" class="classattr">
                                 <div class="attr variable">
             <span class="name">offset</span>
@@ -11209,6 +11199,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#Store.offset"></a>
+    
+    
+
+                            </div>
+                            <div id="Store.target" class="classattr">
+                                <div class="attr variable">
+            <span class="name">target</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Store.target"></a>
     
     
 
@@ -11328,17 +11329,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     
 
                             </div>
-                            <div id="SwapPhases.frameB" class="classattr">
-                                <div class="attr variable">
-            <span class="name">frameB</span>
-
-        
-    </div>
-    <a class="headerlink" href="#SwapPhases.frameB"></a>
-    
-    
-
-                            </div>
                             <div id="SwapPhases.frame_1" class="classattr">
                                 <div class="attr variable">
             <span class="name">frame_1</span>
@@ -11357,6 +11347,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#SwapPhases.frame_2"></a>
+    
+    
+
+                            </div>
+                            <div id="SwapPhases.frameB" class="classattr">
+                                <div class="attr variable">
+            <span class="name">frameB</span>
+
+        
+    </div>
+    <a class="headerlink" href="#SwapPhases.frameB"></a>
     
     
 
@@ -11498,17 +11499,6 @@ at a later time.</p>
 </div>
 
 
-                            <div id="TargetPlaceholder.base_label" class="classattr">
-                                <div class="attr variable">
-            <span class="name">base_label</span>
-
-        
-    </div>
-    <a class="headerlink" href="#TargetPlaceholder.base_label"></a>
-    
-    
-
-                            </div>
                             <div id="TargetPlaceholder.prefix" class="classattr">
                                 <div class="attr variable">
             <span class="name">prefix</span>
@@ -11522,6 +11512,17 @@ at a later time.</p>
 <p>This is deprecated; use <code><a href="#TargetPlaceholder.base_label">base_label</a></code> instead.</p>
 </div>
 
+
+                            </div>
+                            <div id="TargetPlaceholder.base_label" class="classattr">
+                                <div class="attr variable">
+            <span class="name">base_label</span>
+
+        
+    </div>
+    <a class="headerlink" href="#TargetPlaceholder.base_label"></a>
+    
+    
 
                             </div>
                 </section>
@@ -11624,17 +11625,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
     
 
                             </div>
-                            <div id="UnaryLogic.op" class="classattr">
-                                <div class="attr variable">
-            <span class="name">op</span>
-
-        
-    </div>
-    <a class="headerlink" href="#UnaryLogic.op"></a>
-    
-    
-
-                            </div>
                             <div id="UnaryLogic.operand" class="classattr">
                                 <div class="attr variable">
             <span class="name">operand</span>
@@ -11642,6 +11632,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#UnaryLogic.operand"></a>
+    
+    
+
+                            </div>
+                            <div id="UnaryLogic.op" class="classattr">
+                                <div class="attr variable">
+            <span class="name">op</span>
+
+        
+    </div>
+    <a class="headerlink" href="#UnaryLogic.op"></a>
     
     
 
@@ -11765,17 +11766,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
-                            <div id="Vector.data_type" class="classattr">
-                                <div class="attr variable">
-            <span class="name">data_type</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Vector.data_type"></a>
-    
-    
-
-                            </div>
                             <div id="Vector.length" class="classattr">
                                 <div class="attr variable">
             <span class="name">length</span>
@@ -11783,6 +11773,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
         
     </div>
     <a class="headerlink" href="#Vector.length"></a>
+    
+    
+
+                            </div>
+                            <div id="Vector.data_type" class="classattr">
+                                <div class="attr variable">
+            <span class="name">data_type</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Vector.data_type"></a>
     
     
 
@@ -12016,6 +12017,17 @@ will be replaced with a <code>__repr__</code> representation of that component.<
 
 
                             </div>
+                            <div id="WaveformDefinition.name" class="classattr">
+                                <div class="attr variable">
+            <span class="name">name</span>
+
+        
+    </div>
+    <a class="headerlink" href="#WaveformDefinition.name"></a>
+    
+    
+
+                            </div>
                             <div id="WaveformDefinition.definition" class="classattr">
                                 <div class="attr variable">
             <span class="name">definition</span>
@@ -12038,17 +12050,6 @@ will be replaced with a <code>__repr__</code> representation of that component.<
             <div class="docstring"><p>Get the entries of the waveform definition.</p>
 </div>
 
-
-                            </div>
-                            <div id="WaveformDefinition.name" class="classattr">
-                                <div class="attr variable">
-            <span class="name">name</span>
-
-        
-    </div>
-    <a class="headerlink" href="#WaveformDefinition.name"></a>
-    
-    
 
                             </div>
                             <div class="inherited">
