@@ -56,7 +56,7 @@ class Address(Expression):
     def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
     def __getnewargs__(self) -> tuple[instructions.MemoryReference]: ...
     def __hash__(self) -> builtins.int: ...
-    def __new__(cls, memory_reference: instructions.MemoryReference  |  instructions.DeclarationAt  |  instructions.Declaration  |  tuple[builtins.str, builtins.int]) -> Address: ...
+    def __new__(cls, memory_reference: instructions.MemoryReference  |  Address  |  instructions.DeclarationAt  |  instructions.Declaration  |  tuple[builtins.str, builtins.int]) -> Address: ...
 
 class EvaluationError(_quil.QuilError):
     r"""
@@ -143,7 +143,7 @@ class Expression:
     def __str__(self) -> builtins.str: ...
     def __sub__(self, other: Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  instructions.MemoryReference  |  builtins.str) -> Expression: ...
     def __truediv__(self, other: Expression  |  builtins.int  |  builtins.float  |  builtins.complex  |  instructions.MemoryReference  |  builtins.str) -> Expression: ...
-    def evaluate(self, variables: typing.Optional[typing.Mapping[Parameter, builtins.complex]] = None, memory_references: typing.Optional[typing.Mapping[instructions.MemoryReference  |  instructions.DeclarationAt  |  instructions.Declaration  |  tuple[builtins.str, builtins.int]  |  builtins.str, typing.Sequence[builtins.float]]] = None, /, partial: builtins.bool = False) -> Expression  |  builtins.complex:
+    def evaluate(self, variables: typing.Optional[typing.Mapping[Parameter, builtins.complex]] = None, memory_references: typing.Optional[typing.Mapping[instructions.MemoryReference  |  Address  |  instructions.DeclarationAt  |  instructions.Declaration  |  tuple[builtins.str, builtins.int]  |  builtins.str, typing.Sequence[builtins.float]]] = None, /, partial: builtins.bool = False) -> Expression  |  builtins.complex:
         r"""
         Evaluate an expression, expecting that it may be fully reduced to a single complex number.
         
@@ -180,7 +180,7 @@ class Expression:
         
         Raises a ``ParseExpressionError`` error if the string isn't a valid Quil expression.
         """
-    def substitute(self, d: typing.Optional[typing.Mapping[Parameter  |  instructions.MemoryReference  |  instructions.DeclarationAt  |  instructions.Declaration  |  tuple[builtins.str, builtins.int]  |  builtins.str, builtins.complex  |  typing.Sequence[builtins.complex]]] = None, /) -> Expression  |  builtins.complex:
+    def substitute(self, d: typing.Optional[typing.Mapping[Parameter  |  instructions.MemoryReference  |  Address  |  instructions.DeclarationAt  |  instructions.Declaration  |  tuple[builtins.str, builtins.int]  |  builtins.str, builtins.complex  |  typing.Sequence[builtins.complex]]] = None, /) -> Expression  |  builtins.complex:
         r"""
         Explicitly evaluate as much of ``expr`` as possible, using substitutions from `d`.
         
