@@ -1,3 +1,64 @@
+## 0.37.3-rc.2 (2026-10-17)
+
+### Features
+
+- improve ergonomics for Expressions
+- migrate PyQuil Expression functions
+
+### Fixes
+
+- program Python bindings and stubs
+- stubs for OneOrMore<AnyInstruction>
+- remove waveform/templates post-rebase
+- update AnyInstruction stubs
+- handle PiConstant from evaluate_partial
+- run cargo fix
+- add back accidentally removed imports
+- resolve PiConstant unit-variant syntax after PyExpression split
+- remove accidental non-module from stubs
+- add missing attribute to strip stubs
+- add missing from_py_object attribute
+- strip pyo3 attributes in pickleable_new!
+
+## 0.37.3-rc.1 (2026-10-17)
+
+### Features
+
+- improve ergonomics for Expressions
+- migrate PyQuil Expression functions
+
+### Fixes
+
+- program Python bindings and stubs
+- stubs for OneOrMore<AnyInstruction>
+- remove waveform/templates post-rebase
+- update AnyInstruction stubs
+- handle PiConstant from evaluate_partial
+- run cargo fix
+- add back accidentally removed imports
+- resolve PiConstant unit-variant syntax after PyExpression split
+- remove accidental non-module from stubs
+- add missing attribute to strip stubs
+
+## 0.37.3-rc.0 (2026-10-17)
+
+### Features
+
+- improve ergonomics for Expressions
+- migrate PyQuil Expression functions
+
+### Fixes
+
+- program Python bindings and stubs
+- stubs for OneOrMore<AnyInstruction>
+- remove waveform/templates post-rebase
+- update AnyInstruction stubs
+- handle PiConstant from evaluate_partial
+- run cargo fix
+- add back accidentally removed imports
+- resolve PiConstant unit-variant syntax after PyExpression split
+- remove accidental non-module from stubs
+
 ## 0.37.2 (2026-08-20)
 
 ### Fixes

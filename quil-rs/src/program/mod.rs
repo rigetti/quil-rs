@@ -66,8 +66,6 @@ pub mod scheduling;
 mod source_map;
 pub mod type_check;
 
-#[cfg(not(feature = "python"))]
-use optipy::strip_pyo3;
 #[cfg(feature = "python")]
 pub(crate) mod quilpy;
 
@@ -177,7 +175,7 @@ type Result<T> = std::result::Result<T, ProgramError>;
     feature = "python",
     pyo3::pyclass(module = "quil._quil.program", eq, from_py_object)
 )]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
+#[cfg_attr(not(feature = "python"), optipy::strip_pyo3)]
 pub struct Program {
     #[pyo3(get, set)]
     pub calibrations: Calibrations,
@@ -196,12 +194,12 @@ pub struct Program {
     instructions: Vec<Instruction>,
     // private field used for caching operations
     #[pyo3(get)]
-    used_qubits: HashSet<Qubit>,
+    pub(crate) used_qubits: HashSet<Qubit>,
 }
 
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[cfg_attr(feature = "python", pyo3::pymethods)]
-#[cfg_attr(not(feature = "python"), strip_pyo3)]
+#[cfg_attr(not(feature = "python"), optipy::strip_pyo3)]
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 impl Program {
     #[new]
@@ -221,87 +219,6 @@ impl Program {
             circuits: self.circuits.clone(),
             instructions: Vec::new(),
             used_qubits: HashSet::new(),
-        }
-    }
-
-    /// Add an instruction to the end of the program.
-    ///
-    /// Note, parsing extern signatures is deferred here to maintain infallibility
-    /// of [`Program::add_instruction`]. This means that invalid `PRAGMA EXTERN`
-    /// instructions are still added to the [`Program::extern_pragma_map`];
-    /// duplicate `PRAGMA EXTERN` names are overwritten.
-    pub fn add_instruction(
-        &mut self,
-        #[gen_stub(override_type(
-            type_repr = "_quil.instructions.Instruction",
-            imports = ("quil._quil"),
-        ))]
-        instruction: Instruction,
-    ) {
-        self.used_qubits
-            .extend(instruction.get_qubits().into_iter().cloned());
-
-        match instruction {
-            Instruction::CalibrationDefinition(calibration) => {
-                self.calibrations.insert_calibration(calibration);
-            }
-            Instruction::CircuitDefinition(circuit) => {
-                self.circuits.insert(circuit.name.clone(), circuit);
-            }
-            Instruction::FrameDefinition(FrameDefinition {
-                identifier,
-                attributes,
-            }) => {
-                self.frames.insert(identifier, attributes);
-            }
-            Instruction::Declaration(Declaration {
-                name,
-                size,
-                sharing,
-            }) => {
-                self.memory_regions
-                    .insert(name, MemoryRegion { size, sharing });
-            }
-            Instruction::GateDefinition(gate_definition) => {
-                self.gate_definitions
-                    .insert(gate_definition.name.clone(), gate_definition);
-            }
-            Instruction::MeasureCalibrationDefinition(calibration) => {
-                self.calibrations
-                    .insert_measurement_calibration(calibration);
-            }
-            Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => {
-                self.waveforms.insert(name, definition);
-            }
-            Instruction::Gate(gate) => {
-                self.instructions.push(Instruction::Gate(gate));
-            }
-            Instruction::Measurement(measurement) => {
-                self.instructions
-                    .push(Instruction::Measurement(measurement));
-            }
-            Instruction::Reset(reset) => {
-                self.instructions.push(Instruction::Reset(reset));
-            }
-            Instruction::Delay(delay) => {
-                self.instructions.push(Instruction::Delay(delay));
-            }
-            Instruction::Fence(fence) => {
-                self.instructions.push(Instruction::Fence(fence));
-            }
-            Instruction::Capture(capture) => {
-                self.instructions.push(Instruction::Capture(capture));
-            }
-            Instruction::Pulse(pulse) => {
-                self.instructions.push(Instruction::Pulse(pulse));
-            }
-            Instruction::Pragma(pragma) if pragma.name == RESERVED_PRAGMA_EXTERN => {
-                self.extern_pragma_map.insert(pragma);
-            }
-            Instruction::RawCapture(raw_capture) => {
-                self.instructions.push(Instruction::RawCapture(raw_capture));
-            }
-            other => self.instructions.push(other),
         }
     }
 
@@ -333,6 +250,19 @@ impl Program {
     /// See [`Program::expand_calibrations_with_source_map`] for a version that returns a source mapping.
     pub fn expand_calibrations(&self) -> Result<Self> {
         self.expand_calibrations_inner(None)
+    }
+
+    /// Resolve [`TargetPlaceholder`]s and [`QubitPlaceholder`]s within the program using default
+    /// resolvers.
+    ///
+    /// See [`resolve_placeholders_with_custom_resolvers`](Self::resolve_placeholders_with_custom_resolvers),
+    /// [`default_target_resolver`](Self::default_target_resolver),
+    /// and [`default_qubit_resolver`](Self::default_qubit_resolver) for more information.
+    pub fn resolve_placeholders(&mut self) {
+        self.resolve_placeholders_with_custom_resolvers(
+            self.default_target_resolver(),
+            self.default_qubit_resolver(),
+        )
     }
 
     /// Return a copy of the [`Program`] wrapped in a loop that repeats `iterations` times.
@@ -420,19 +350,6 @@ impl Program {
         looped_program
     }
 
-    /// Resolve [`TargetPlaceholder`]s and [`QubitPlaceholder`]s within the program using default
-    /// resolvers.
-    ///
-    /// See [`resolve_placeholders_with_custom_resolvers`](Self::resolve_placeholders_with_custom_resolvers),
-    /// [`default_target_resolver`](Self::default_target_resolver),
-    /// and [`default_qubit_resolver`](Self::default_qubit_resolver) for more information.
-    pub fn resolve_placeholders(&mut self) {
-        self.resolve_placeholders_with_custom_resolvers(
-            self.default_target_resolver(),
-            self.default_qubit_resolver(),
-        )
-    }
-
     /// Return a copy of all of the instructions which constitute this [`Program`].
     #[gen_stub(override_return_type(
         type_repr = "builtins.list[_quil.instructions.Instruction]",
@@ -496,6 +413,80 @@ impl Program {
         instructions.iter_mut().for_each(closure);
 
         self.add_instructions(instructions);
+    }
+
+    /// Add an instruction to the end of the program.
+    ///
+    /// Note, parsing extern signatures is deferred here to maintain infallibility
+    /// of [`Program::add_instruction`]. This means that invalid `PRAGMA EXTERN`
+    /// instructions are still added to the [`Program::extern_pragma_map`];
+    /// duplicate `PRAGMA EXTERN` names are overwritten.
+    pub fn add_instruction(&mut self, instruction: Instruction) {
+        self.used_qubits
+            .extend(instruction.get_qubits().into_iter().cloned());
+
+        match instruction {
+            Instruction::CalibrationDefinition(calibration) => {
+                self.calibrations.insert_calibration(calibration);
+            }
+            Instruction::CircuitDefinition(circuit) => {
+                self.circuits.insert(circuit.name.clone(), circuit);
+            }
+            Instruction::FrameDefinition(FrameDefinition {
+                identifier,
+                attributes,
+            }) => {
+                self.frames.insert(identifier, attributes);
+            }
+            Instruction::Declaration(Declaration {
+                name,
+                size,
+                sharing,
+            }) => {
+                self.memory_regions
+                    .insert(name, MemoryRegion { size, sharing });
+            }
+            Instruction::GateDefinition(gate_definition) => {
+                self.gate_definitions
+                    .insert(gate_definition.name.clone(), gate_definition);
+            }
+            Instruction::MeasureCalibrationDefinition(calibration) => {
+                self.calibrations
+                    .insert_measurement_calibration(calibration);
+            }
+            Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => {
+                self.waveforms.insert(name, definition);
+            }
+            Instruction::Gate(gate) => {
+                self.instructions.push(Instruction::Gate(gate));
+            }
+            Instruction::Measurement(measurement) => {
+                self.instructions
+                    .push(Instruction::Measurement(measurement));
+            }
+            Instruction::Reset(reset) => {
+                self.instructions.push(Instruction::Reset(reset));
+            }
+            Instruction::Delay(delay) => {
+                self.instructions.push(Instruction::Delay(delay));
+            }
+            Instruction::Fence(fence) => {
+                self.instructions.push(Instruction::Fence(fence));
+            }
+            Instruction::Capture(capture) => {
+                self.instructions.push(Instruction::Capture(capture));
+            }
+            Instruction::Pulse(pulse) => {
+                self.instructions.push(Instruction::Pulse(pulse));
+            }
+            Instruction::Pragma(pragma) if pragma.name == RESERVED_PRAGMA_EXTERN => {
+                self.extern_pragma_map.insert(pragma);
+            }
+            Instruction::RawCapture(raw_capture) => {
+                self.instructions.push(Instruction::RawCapture(raw_capture));
+            }
+            other => self.instructions.push(other),
+        }
     }
 
     pub fn add_instructions<I>(&mut self, instructions: I)
@@ -1017,7 +1008,7 @@ impl Program {
         let mut umat = Array2::eye(2usize.pow(n_qubits as u32));
         for instruction in self.instructions.clone() {
             match instruction {
-                Instruction::Halt() => {}
+                Instruction::Halt => {}
                 Instruction::Gate(mut gate) => {
                     umat = gate.to_unitary(n_qubits)?.dot(&umat);
                 }
@@ -1729,7 +1720,7 @@ I 0
     #[test]
     fn test_add_instructions() {
         let mut p = Program::new();
-        let instrs = vec![Instruction::Nop(), Instruction::Nop()];
+        let instrs = vec![Instruction::Nop, Instruction::Nop];
         p.add_instructions(instrs.clone());
         assert_eq!(p.instructions, instrs);
     }
@@ -2350,7 +2341,7 @@ CALL foo octets[1] reals
     fn test_defgate_as_sequence_mechanics() {
         let pi_divided_by_2 = Expression::Infix(InfixExpression {
             operator: InfixOperator::Slash,
-            left: ArcIntern::new(Expression::PiConstant()),
+            left: ArcIntern::new(Expression::PiConstant),
             right: ArcIntern::new(Expression::Number(Complex64 { re: 2.0, im: 0.0 })),
         });
         let negate_variable = |variable: String| {

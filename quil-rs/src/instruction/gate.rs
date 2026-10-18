@@ -5,13 +5,13 @@ use crate::{
         write_expression_parameter_string, write_parameter_string, write_qubits, DefGateSequence,
         Qubit,
     },
-    pickleable_new,
     quil::{write_join_quil, Quil, INDENT},
     real,
     validation::identifier::{
         validate_identifier, validate_user_identifier, IdentifierValidationError,
     },
 };
+use itertools::Itertools;
 use ndarray::{array, linalg::kron, Array2};
 use num_complex::Complex64;
 use once_cell::sync::Lazy;
@@ -20,6 +20,8 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyInstruction;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{
     gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pyclass_enum,
@@ -32,6 +34,7 @@ use pyo3_stub_gen::derive::{
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -129,7 +132,7 @@ impl Gate {
     ///
     /// Returns an error if the given name isn't a valid Quil identifier or if no qubits are given.
     pub fn new(
-        name: &str,
+        name: impl AsRef<str>,
         parameters: Vec<Expression>,
         qubits: Vec<Qubit>,
         modifiers: Vec<GateModifier>,
@@ -138,6 +141,7 @@ impl Gate {
             return Err(GateError::EmptyQubits);
         }
 
+        let name = name.as_ref();
         validate_identifier(name).map_err(GateError::InvalidIdentifier)?;
 
         Ok(Self {
@@ -845,7 +849,7 @@ mod test_gate_into_matrix {
         frozen,
         hash,
         rename_all = "SCREAMING_SNAKE_CASE",
-        from_py_object
+        skip_from_py_object
     )
 )]
 #[strum(serialize_all = "UPPERCASE")]
@@ -856,6 +860,25 @@ pub enum PauliGate {
     Z,
 }
 
+// TODO(migration-guide):
+// In PyQuil v4, `PauliTerm`'s implemention of `__eq__` allowed comparison to `PauliSum`s,
+// violating the Python requirement that objects which compare equal have the same hash.
+// We fix this bug by virtue of not implementing such comparisons,
+// but this may break code which relied on the old behavior.
+// For users that need to compare a `PauliTerm` to a `PauliSum`,
+// they should wrap the `PauliTerm` in a `PauliSum` with a single term and compare those.
+/// A `PauliTerm` is a coefficient multiplied by the tensor product of Pauli operators
+/// operating on different qubit indices.
+///
+/// # Python Users
+///
+/// For Python users, `PauliTerm`s and [`PauliSum`]s support several mathematical operations
+/// that allow you to manipulate instances in a natural way;
+/// except where otherwise noted, these methods may rearrange and/or simplify terms,
+/// which may change the observable behavior of a program when executed on a QPU.
+/// The simplifications and rearrangements are not guaranteed to be stable across versions,
+/// so if you wish to specify an exact order of operations,
+/// you must use the `PauliTerm` and `PauliSum` constructors directly.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
@@ -882,9 +905,7 @@ impl PauliTerm {
             expression,
         }
     }
-}
 
-impl PauliTerm {
     pub(crate) fn word(&self) -> impl Iterator<Item = &PauliGate> {
         self.arguments.iter().map(|(gate, _)| gate)
     }
@@ -894,6 +915,7 @@ impl PauliTerm {
     }
 }
 
+// TODO(migration-guide): See note about `__eq__` in `PauliTerm` above.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
@@ -913,26 +935,71 @@ pub struct PauliSum {
     pub terms: Vec<PauliTerm>,
 }
 
-pickleable_new! {
-    impl PauliSum {
-        pub fn new(arguments: Vec<String>, terms: Vec<PauliTerm>) -> Result<PauliSum, GateError> {
-            let diff = terms
-                .iter()
-                .flat_map(|t| t.arguments())
-                .collect::<HashSet<_>>()
-                .difference(&arguments.iter().collect::<HashSet<_>>())
-                .copied()
-                .collect::<Vec<_>>();
+impl PauliSum {
+    pub fn new(arguments: Vec<String>, terms: Vec<PauliTerm>) -> Result<PauliSum, GateError> {
+        let diff = PauliSum::extract_args(&terms)
+            .difference(
+                &arguments
+                    .iter()
+                    .map(|arg| arg.as_str())
+                    .collect::<HashSet<_>>(),
+            )
+            .copied()
+            .collect::<Vec<_>>();
 
-            if !diff.is_empty() {
-                return Err(GateError::PauliSumArgumentMismatch {
-                    mismatches: diff.into_iter().cloned().collect(),
-                    expected_arguments: arguments,
-                });
-            }
-
-            Ok(Self { arguments, terms })
+        if !diff.is_empty() {
+            return Err(GateError::PauliSumArgumentMismatch {
+                mismatches: diff.into_iter().map(|arg| arg.to_string()).collect(),
+                expected_arguments: arguments,
+            });
         }
+
+        Ok(Self { arguments, terms })
+    }
+
+    /// Extract arguments from a collection of `PauliTerm`s.
+    pub(crate) fn extract_args(terms: &[PauliTerm]) -> HashSet<&str> {
+        terms
+            .iter()
+            .flat_map(|term| term.arguments())
+            .map(|arg| arg.as_str())
+            .collect::<HashSet<_>>()
+    }
+
+    /// Collect arguments into a sorted list.
+    pub(crate) fn into_args(terms: &[PauliTerm]) -> Vec<String> {
+        PauliSum::extract_args(terms)
+            .iter()
+            .map(|&arg| arg.to_string())
+            .sorted()
+            .collect()
+    }
+}
+
+#[cfg(test)]
+mod pauli_sum_tests {
+    use super::*;
+
+    const ONE: Expression = Expression::Number(Complex64::new(1.0, 0.0));
+
+    #[test]
+    fn test_infer_args() {
+        let terms = vec![
+            PauliTerm::new(vec![(PauliGate::X, "q0".to_string())], ONE),
+            PauliTerm::new(vec![(PauliGate::Y, "q1".to_string())], ONE),
+            PauliTerm::new(vec![(PauliGate::Z, "q0".to_string())], ONE),
+        ];
+
+        let inferred_args = PauliSum::extract_args(&terms);
+        let expected_args: HashSet<&str> = HashSet::from(["q0", "q1"]);
+        assert_eq!(inferred_args, expected_args);
+
+        // Check that it is consistent with the `PauliSum::new` constructor.
+        let expected_args = PauliSum::into_args(&terms);
+        let pauli_sum = PauliSum::new(expected_args.clone(), terms)
+            .expect("PauliSum::new should succeed with matching arguments");
+        // Sanity check that they are indeed the same.
+        assert_eq!(pauli_sum.arguments, expected_args);
     }
 }
 
@@ -941,7 +1008,13 @@ pickleable_new! {
 #[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
 #[cfg_attr(
     feature = "python",
-    pyo3::pyclass(module = "quil._quil.instructions", eq, frozen, hash, from_py_object)
+    pyo3::pyclass(
+        module = "quil._quil.instructions",
+        eq,
+        frozen,
+        hash,
+        skip_from_py_object
+    )
 )]
 pub enum GateSpecification {
     /// A matrix of [`Expression`]s representing a unitary operation for a [`GateType::Matrix`].
@@ -1009,38 +1082,39 @@ impl Quil for GateSpecification {
 /// A struct encapsulating a quil Gate Definition
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
+#[cfg_attr(not(feature = "python"), optipy::strip_pyo3)]
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
-        get_all,
         subclass,
         from_py_object
     )
 )]
 pub struct GateDefinition {
+    #[pyo3(get)]
     pub name: String,
     pub parameters: Vec<String>,
+    #[pyo3(get)]
     pub specification: GateSpecification,
 }
 
-pickleable_new! {
-    impl GateDefinition {
-        pub fn new(
-            name: String,
-            parameters: Vec<String>,
-            specification: GateSpecification,
-        ) -> Result<GateDefinition, GateError> {
-            validate_user_identifier(&name)?;
-            Ok(Self {
-                name,
-                parameters,
-                specification,
-            })
-        }
+impl GateDefinition {
+    pub fn new(
+        name: String,
+        parameters: Vec<String>,
+        specification: GateSpecification,
+    ) -> Result<GateDefinition, GateError> {
+        validate_user_identifier(&name)?;
+        Ok(Self {
+            name,
+            parameters,
+            specification,
+        })
     }
 }
 

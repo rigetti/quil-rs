@@ -1,23 +1,13 @@
 use std::sync::Arc;
 
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyQubit;
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum};
+use pyo3_stub_gen::derive::gen_stub_pyclass;
 
 use crate::quil::{Quil, ToQuilError};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord, strum::EnumTryAs)]
-#[cfg_attr(feature = "stubs", gen_stub_pyclass_complex_enum)]
-#[cfg_attr(
-    feature = "python",
-    pyo3::pyclass(
-        module = "quil._quil.instructions",
-        eq,
-        frozen,
-        hash,
-        ord,
-        from_py_object
-    )
-)]
 pub enum Qubit {
     Fixed(u64),
     Placeholder(QubitPlaceholder),
@@ -67,6 +57,7 @@ type QubitPlaceholderInner = Arc<()>;
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyQubit,
         eq,
         frozen,
         hash,

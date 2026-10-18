@@ -8,10 +8,12 @@ use crate::{
         write_expression_parameter_string, write_instruction_block, Expression, GateModifier,
         Instruction, Qubit,
     },
-    pickleable_new,
     quil::{Quil, INDENT},
     validation::identifier::{validate_identifier, IdentifierValidationError},
 };
+
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyInstruction;
 
 use super::{write_qubit_parameters, Gate};
 
@@ -30,6 +32,7 @@ pub trait CalibrationSignature {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         get_all,
         set_all,
@@ -39,18 +42,17 @@ pub trait CalibrationSignature {
 )]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub struct CalibrationDefinition {
-    #[pyo3(name = "identifier")]
     pub identifier: CalibrationIdentifier,
     pub instructions: Vec<Instruction>,
 }
 
-pickleable_new! {
-    impl CalibrationDefinition {
-        /// Builds a new calibration definition.
-        pub fn new(
-            identifier: CalibrationIdentifier,
-            instructions: Vec<Instruction>,
-        );
+impl CalibrationDefinition {
+    /// Builds a new calibration definition.
+    pub fn new(identifier: CalibrationIdentifier, instructions: Vec<Instruction>) -> Self {
+        Self {
+            identifier,
+            instructions,
+        }
     }
 }
 
@@ -230,6 +232,7 @@ impl Quil for CalibrationIdentifier {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         get_all,
         set_all,
@@ -242,9 +245,12 @@ pub struct MeasureCalibrationDefinition {
     pub instructions: Vec<Instruction>,
 }
 
-pickleable_new! {
-    impl MeasureCalibrationDefinition {
-        pub fn new(identifier: MeasureCalibrationIdentifier, instructions: Vec<Instruction>);
+impl MeasureCalibrationDefinition {
+    pub fn new(identifier: MeasureCalibrationIdentifier, instructions: Vec<Instruction>) -> Self {
+        Self {
+            identifier,
+            instructions,
+        }
     }
 }
 
@@ -410,7 +416,7 @@ mod test_measure_calibration_definition {
             },
             instructions: vec![Instruction::Gate(Gate {
                 name: "X".to_string(),
-                parameters: vec![Expression::PiConstant()],
+                parameters: vec![Expression::PiConstant],
                 qubits: vec![Qubit::Fixed(0)],
                 modifiers: vec![],
 
@@ -426,7 +432,7 @@ mod test_measure_calibration_definition {
             },
             instructions: vec![Instruction::Gate(Gate {
                 name: "X".to_string(),
-                parameters: vec![Expression::PiConstant()],
+                parameters: vec![Expression::PiConstant],
                 qubits: vec![Qubit::Fixed(0)],
                 modifiers: vec![],
 
@@ -472,7 +478,7 @@ mod test_measure_calibration_definition {
             },
             instructions: vec![Instruction::Gate(Gate {
                 name: "X".to_string(),
-                parameters: vec![Expression::PiConstant()],
+                parameters: vec![Expression::PiConstant],
                 qubits: vec![Qubit::Variable("q".to_string())],
                 modifiers: vec![],
             })]},
@@ -487,7 +493,7 @@ mod test_measure_calibration_definition {
             },
             instructions: vec![Instruction::Gate(Gate {
                 name: "X".to_string(),
-                parameters: vec![Expression::PiConstant()],
+                parameters: vec![Expression::PiConstant],
                 qubits: vec![Qubit::Variable("q".to_string())],
                 modifiers: vec![],
             })]},

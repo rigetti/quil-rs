@@ -1,4 +1,5 @@
-use std::str::FromStr;
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyInstruction;
 
 use nom_locate::LocatedSpan;
 
@@ -24,7 +25,7 @@ use super::ArithmeticOperand;
         frozen,
         hash,
         rename_all = "SCREAMING_SNAKE_CASE",
-        from_py_object
+        skip_from_py_object
     )
 )]
 pub enum ScalarType {
@@ -150,12 +151,14 @@ impl Quil for Offset {
     }
 }
 
+// TODO(migration-guide): PyQuil v4 calls this `Declare`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -170,9 +173,13 @@ pub struct Declaration {
     pub sharing: Option<Sharing>,
 }
 
-pickleable_new! {
-    impl Declaration {
-        pub fn new(name: String, size: Vector, sharing: Option<Sharing>);
+impl Declaration {
+    pub fn new(name: String, size: Vector, sharing: Option<Sharing>) -> Self {
+        Self {
+            name,
+            size,
+            sharing,
+        }
     }
 }
 
@@ -245,6 +252,7 @@ mod test_declaration {
     }
 }
 
+/// Representation of a reference to a classical memory address.
 #[derive(Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
@@ -261,17 +269,21 @@ mod test_declaration {
 )]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub struct MemoryReference {
+    /// The name of the variable.
     #[cfg_attr(
         test,
         proptest(strategy = "crate::expression::proptest_helpers::arb_name()")
     )]
     pub name: String,
+
+    // TODO(migration-guide): PyQuil v4 calls this `offset`.
+    /// The offset into the memory region.
     pub index: u64,
 }
 
-pickleable_new! {
-    impl MemoryReference {
-        pub fn new(name: String, index: u64);
+impl MemoryReference {
+    pub fn new(name: String, index: u64) -> Self {
+        Self { name, index }
     }
 }
 
@@ -291,7 +303,7 @@ impl std::fmt::Display for MemoryReference {
     }
 }
 
-impl FromStr for MemoryReference {
+impl std::str::FromStr for MemoryReference {
     type Err = SyntaxError<Self>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -309,6 +321,7 @@ impl FromStr for MemoryReference {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -323,9 +336,13 @@ pub struct Load {
     pub offset: MemoryReference,
 }
 
-pickleable_new! {
-    impl Load {
-        pub fn new(destination: MemoryReference, source: String, offset: MemoryReference);
+impl Load {
+    pub fn new(destination: MemoryReference, source: String, offset: MemoryReference) -> Self {
+        Self {
+            destination,
+            source,
+            offset,
+        }
     }
 }
 
@@ -349,6 +366,7 @@ impl Quil for Load {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -363,9 +381,13 @@ pub struct Store {
     pub source: ArithmeticOperand,
 }
 
-pickleable_new! {
-    impl Store {
-        pub fn new(destination: String, offset: MemoryReference, source: ArithmeticOperand);
+impl Store {
+    pub fn new(destination: String, offset: MemoryReference, source: ArithmeticOperand) -> Self {
+        Self {
+            destination,
+            offset,
+            source,
+        }
     }
 }
 

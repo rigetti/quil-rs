@@ -1,8 +1,10 @@
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyInstruction;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::gen_stub_pyclass;
 
 use super::Qubit;
-use crate::{expression::Expression, pickleable_new, quil::Quil};
+use crate::{expression::Expression, quil::Quil};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
@@ -10,6 +12,7 @@ use crate::{expression::Expression, pickleable_new, quil::Quil};
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -24,9 +27,13 @@ pub struct Delay {
     pub qubits: Vec<Qubit>,
 }
 
-pickleable_new! {
-    impl Delay {
-        pub fn new(duration: Expression, frame_names: Vec<String>, qubits: Vec<Qubit>);
+impl Delay {
+    pub fn new(duration: Expression, frame_names: Vec<String>, qubits: Vec<Qubit>) -> Self {
+        Self {
+            duration,
+            frame_names,
+            qubits,
+        }
     }
 }
 
@@ -55,6 +62,7 @@ impl Quil for Delay {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -65,6 +73,12 @@ impl Quil for Delay {
 )]
 pub struct Fence {
     pub qubits: Vec<Qubit>,
+}
+
+impl Fence {
+    pub fn new(qubits: Vec<Qubit>) -> Self {
+        Self { qubits }
+    }
 }
 
 impl Quil for Fence {
@@ -79,11 +93,5 @@ impl Quil for Fence {
             qubit.write(writer, fall_back_to_debug)?;
         }
         Ok(())
-    }
-}
-
-pickleable_new! {
-    impl Fence {
-        pub fn new(qubits: Vec<Qubit>);
     }
 }
