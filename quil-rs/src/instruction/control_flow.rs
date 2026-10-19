@@ -8,10 +8,7 @@ use optipy::strip_pyo3;
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen_stub_pymethods};
 
 use super::MemoryReference;
-use crate::{
-    pickleable_new,
-    quil::{Quil, ToQuilError},
-};
+use crate::quil::{Quil, ToQuilError};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]

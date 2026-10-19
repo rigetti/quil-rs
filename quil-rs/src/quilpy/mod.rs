@@ -19,6 +19,7 @@ pub(crate) mod deprecations;
 pub(crate) mod errors;
 pub(crate) mod memory;
 pub(crate) mod migrations;
+pub(crate) mod pauli;
 pub(crate) mod singleton;
 
 pub(crate) use deprecations::{
@@ -677,15 +678,6 @@ where
 /// simply call `value.into_new_args(py)` on the value you want to return,
 /// and it will be converted into a `PyTuple` containing just that value.
 pub(crate) struct NewArgs<'py, T>(Bound<'py, PyTuple>, PhantomData<T>);
-
-impl<'py, T> NewArgs<'py, T> {
-    pub(crate) fn new<U>(py: Python<'py>, value: U) -> PyResult<Self>
-    where
-        U: IntoPyObject<'py>,
-    {
-        Ok(NewArgs((value,).into_pyobject(py)?, PhantomData))
-    }
-}
 
 impl<'py, T> IntoPyObject<'py> for NewArgs<'py, T> {
     type Target = PyTuple;
