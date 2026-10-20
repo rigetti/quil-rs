@@ -3056,7 +3056,6 @@ impl FrameDefinition {
 
 use crate::quilpy::pauli::{PauliArg, PauliArgIter, PauliTermIter};
 
-
 impl_stub_like!(pub(crate) PragmaArgumentLike = enum PragmaArgument | String as Identifier | u64 as Integer);
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]

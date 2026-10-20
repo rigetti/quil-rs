@@ -2482,6 +2482,18 @@ class PauliSum:
         r"""
         Get a list of all the qubits in the sum of the terms.
         """
+    def simplify(self) -> PauliSum:
+        r"""
+        Simplify the sum of Pauli operators according to Pauli algebra rules.
+        
+        This combines terms that act with the same Pauli operators on the same qubits
+        (regardless of their order) by summing their coefficients, and drops any resulting
+        terms whose coefficient is (numerically close to) zero.
+        
+        Note that math operations (``+``, ``-``, ``*``, and ``**``) already call this
+        automatically, so you typically don't need to call it yourself unless you've
+        constructed a `PauliSum` directly from unsimplified terms.
+        """
 
 class PauliTerm:
     r"""
@@ -2507,10 +2519,12 @@ class PauliTerm:
     @property
     def arguments(self) -> builtins.list[tuple[PauliGate, builtins.str]]: ...
     @property
-    def coefficient(self) -> expression.Expression:
+    def coefficient(self) -> builtins.complex:
         r"""
-        Return a copy of the coefficient [`Expression`] of the [`PauliTerm`],
-        aka its `expression` property.
+        Return a copy of the coefficient [`Expression`], simplified to a complex number.
+        
+        This is equivalent to `complex(pauli_term.expression)`,
+        and will raise an error if the expression cannot be simplified.
         """
     @property
     def expression(self) -> expression.Expression: ...
@@ -2775,14 +2789,14 @@ class PauliTerm:
         r"""
         Get the arguments of the [`PauliTerm`] as [`Qubit`]s.
         """
-    def id(self, sort_ops: builtins.bool = False, /, delimiter: builtins.str = '') -> builtins.str:
+    def id(self, sort_ops: builtins.bool = False, *, delimiter: builtins.str = '') -> builtins.str:
         r"""
         Return an identifier string for the PauliTerm (ignoring the coefficient).
         
         For example, ``PauliTerm.from_list([("X", 0), ("Y", "q")]).id() == "Xq0Yq"``.
         
         If an argument contains a character that would otherwise be interpreted as a Pauli operator
-        (i.e., `X`, `Y`, or `Z`), its wrapped in parentheses to avoid ambiguity. For example,
+        (i.e., `X`, `Y`, or `Z`), it's wrapped in parentheses to avoid ambiguity. For example,
         ``PauliTerm.from_list([("X", "X0")]).id() == "X(X0)"``.
         
         Don't use this to compare terms (use ``pt0 == pt1`` or ``hash(pt0)`` for that).

@@ -6,6 +6,7 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
+use indexmap::IndexMap;
 use itertools::Itertools as _;
 use num_complex::Complex64;
 use pyo3::{
@@ -27,7 +28,9 @@ use crate::{
         quilpy::{quil_exp, ExpressionLike, PyExpression, QualifiedExpression},
         Expression,
     },
-    instruction::{Gate, Instruction, ParseInstructionError, PauliGate, PauliSum, PauliTerm, Qubit},
+    instruction::{
+        Gate, Instruction, ParseInstructionError, PauliGate, PauliSum, PauliTerm, Qubit,
+    },
     quil::Quil,
     quilpy::{errors, py_deprecated, Migrate},
     Program,
@@ -805,6 +808,7 @@ impl PauliTerm {
             arguments: self.arguments().cloned().collect(),
             terms: vec![term_ident, term_pauli],
         }
+        .simplified()
         .into_bound_py_any(py)
     }
 
@@ -841,7 +845,7 @@ impl PauliTerm {
     /// For example, ``PauliTerm.from_list([("X", 0), ("Y", "q")]).id() == "Xq0Yq"``.
     ///
     /// If an argument contains a character that would otherwise be interpreted as a Pauli operator
-    /// (i.e., `X`, `Y`, or `Z`), its wrapped in parentheses to avoid ambiguity. For example,
+    /// (i.e., `X`, `Y`, or `Z`), it's wrapped in parentheses to avoid ambiguity. For example,
     /// ``PauliTerm.from_list([("X", "X0")]).id() == "X(X0)"``.
     ///
     /// Don't use this to compare terms (use ``pt0 == pt1`` or ``hash(pt0)`` for that).
@@ -849,7 +853,7 @@ impl PauliTerm {
     ///
     /// Note that if the term has no operators, this function will return ``"I"``.
     /// If you need to check for identity, use ``term.is_identity()`` instead.
-    #[pyo3(signature = (sort_ops=false, /, delimiter=""))]
+    #[pyo3(signature = (sort_ops=false, *, delimiter=""))]
     fn id(&self, sort_ops: bool, delimiter: &str) -> String {
         if self.arguments.is_empty() {
             return "I".to_string();
@@ -1018,11 +1022,13 @@ impl PauliTerm {
 
     // This is the name that PyQuil v4 used for this property;
     // it's probably a better name anyway, so there's no immediate plan to deprecate it.
-    /// Return a copy of the coefficient [`Expression`] of the [`PauliTerm`],
-    /// aka its `expression` property.
+    /// Return a copy of the coefficient [`Expression`], simplified to a complex number.
+    ///
+    /// This is equivalent to `complex(pauli_term.expression)`,
+    /// and will raise an error if the expression cannot be simplified.
     #[getter]
-    fn coefficient(&self) -> Expression {
-        self.expression.clone()
+    fn coefficient(&self) -> PyResult<Complex64> {
+        self.expression.clone().into_complex()
     }
 
     /// Supported for backwards compatibility, though only for use within PyQuil itself.
@@ -1089,7 +1095,7 @@ impl std::ops::Add<PauliTerm> for PauliTerm {
     fn add(self, rhs: PauliTerm) -> Self::Output {
         let terms = vec![self, rhs];
         let arguments = PauliSum::into_args(&terms);
-        PauliSum { arguments, terms }
+        PauliSum { arguments, terms }.simplified()
     }
 }
 
@@ -1187,7 +1193,7 @@ impl std::ops::Add<PauliTerm> for PauliSum {
             }
         }
         terms.push(rhs);
-        PauliSum { arguments, terms }
+        PauliSum { arguments, terms }.simplified()
     }
 }
 
@@ -1207,7 +1213,7 @@ impl std::ops::Add<PauliSum> for PauliSum {
         }
 
         terms.extend(rhs.terms);
-        PauliSum { arguments, terms }
+        PauliSum { arguments, terms }.simplified()
     }
 }
 
@@ -1297,7 +1303,7 @@ impl std::ops::Mul<PauliTerm> for PauliSum {
         }
 
         let arguments = unique_args.into_iter().cloned().collect();
-        PauliSum { arguments, terms }
+        PauliSum { arguments, terms }.simplified()
     }
 }
 
@@ -1321,6 +1327,63 @@ impl std::ops::Mul<PauliSum> for PauliSum {
         }
 
         let arguments = unique_args.into_iter().collect();
+        PauliSum { arguments, terms }.simplified()
+    }
+}
+
+/// Returns `true` if `expression` evaluates (without any variable or memory-reference
+/// substitutions) to a [`Complex64`] whose magnitude is within `1e-10` of zero.
+///
+/// If the expression can't be evaluated without substitution (e.g. it's symbolic,
+/// containing a [`Expression::Variable`] or [`Expression::Address`]), this conservatively
+/// returns `false`, since we can't determine whether it's "close to zero" in that case.
+fn is_close_to_zero(expression: &Expression) -> bool {
+    let no_variables: HashMap<String, Complex64> = HashMap::new();
+    let no_memory_references: HashMap<String, Vec<f64>> = HashMap::new();
+
+    expression
+        .evaluate(&no_variables, &no_memory_references)
+        .is_ok_and(|value| value.norm() < 1e-10)
+}
+
+impl PauliSum {
+    /// Simplify this [`PauliSum`] according to Pauli algebra rules by combining "like" terms,
+    /// i.e. those with the same set of `(PauliGate, qubit)` operators, regardless of order
+    /// (since, by construction, a given [`PauliTerm`] only ever has a single operator per qubit).
+    ///
+    /// Terms sharing a key have their coefficients summed together (using [`simple!`] to keep
+    /// the result as a [`Expression::Number`] when possible); if the combined coefficient
+    /// evaluates to (numerically close to) zero, the term is dropped entirely. Terms whose
+    /// coefficient can't be evaluated without substitution (i.e. symbolic expressions) are
+    /// never dropped on this basis, since we can't determine whether the result is zero.
+    ///
+    /// The relative order of terms is preserved by the order in which each distinct key
+    /// is first seen; order within a merged group's arguments is otherwise unspecified.
+    pub(crate) fn simplified(self) -> Self {
+        let mut groups: IndexMap<Vec<(PauliGate, String)>, PauliTerm> = IndexMap::new();
+
+        for term in self.terms {
+            let mut key = term.arguments.clone();
+            key.sort_by(|a, b| a.1.cmp(&b.1));
+
+            match groups.entry(key) {
+                indexmap::map::Entry::Occupied(mut entry) => {
+                    let combined = entry.get_mut();
+                    combined.expression =
+                        simple!(combined.expression.clone() + term.expression.clone());
+                }
+                indexmap::map::Entry::Vacant(entry) => {
+                    entry.insert(term);
+                }
+            }
+        }
+
+        let terms = groups
+            .into_values()
+            .filter(|term| !is_close_to_zero(&term.expression))
+            .collect::<Vec<_>>();
+        let arguments = PauliSum::into_args(&terms);
+
         PauliSum { arguments, terms }
     }
 }
@@ -1710,5 +1773,18 @@ impl PauliSum {
     /// Get a list of all the qubits in the sum of the terms.
     fn get_qubits(&self) -> Vec<String> {
         self.arguments.clone()
+    }
+
+    /// Simplify the sum of Pauli operators according to Pauli algebra rules.
+    ///
+    /// This combines terms that act with the same Pauli operators on the same qubits
+    /// (regardless of their order) by summing their coefficients, and drops any resulting
+    /// terms whose coefficient is (numerically close to) zero.
+    ///
+    /// Note that math operations (``+``, ``-``, ``*``, and ``**``) already call this
+    /// automatically, so you typically don't need to call it yourself unless you've
+    /// constructed a `PauliSum` directly from unsimplified terms.
+    fn simplify(&self) -> PauliSum {
+        self.clone().simplified()
     }
 }
