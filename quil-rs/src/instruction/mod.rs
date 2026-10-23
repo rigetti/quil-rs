@@ -1457,7 +1457,7 @@ RX(%a) 0",
             ) -> Option<MatchedFrames<'p>> {
                 if let Instruction::Pragma(_) = instruction {
                     Some(MatchedFrames {
-                        used: program.frames.get_keys().into_iter().collect(),
+                        used: program.frames.get_keys().collect(),
                         blocked: HashSet::new(),
                     })
                 } else {

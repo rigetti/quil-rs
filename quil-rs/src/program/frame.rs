@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{
-    borrow::Borrow,
-    collections::{HashMap, HashSet},
-};
+use std::{borrow::Borrow, collections::HashSet};
 
+use indexmap::IndexMap;
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
@@ -32,8 +30,10 @@ use crate::instruction::{FrameAttributes, FrameDefinition, FrameIdentifier, Inst
     pyo3::pyclass(module = "quil._quil.program", eq, from_py_object)
 )]
 pub struct FrameSet {
-    pub(crate) frames: HashMap<FrameIdentifier, FrameAttributes>,
+    pub(crate) frames: FrameSetInner,
 }
+
+type FrameSetInner = IndexMap<FrameIdentifier, FrameAttributes>;
 
 impl FrameSet {
     /// Retrieve the attributes of a frame by its identifier.
@@ -42,8 +42,8 @@ impl FrameSet {
     }
 
     /// Return a list of all frame IDs described by this FrameSet.
-    pub fn get_keys(&self) -> Vec<&FrameIdentifier> {
-        self.frames.keys().collect()
+    pub fn get_keys(&self) -> impl Iterator<Item = &FrameIdentifier> {
+        self.frames.keys()
     }
 
     pub(crate) fn filter<'s>(&'s self, condition: FrameMatchConditions) -> MatchedFrames<'s> {
@@ -122,8 +122,8 @@ impl FrameSet {
     }
 
     /// Iterate through the contained frames.
-    pub fn iter(&self) -> std::collections::hash_map::Iter<'_, FrameIdentifier, FrameAttributes> {
-        self.frames.iter()
+    pub fn iter(&self) -> <&Self as IntoIterator>::IntoIter {
+        self.into_iter()
     }
 
     /// Return the Quil instructions which describe the contained frames, consuming the [`FrameSet`].
@@ -181,6 +181,53 @@ impl FrameSet {
                 })
             })
             .collect()
+    }
+}
+
+impl<A> FromIterator<A> for FrameSet
+where
+    FrameSetInner: FromIterator<A>,
+{
+    fn from_iter<I: IntoIterator<Item = A>>(iter: I) -> Self {
+        Self {
+            frames: iter.into_iter().collect(),
+        }
+    }
+}
+
+impl IntoIterator for FrameSet {
+    type Item = <FrameSetInner as IntoIterator>::Item;
+
+    type IntoIter = <FrameSetInner as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let FrameSet { frames } = self;
+
+        frames.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a FrameSet {
+    type Item = <&'a FrameSetInner as IntoIterator>::Item;
+
+    type IntoIter = <&'a FrameSetInner as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let FrameSet { frames } = self;
+
+        frames.into_iter()
+    }
+}
+#[cfg(test)]
+impl proptest::arbitrary::Arbitrary for FrameSet {
+    type Parameters = ();
+    type Strategy = proptest::prelude::BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        use crate::expression::proptest_helpers::arb_name;
+        use proptest::prelude::*;
+
+        proptest_helpers::arb_frame_set(arb_name()).boxed()
     }
 }
 
@@ -250,5 +297,47 @@ pub struct MatchedFrames<'a> {
 impl MatchedFrames<'_> {
     pub fn new() -> Self {
         Self::default()
+    }
+}
+
+#[cfg(test)]
+mod proptest_helpers {
+    use super::*;
+
+    use proptest::{prelude::*, sample::SizeRange};
+
+    use crate::instruction::AttributeValue;
+
+    pub fn arb_frame_set(
+        arb_name: impl Strategy<Value = String>,
+    ) -> impl Strategy<Value = FrameSet> {
+        proptest::collection::hash_map(
+            any::<FrameIdentifier>(),
+            arb_frame_attributes(arb_name),
+            SizeRange::default(),
+        )
+        .prop_map(|frame_set| frame_set.into_iter().collect())
+    }
+
+    pub fn arb_frame_attributes(
+        arb_name: impl Strategy<Value = String>,
+    ) -> impl Strategy<Value = FrameAttributes> {
+        proptest::collection::hash_map(arb_name, any::<AttributeValue>(), SizeRange::default())
+            .prop_map(|frame_attributes| frame_attributes.into_iter().collect())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn deterministic_iteration(frame_set: FrameSet) {
+            for (left, right) in frame_set.iter().zip(frame_set.iter()) {
+                prop_assert_eq!(left, right);
+            }
+        }
     }
 }
