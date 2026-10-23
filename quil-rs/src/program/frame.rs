@@ -12,11 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{
-    borrow::Borrow,
-    collections::{HashMap, HashSet},
-};
+use std::{borrow::Borrow, collections::HashSet};
 
+use indexmap::IndexMap;
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
@@ -32,7 +30,7 @@ use crate::instruction::{FrameAttributes, FrameDefinition, FrameIdentifier, Inst
     pyo3::pyclass(module = "quil._quil.program", eq, from_py_object)
 )]
 pub struct FrameSet {
-    pub(crate) frames: HashMap<FrameIdentifier, FrameAttributes>,
+    pub(crate) frames: IndexMap<FrameIdentifier, FrameAttributes>,
 }
 
 impl FrameSet {
@@ -42,8 +40,8 @@ impl FrameSet {
     }
 
     /// Return a list of all frame IDs described by this FrameSet.
-    pub fn get_keys(&self) -> Vec<&FrameIdentifier> {
-        self.frames.keys().collect()
+    pub fn get_keys(&self) -> impl Iterator<Item = &FrameIdentifier> {
+        self.frames.keys()
     }
 
     pub(crate) fn filter<'s>(&'s self, condition: FrameMatchConditions) -> MatchedFrames<'s> {
@@ -122,7 +120,7 @@ impl FrameSet {
     }
 
     /// Iterate through the contained frames.
-    pub fn iter(&self) -> std::collections::hash_map::Iter<'_, FrameIdentifier, FrameAttributes> {
+    pub fn iter(&self) -> impl Iterator<Item = (&FrameIdentifier, &FrameAttributes)> {
         self.frames.iter()
     }
 
