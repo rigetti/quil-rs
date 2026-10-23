@@ -47,6 +47,19 @@ impl Quil for AttributeValue {
     }
 }
 
+#[cfg(test)]
+impl proptest::arbitrary::Arbitrary for AttributeValue {
+    type Parameters = ();
+    type Strategy = proptest::prelude::BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        use crate::expression::proptest_helpers::arb_name;
+        use proptest::prelude::*;
+
+        proptest_helpers::arb_attribute_value(arb_name(), any::<Expression>()).boxed()
+    }
+}
+
 pub type FrameAttributes = IndexMap<String, AttributeValue>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -139,6 +152,19 @@ impl FromStr for FrameIdentifier {
         disallow_leftover(
             parse_frame_identifier(&tokens).map_err(ParseError::from_nom_internal_err),
         )
+    }
+}
+
+#[cfg(test)]
+impl proptest::arbitrary::Arbitrary for FrameIdentifier {
+    type Parameters = ();
+    type Strategy = proptest::prelude::BoxedStrategy<Self>;
+
+    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
+        use crate::expression::proptest_helpers::arb_name;
+        use proptest::prelude::*;
+
+        proptest_helpers::arb_frame_identifier(arb_name(), any::<u64>(), arb_name()).boxed()
     }
 }
 
@@ -526,5 +552,53 @@ impl Quil for SwapPhases {
         write!(writer, " ")?;
         self.frame_2.write(writer, fall_back_to_debug)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+pub mod proptest_helpers {
+    use super::*;
+
+    use proptest::{prelude::*, sample::SizeRange};
+
+    use crate::instruction::QubitPlaceholder;
+
+    prop_compose! {
+        pub fn arb_frame_identifier(
+            arb_name: impl Strategy<Value = String>,
+            arb_fixed: impl Strategy<Value = u64>,
+            arb_variable: impl Strategy<Value = String>
+        )
+        (
+            name in arb_name,
+            qubits in proptest::collection::vec(arb_qubit(arb_fixed, arb_variable), SizeRange::default())
+        )
+        -> FrameIdentifier {
+            FrameIdentifier {
+                name,
+                qubits,
+            }
+        }
+    }
+
+    pub fn arb_qubit(
+        arb_fixed: impl Strategy<Value = u64>,
+        arb_variable: impl Strategy<Value = String>,
+    ) -> impl Strategy<Value = Qubit> {
+        prop_oneof![
+            arb_fixed.prop_map(Qubit::Fixed),
+            arb_variable.prop_map(Qubit::Variable),
+            Just(QubitPlaceholder::default()).prop_map(Qubit::Placeholder),
+        ]
+    }
+
+    pub fn arb_attribute_value(
+        arb_string: impl Strategy<Value = String>,
+        arb_expr: impl Strategy<Value = Expression>,
+    ) -> impl Strategy<Value = AttributeValue> {
+        prop_oneof![
+            arb_string.prop_map(AttributeValue::String),
+            arb_expr.prop_map(AttributeValue::Expression),
+        ]
     }
 }
