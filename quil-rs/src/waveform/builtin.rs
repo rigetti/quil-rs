@@ -249,6 +249,10 @@ impl<T: WaveformData> CommonBuiltinParameters<T> {
     where
         T: Sampleable,
     {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err(SamplingError::InvalidSampleRate { sample_rate });
+        }
+
         let Self {
             duration,
             scale,
@@ -1433,9 +1437,9 @@ mod tests {
     }
 
     #[rstest::rstest]
-    #[case(0.0, 0.0, Some(0.0))]
+    #[case(0.0, 0.0, None)]
     #[case(0.0, 1e9, Some(0.0))]
-    #[case(1e9, 0.0, Some(0.0))]
+    #[case(1e9, 0.0, None)]
     #[case(f64::EPSILON, 1.0, Some(0.0))]
     #[case(-f64::EPSILON, 1.0, Some(0.0))]
     #[case(0.9999999, 101.0, Some(101.0))]
@@ -1502,6 +1506,24 @@ mod tests {
                 )
             }
         }
+    }
+
+    #[rstest::rstest]
+    #[case(0.0)]
+    #[case(-1.0)]
+    #[case(f64::NAN)]
+    #[case(f64::INFINITY)]
+    fn sample_rate_must_be_positive_and_finite(#[case] sample_rate: f64) {
+        let error = CommonBuiltinParameters {
+            duration: 0.1,
+            scale: None,
+            phase: None,
+            detuning: None,
+        }
+        .resolve_with_sample_rate(sample_rate)
+        .expect_err("invalid sample rates must be rejected");
+
+        assert!(matches!(error, SamplingError::InvalidSampleRate { .. }));
     }
 
     /// Assert that for some exemplar waveform templates, the right IQ values are generated.
