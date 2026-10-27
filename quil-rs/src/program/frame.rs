@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{borrow::Borrow, collections::HashSet};
+use std::{
+    borrow::Borrow,
+    collections::{BTreeMap, HashSet},
+};
 
-use indexmap::IndexMap;
 #[cfg(not(feature = "python"))]
 use optipy::strip_pyo3;
 #[cfg(feature = "stubs")]
@@ -33,7 +35,7 @@ pub struct FrameSet {
     pub(crate) frames: FrameSetInner,
 }
 
-type FrameSetInner = IndexMap<FrameIdentifier, FrameAttributes>;
+type FrameSetInner = BTreeMap<FrameIdentifier, FrameAttributes>;
 
 impl FrameSet {
     /// Retrieve the attributes of a frame by its identifier.
@@ -215,7 +217,7 @@ impl<'a> IntoIterator for &'a FrameSet {
     fn into_iter(self) -> Self::IntoIter {
         let FrameSet { frames } = self;
 
-        frames.into_iter()
+        frames.iter()
     }
 }
 #[cfg(test)]
@@ -311,12 +313,12 @@ mod proptest_helpers {
     pub fn arb_frame_set(
         arb_name: impl Strategy<Value = String>,
     ) -> impl Strategy<Value = FrameSet> {
-        proptest::collection::hash_map(
+        proptest::collection::btree_map(
             any::<FrameIdentifier>(),
             arb_frame_attributes(arb_name),
             SizeRange::default(),
         )
-        .prop_map(|frame_set| frame_set.into_iter().collect())
+        .prop_map(|frames| FrameSet { frames })
     }
 
     pub fn arb_frame_attributes(
