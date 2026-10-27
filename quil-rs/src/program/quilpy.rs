@@ -794,11 +794,16 @@ impl FrameSet {
     /// Return a list of all `FrameIdentifier`s described by this `FrameSet`.
     #[pyo3(name = "get_keys")]
     fn py_get_keys(&self) -> Vec<FrameIdentifier> {
-        self.get_keys().into_iter().cloned().collect()
+        self.get_keys().cloned().collect()
     }
 
     fn get_all_frames(&self) -> HashMap<FrameIdentifier, FrameAttributes> {
-        self.frames.clone()
+        self.frames
+            .iter()
+            .map(|(frame_identitifier, frame_attributes)| {
+                (frame_identitifier.clone(), frame_attributes.clone())
+            })
+            .collect()
     }
 
     /// Return a new `FrameSet` which describes only the given `FrameIdentifier`s.
