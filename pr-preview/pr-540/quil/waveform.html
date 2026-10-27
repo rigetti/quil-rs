@@ -48,13 +48,13 @@
                     <a class="class" href="#BuiltinWaveform">BuiltinWaveform</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#BuiltinWaveform.evaluate">evaluate</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#BuiltinWaveform.iq_values_at_sample_rate">iq_values_at_sample_rate</a>
                         </li>
                         <li>
                                 <a class="function" href="#BuiltinWaveform.as_inner">as_inner</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#BuiltinWaveform.evaluate">evaluate</a>
                         </li>
                 </ul>
 
@@ -63,22 +63,22 @@
                     <a class="class" href="#CommonBuiltinParameters">CommonBuiltinParameters</a>
                             <ul class="memberlist">
                         <li>
+                                <a class="function" href="#CommonBuiltinParameters.resolve_with_sample_rate">resolve_with_sample_rate</a>
+                        </li>
+                        <li>
                                 <a class="function" href="#CommonBuiltinParameters.evaluate">evaluate</a>
                         </li>
                         <li>
-                                <a class="function" href="#CommonBuiltinParameters.resolve_with_sample_rate">resolve_with_sample_rate</a>
+                                <a class="variable" href="#CommonBuiltinParameters.detuning">detuning</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#CommonBuiltinParameters.phase">phase</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CommonBuiltinParameters.duration">duration</a>
                         </li>
                         <li>
                                 <a class="variable" href="#CommonBuiltinParameters.scale">scale</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#CommonBuiltinParameters.phase">phase</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#CommonBuiltinParameters.detuning">detuning</a>
                         </li>
                 </ul>
 
@@ -93,16 +93,16 @@
                                 <a class="function" href="#DragGaussian.evaluate">evaluate</a>
                         </li>
                         <li>
-                                <a class="variable" href="#DragGaussian.alpha">alpha</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#DragGaussian.t0">t0</a>
+                                <a class="variable" href="#DragGaussian.fwhm">fwhm</a>
                         </li>
                         <li>
                                 <a class="variable" href="#DragGaussian.anh">anh</a>
                         </li>
                         <li>
-                                <a class="variable" href="#DragGaussian.fwhm">fwhm</a>
+                                <a class="variable" href="#DragGaussian.t0">t0</a>
+                        </li>
+                        <li>
+                                <a class="variable" href="#DragGaussian.alpha">alpha</a>
                         </li>
                 </ul>
 
@@ -117,13 +117,13 @@
                                 <a class="function" href="#ErfSquare.evaluate">evaluate</a>
                         </li>
                         <li>
+                                <a class="variable" href="#ErfSquare.pad_left">pad_left</a>
+                        </li>
+                        <li>
                                 <a class="variable" href="#ErfSquare.risetime">risetime</a>
                         </li>
                         <li>
                                 <a class="variable" href="#ErfSquare.pad_right">pad_right</a>
-                        </li>
-                        <li>
-                                <a class="variable" href="#ErfSquare.pad_left">pad_left</a>
                         </li>
                 </ul>
 
@@ -132,13 +132,13 @@
                     <a class="class" href="#ExplicitCommonBuiltinParameters">ExplicitCommonBuiltinParameters</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="variable" href="#ExplicitCommonBuiltinParameters.scale">scale</a>
+                                <a class="variable" href="#ExplicitCommonBuiltinParameters.phase">phase</a>
                         </li>
                         <li>
                                 <a class="variable" href="#ExplicitCommonBuiltinParameters.sample_count">sample_count</a>
                         </li>
                         <li>
-                                <a class="variable" href="#ExplicitCommonBuiltinParameters.phase">phase</a>
+                                <a class="variable" href="#ExplicitCommonBuiltinParameters.scale">scale</a>
                         </li>
                         <li>
                                 <a class="variable" href="#ExplicitCommonBuiltinParameters.detuning">detuning</a>
@@ -171,10 +171,10 @@
                                 <a class="function" href="#Gaussian.evaluate">evaluate</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Gaussian.fwhm">fwhm</a>
+                                <a class="variable" href="#Gaussian.t0">t0</a>
                         </li>
                         <li>
-                                <a class="variable" href="#Gaussian.t0">t0</a>
+                                <a class="variable" href="#Gaussian.fwhm">fwhm</a>
                         </li>
                 </ul>
 
@@ -189,19 +189,19 @@
                                 <a class="function" href="#HermiteGaussian.evaluate">evaluate</a>
                         </li>
                         <li>
-                                <a class="variable" href="#HermiteGaussian.anh">anh</a>
+                                <a class="variable" href="#HermiteGaussian.second_order_hrm_coeff">second_order_hrm_coeff</a>
                         </li>
                         <li>
-                                <a class="variable" href="#HermiteGaussian.second_order_hrm_coeff">second_order_hrm_coeff</a>
+                                <a class="variable" href="#HermiteGaussian.alpha">alpha</a>
                         </li>
                         <li>
                                 <a class="variable" href="#HermiteGaussian.t0">t0</a>
                         </li>
                         <li>
-                                <a class="variable" href="#HermiteGaussian.fwhm">fwhm</a>
+                                <a class="variable" href="#HermiteGaussian.anh">anh</a>
                         </li>
                         <li>
-                                <a class="variable" href="#HermiteGaussian.alpha">alpha</a>
+                                <a class="variable" href="#HermiteGaussian.fwhm">fwhm</a>
                         </li>
                 </ul>
 
@@ -384,21 +384,6 @@
     
     
 
-                            <div id="BuiltinWaveform.evaluate" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">real</span>, </span><span class="param"><span class="nb">complex</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#BuiltinWaveform.evaluate"></a>
-    
-            <div class="docstring"><p>The type of the None singleton.</p>
-</div>
-
-
-                            </div>
                             <div id="BuiltinWaveform.iq_values_at_sample_rate" class="classattr">
                                 <div class="attr function">
             
@@ -429,6 +414,21 @@
 
 
                             </div>
+                            <div id="BuiltinWaveform.evaluate" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">evaluate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">real</span>, </span><span class="param"><span class="nb">complex</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#BuiltinWaveform.evaluate"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
                 </section>
                 <section id="CommonBuiltinParameters">
                     <div class="attr class">
@@ -442,6 +442,21 @@
     
     
 
+                            <div id="CommonBuiltinParameters.resolve_with_sample_rate" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">resolve_with_sample_rate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">sample_rate</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#CommonBuiltinParameters.resolve_with_sample_rate"></a>
+    
+            <div class="docstring"><p>The type of the None singleton.</p>
+</div>
+
+
+                            </div>
                             <div id="CommonBuiltinParameters.evaluate" class="classattr">
                                 <div class="attr function">
             
@@ -457,19 +472,26 @@
 
 
                             </div>
-                            <div id="CommonBuiltinParameters.resolve_with_sample_rate" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">resolve_with_sample_rate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">sample_rate</span></span><span class="return-annotation">):</span></span>
+                            <div id="CommonBuiltinParameters.detuning" class="classattr">
+                                <div class="attr variable">
+            <span class="name">detuning</span>
 
         
     </div>
-    <a class="headerlink" href="#CommonBuiltinParameters.resolve_with_sample_rate"></a>
+    <a class="headerlink" href="#CommonBuiltinParameters.detuning"></a>
     
-            <div class="docstring"><p>The type of the None singleton.</p>
-</div>
+    
 
+                            </div>
+                            <div id="CommonBuiltinParameters.phase" class="classattr">
+                                <div class="attr variable">
+            <span class="name">phase</span>
+
+        
+    </div>
+    <a class="headerlink" href="#CommonBuiltinParameters.phase"></a>
+    
+    
 
                             </div>
                             <div id="CommonBuiltinParameters.duration" class="classattr">
@@ -490,28 +512,6 @@
         
     </div>
     <a class="headerlink" href="#CommonBuiltinParameters.scale"></a>
-    
-    
-
-                            </div>
-                            <div id="CommonBuiltinParameters.phase" class="classattr">
-                                <div class="attr variable">
-            <span class="name">phase</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CommonBuiltinParameters.phase"></a>
-    
-    
-
-                            </div>
-                            <div id="CommonBuiltinParameters.detuning" class="classattr">
-                                <div class="attr variable">
-            <span class="name">detuning</span>
-
-        
-    </div>
-    <a class="headerlink" href="#CommonBuiltinParameters.detuning"></a>
     
     
 
@@ -559,24 +559,13 @@
 
 
                             </div>
-                            <div id="DragGaussian.alpha" class="classattr">
+                            <div id="DragGaussian.fwhm" class="classattr">
                                 <div class="attr variable">
-            <span class="name">alpha</span>
+            <span class="name">fwhm</span>
 
         
     </div>
-    <a class="headerlink" href="#DragGaussian.alpha"></a>
-    
-    
-
-                            </div>
-                            <div id="DragGaussian.t0" class="classattr">
-                                <div class="attr variable">
-            <span class="name">t0</span>
-
-        
-    </div>
-    <a class="headerlink" href="#DragGaussian.t0"></a>
+    <a class="headerlink" href="#DragGaussian.fwhm"></a>
     
     
 
@@ -592,13 +581,24 @@
     
 
                             </div>
-                            <div id="DragGaussian.fwhm" class="classattr">
+                            <div id="DragGaussian.t0" class="classattr">
                                 <div class="attr variable">
-            <span class="name">fwhm</span>
+            <span class="name">t0</span>
 
         
     </div>
-    <a class="headerlink" href="#DragGaussian.fwhm"></a>
+    <a class="headerlink" href="#DragGaussian.t0"></a>
+    
+    
+
+                            </div>
+                            <div id="DragGaussian.alpha" class="classattr">
+                                <div class="attr variable">
+            <span class="name">alpha</span>
+
+        
+    </div>
+    <a class="headerlink" href="#DragGaussian.alpha"></a>
     
     
 
@@ -646,6 +646,17 @@
 
 
                             </div>
+                            <div id="ErfSquare.pad_left" class="classattr">
+                                <div class="attr variable">
+            <span class="name">pad_left</span>
+
+        
+    </div>
+    <a class="headerlink" href="#ErfSquare.pad_left"></a>
+    
+    
+
+                            </div>
                             <div id="ErfSquare.risetime" class="classattr">
                                 <div class="attr variable">
             <span class="name">risetime</span>
@@ -664,17 +675,6 @@
         
     </div>
     <a class="headerlink" href="#ErfSquare.pad_right"></a>
-    
-    
-
-                            </div>
-                            <div id="ErfSquare.pad_left" class="classattr">
-                                <div class="attr variable">
-            <span class="name">pad_left</span>
-
-        
-    </div>
-    <a class="headerlink" href="#ErfSquare.pad_left"></a>
     
     
 
@@ -698,15 +698,15 @@ waveforms.</p>
 </div>
 
 
-                            <div id="ExplicitCommonBuiltinParameters.scale" class="classattr">
+                            <div id="ExplicitCommonBuiltinParameters.phase" class="classattr">
                                 <div class="attr variable">
-            <span class="name">scale</span>
+            <span class="name">phase</span>
 
         
     </div>
-    <a class="headerlink" href="#ExplicitCommonBuiltinParameters.scale"></a>
+    <a class="headerlink" href="#ExplicitCommonBuiltinParameters.phase"></a>
     
-            <div class="docstring"><p>Scale to apply to waveform envelope.</p>
+            <div class="docstring"><p>Phase shift for the entire waveform.</p>
 </div>
 
 
@@ -726,15 +726,15 @@ waveforms.</p>
 
 
                             </div>
-                            <div id="ExplicitCommonBuiltinParameters.phase" class="classattr">
+                            <div id="ExplicitCommonBuiltinParameters.scale" class="classattr">
                                 <div class="attr variable">
-            <span class="name">phase</span>
+            <span class="name">scale</span>
 
         
     </div>
-    <a class="headerlink" href="#ExplicitCommonBuiltinParameters.phase"></a>
+    <a class="headerlink" href="#ExplicitCommonBuiltinParameters.scale"></a>
     
-            <div class="docstring"><p>Phase shift for the entire waveform.</p>
+            <div class="docstring"><p>Scale to apply to waveform envelope.</p>
 </div>
 
 
@@ -849,17 +849,6 @@ waveforms.</p>
 
 
                             </div>
-                            <div id="Gaussian.fwhm" class="classattr">
-                                <div class="attr variable">
-            <span class="name">fwhm</span>
-
-        
-    </div>
-    <a class="headerlink" href="#Gaussian.fwhm"></a>
-    
-    
-
-                            </div>
                             <div id="Gaussian.t0" class="classattr">
                                 <div class="attr variable">
             <span class="name">t0</span>
@@ -867,6 +856,17 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#Gaussian.t0"></a>
+    
+    
+
+                            </div>
+                            <div id="Gaussian.fwhm" class="classattr">
+                                <div class="attr variable">
+            <span class="name">fwhm</span>
+
+        
+    </div>
+    <a class="headerlink" href="#Gaussian.fwhm"></a>
     
     
 
@@ -914,17 +914,6 @@ waveforms.</p>
 
 
                             </div>
-                            <div id="HermiteGaussian.anh" class="classattr">
-                                <div class="attr variable">
-            <span class="name">anh</span>
-
-        
-    </div>
-    <a class="headerlink" href="#HermiteGaussian.anh"></a>
-    
-    
-
-                            </div>
                             <div id="HermiteGaussian.second_order_hrm_coeff" class="classattr">
                                 <div class="attr variable">
             <span class="name">second_order_hrm_coeff</span>
@@ -932,6 +921,17 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#HermiteGaussian.second_order_hrm_coeff"></a>
+    
+    
+
+                            </div>
+                            <div id="HermiteGaussian.alpha" class="classattr">
+                                <div class="attr variable">
+            <span class="name">alpha</span>
+
+        
+    </div>
+    <a class="headerlink" href="#HermiteGaussian.alpha"></a>
     
     
 
@@ -947,6 +947,17 @@ waveforms.</p>
     
 
                             </div>
+                            <div id="HermiteGaussian.anh" class="classattr">
+                                <div class="attr variable">
+            <span class="name">anh</span>
+
+        
+    </div>
+    <a class="headerlink" href="#HermiteGaussian.anh"></a>
+    
+    
+
+                            </div>
                             <div id="HermiteGaussian.fwhm" class="classattr">
                                 <div class="attr variable">
             <span class="name">fwhm</span>
@@ -954,17 +965,6 @@ waveforms.</p>
         
     </div>
     <a class="headerlink" href="#HermiteGaussian.fwhm"></a>
-    
-    
-
-                            </div>
-                            <div id="HermiteGaussian.alpha" class="classattr">
-                                <div class="attr variable">
-            <span class="name">alpha</span>
-
-        
-    </div>
-    <a class="headerlink" href="#HermiteGaussian.alpha"></a>
     
     
 
