@@ -1,3 +1,9 @@
+## 0.37.3-rc.0 (2026-10-27)
+
+### Features
+
+- allow waveform durations to be 10% off of an integer number of samples instead of 1% (#537)
+
 ## 0.37.2 (2026-08-20)
 
 ### Fixes
