@@ -78,12 +78,10 @@ __all__ = [
     "Offset",
     "ParseInstructionError",
     "ParseMemoryReferenceError",
-    "PauliArgIter",
     "PauliGate",
     "PauliSum",
     "PauliTargetDesignator",
     "PauliTerm",
-    "PauliTermIter",
     "Pragma",
     "PragmaArgument",
     "Pulse",
@@ -2414,14 +2412,6 @@ class ParseMemoryReferenceError(_quil.QuilError):
     """
     ...
 
-@typing.final
-class PauliArgIter:
-    r"""
-    An iterator over the qubit indices and Pauli operators in a [`PauliTerm`].
-    """
-    def __iter__(self) -> PauliArgIter: ...
-    def __next__(self) -> builtins.tuple[PauliGate, builtins.str]: ...
-
 class PauliSum:
     @property
     def arguments(self) -> builtins.list[builtins.str]: ...
@@ -2432,7 +2422,7 @@ class PauliSum:
     def __getitem__(self, index: builtins.int) -> typing.Any: ...
     def __getnewargs__(self) -> tuple[builtins.list[PauliTerm], builtins.list[builtins.str]]: ...
     def __hash__(self) -> builtins.int: ...
-    def __iter__(self) -> PauliTermIter:
+    def __iter__(self) -> collections.abc.Iterator[PauliTerm]:
         r"""
         Iterate over the [`PauliTerm`]s in this [`PauliSum`].
         """
@@ -2550,9 +2540,17 @@ class PauliTerm:
         """
     def __getnewargs__(self) -> tuple[builtins.list[tuple[PauliGate, builtins.str]], _quil.expression.Expression]: ...
     def __hash__(self) -> builtins.int: ...
-    def __iter__(self) -> PauliArgIter:
+    def __iter__(self) -> collections.abc.Iterator[tuple[builtins.int, builtins.str]]:
         r"""
-        Iterate over the arguments in this [`PauliTerm`].
+        Iterate over the integer qubit arguments of this [`PauliTerm`].
+        
+        For backwards compatibility with PyQuil v4,
+        this iterator returns `(int, str)` pairs,
+        and will raise an error if it encounters a non-integer argument.
+        
+        This behavior is expected to change in a future version of PyQuil,
+        but for now, users can use `term.iter_all()` to iterate over all arguments,
+        in their `(str, PauliGate)` form.
         """
     def __len__(self) -> builtins.int:
         r"""
@@ -2810,6 +2808,11 @@ class PauliTerm:
         Return `True` if and only if all operators are identity,
         including the case in which the list of operators is empty.
         """
+    def iter_all(self) -> collections.abc.Iterator[tuple[PauliGate, builtins.str]]:
+        r"""
+        Iterate over the `(op, arg)`s of this [`PauliTerm`],
+        without attempting to convert the arguments into integers.
+        """
     def operations_as_set(self) -> builtins.frozenset[builtins.tuple[PauliGate, builtins.str]]:
         r"""
         Return a frozenset of operations in this term.
@@ -2834,14 +2837,6 @@ class PauliTerm:
         'XI'
         ```
         """
-
-@typing.final
-class PauliTermIter:
-    r"""
-    An iterator over the [`PauliTerm`]s of a [`PauliSum`].
-    """
-    def __iter__(self) -> PauliTermIter: ...
-    def __next__(self) -> PauliTerm: ...
 
 class Pragma(Instruction):
     @property

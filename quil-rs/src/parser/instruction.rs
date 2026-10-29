@@ -166,10 +166,11 @@ mod tests {
         Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic,
         BinaryOperand, BinaryOperator, CalibrationDefinition, CalibrationIdentifier, Capture,
         Comparison, ComparisonOperand, ComparisonOperator, Convert, FrameDefinition,
-        FrameIdentifier, Gate, GateDefinition, GateSpecification, Include, Instruction, Jump,
-        JumpWhen, Label, MemoryReference, Move, Pulse, Qubit, RawCapture, Reset, SetFrequency,
-        SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases, Target, UnaryLogic,
-        UnaryOperator, Waveform, WaveformDefinition, WaveformInvocation, WaveformParameters,
+        FrameIdentifier, Gate, GateDefinition, GateError, GateSpecification, Include, Instruction,
+        Jump, JumpWhen, Label, MemoryReference, Move, Pulse, Qubit, RawCapture, Reset,
+        SetFrequency, SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases, Target,
+        UnaryLogic, UnaryOperator, Vector, Waveform, WaveformDefinition, WaveformInvocation,
+        WaveformParameters,
     };
     use crate::parser::common::tests::KITCHEN_SINK_QUIL;
     use crate::parser::lexer::lex;
@@ -1133,5 +1134,81 @@ JUMP @target"#,
             let roundtrip = Program::from_str(&output).unwrap();
             assert_eq!(output, roundtrip.to_quil().unwrap());
         }
+    }
+
+    #[test]
+    fn test_construction() -> Result<(), GateError> {
+        use crate::instruction::{
+            Declaration, Gate, Instruction, JumpWhen, Label, Measurement, Move, Qubit, ScalarType,
+        };
+        use crate::program::Program;
+
+        let mut program = Program::new();
+        let counter = Declaration::new(
+            "counter".to_string(),
+            Vector {
+                data_type: ScalarType::Integer,
+                length: 1,
+            },
+            None,
+        );
+        let ro = Declaration::new(
+            "ro".to_string(),
+            Vector {
+                data_type: ScalarType::Bit,
+                length: 2,
+            },
+            None,
+        );
+        let counter_0 = MemoryReference::new(counter.name.clone(), 0);
+        let (q0, q1) = (Qubit::Fixed(0), Qubit::Fixed(1));
+        let ro_0 = MemoryReference::new(ro.name.clone(), 0);
+        let ro_1 = MemoryReference::new(ro.name.clone(), 1);
+        let top = Label::new(Target::Fixed("top".to_owned()));
+        program.add_instructions([
+            Instruction::Declaration(counter),
+            Instruction::Declaration(ro),
+            Instruction::Move(Move::new(
+                counter_0.clone(),
+                ArithmeticOperand::LiteralInteger(10),
+            )),
+            Instruction::Label(top.clone()),
+            Instruction::Gate(Gate::new("H", vec![], vec![q0.clone()], vec![])?),
+            Instruction::Gate(Gate::new(
+                "CNOT",
+                vec![],
+                vec![q0.clone(), q1.clone()],
+                vec![],
+            )?),
+            Instruction::Measurement(Measurement::new(None, q0, Some(ro_0))),
+            Instruction::Measurement(Measurement::new(None, q1, Some(ro_1))),
+            Instruction::Arithmetic(Arithmetic::new(
+                ArithmeticOperator::Subtract,
+                counter_0.clone(),
+                ArithmeticOperand::LiteralInteger(1),
+            )),
+            Instruction::JumpWhen(JumpWhen::new(top.target, counter_0)),
+        ]);
+        program.resolve_placeholders();
+        let text = program
+            .to_quil()
+            .expect("program should be convertible to Quil");
+
+        assert_eq!(
+            text,
+            r#"DECLARE counter INTEGER[1]
+DECLARE ro BIT[2]
+MOVE counter[0] 10
+LABEL @top
+H 0
+CNOT 0 1
+MEASURE 0 ro[0]
+MEASURE 1 ro[1]
+SUB counter[0] 1
+JUMP-WHEN @top counter[0]
+"#
+        );
+
+        Ok(())
     }
 }

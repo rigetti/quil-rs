@@ -26,7 +26,7 @@ use crate::{
         Target, TargetPlaceholder, Waveform,
     },
     quil::Quil,
-    quilpy::{errors, impl_to_quil, py_deprecated},
+    quilpy::{errors, impl_to_quil, iter, py_deprecated},
 };
 
 use super::{
@@ -156,9 +156,30 @@ impl Program {
     // we may need to have an `instructions` property that returns all three.
     // In PyQuil, `instructions` returns `declarations.values()` + `body_instructions`,
     // so there's probably more room for improvement yet to be had.
+    /// Returns a read-only view over the program's instructions.
+    ///
+    /// The return value acts as a `collections.abc.Sequence` over the instructions,
+    /// and so acts much the same as would a `list` (including slicing),
+    /// but only copies `Instruction`s when accessed, not when the view is created.
+    /// This is *not* a fully live view: the view's length is captured once, at the time
+    /// this property is accessed, and is not re-checked afterward.
+    /// Holding instances while mutating the `Program`'s instructions
+    /// can lead to seemingly inconsistent behavior,
+    /// so users should either avoid mutating the `Program` while holding onto a view
+    /// (re-accessing the property after any mutation to get a new view),
+    /// or wrap the view in `list()` to get a snapshot of the instructions at that time.
+    #[getter(instructions)]
+    fn py_instructions(slf: Bound<'_, Self>) -> iter::SequenceOf<Instruction> {
+        let len = slf.borrow().instructions.len();
+        iter::SequenceOf::new_mut(slf, len, |program: &Program, index| {
+            Ok(program.instructions.get(index).cloned())
+        })
+    }
+
+    /// This is an alternative alias for `instructions`.
     #[getter(body_instructions)]
-    fn py_body_instructions(&self) -> Vec<Instruction> {
-        self.instructions.clone()
+    fn py_body_instructions(slf: Bound<'_, Self>) -> iter::SequenceOf<Instruction> {
+        Self::py_instructions(slf)
     }
 
     /// Return a deep copy of the `Program`.

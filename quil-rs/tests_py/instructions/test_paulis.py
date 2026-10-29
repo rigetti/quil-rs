@@ -39,6 +39,14 @@ def constr_args() -> list[ConstrArg]:
 
 
 @pytest.fixture
+def fixed_args() -> list[ConstrArg]:
+    """Get a list of non-identity `PauliTerm` constructor arguments with only Fixed qubits."""
+    return [
+        ConstrArg(PauliGate.X, 0, "q0", Pi, Pi),
+        ConstrArg(PauliGate.Y, 1, "q1", -1.0, Number(-1.0)),
+    ]
+
+@pytest.fixture
 def terms(constr_args: list[ConstrArg]) -> list[PauliTerm]:
     return [PauliTerm(term.op, term.index, term.coeff) for term in constr_args]
 
@@ -101,15 +109,20 @@ class TestTermConstructor:
 
 
 class TestPauliTerm:
-    def test_iteration(self, constr_args: list[ConstrArg]):
+    def test_iter_all(self, constr_args: list[ConstrArg]):
         """Confirm we can iterate over the arguments of a PauliTerm."""
 
         terms_list = [(term.op, term.index) for term in constr_args]
         args_list = [(term.op, term.qubit_str) for term in constr_args]
         term = PauliTerm.from_list(terms_list)
 
-        assert list(iter(term)) == args_list == list(term)
+        assert list(term.iter_all()) == args_list
 
+    def test_iteration_integer_terms(self):
+        """Confirm that we can iterate over a PauliTerm with integer qubit indices."""
+        expected = [(0, "X"), (1, "Y")]
+        term = PauliTerm.from_list([(PauliGate(g), i) for i, g in expected])
+        assert list(iter(term)) == list(term) == expected
 
 @pytest.fixture
 def t_2_X0() -> PauliTerm:

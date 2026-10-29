@@ -3,7 +3,6 @@
 use std::{
     collections::{HashMap, HashSet},
     mem,
-    sync::atomic::{AtomicUsize, Ordering},
 };
 
 use indexmap::IndexMap;
@@ -20,7 +19,7 @@ use pyo3::{
 };
 
 #[cfg(feature = "stubs")]
-use pyo3_stub_gen::derive::{gen_methods_from_python, gen_stub_pyclass, gen_stub_pymethods};
+use pyo3_stub_gen::derive::{gen_methods_from_python, gen_stub_pymethods};
 
 use crate::{
     expression::{
@@ -32,7 +31,7 @@ use crate::{
         Gate, Instruction, ParseInstructionError, PauliGate, PauliSum, PauliTerm, Qubit,
     },
     quil::Quil,
-    quilpy::{errors, py_deprecated, Migrate},
+    quilpy::{errors, iter, py_deprecated, Migrate},
     Program,
 };
 
@@ -574,9 +573,39 @@ impl PauliTerm {
             .unwrap_or(PauliGate::I))
     }
 
-    /// Iterate over the arguments in this [`PauliTerm`].
-    fn __iter__(slf: Bound<'_, Self>) -> PauliArgIter {
-        PauliArgIter::new(slf.unbind())
+    /// Iterate over the integer qubit arguments of this [`PauliTerm`].
+    ///
+    /// For backwards compatibility with PyQuil v4,
+    /// this iterator returns `(int, str)` pairs,
+    /// and will raise an error if it encounters a non-integer argument.
+    ///
+    /// This behavior is expected to change in a future version of PyQuil,
+    /// but for now, users can use `term.iter_all()` to iterate over all arguments,
+    /// in their `(str, PauliGate)` form.
+    fn __iter__(slf: Bound<'_, Self>) -> iter::IteratorOf<(u64, String)> {
+        let len = slf.get().arguments.len();
+        iter::IteratorOf::new(slf, len, |term, index| {
+            term.arguments
+                .get(index)
+                .map(|(gate, qubit)| {
+                    let qubit_index = arg_as_index(qubit).ok_or_else(|| {
+                        PyValueError::new_err(format!(
+                            "PauliTerm contains non-fixed qubit index: {qubit}"
+                        ))
+                    })?;
+                    Ok((qubit_index, gate.to_string()))
+                })
+                .transpose()
+        })
+    }
+
+    /// Iterate over the `(op, arg)`s of this [`PauliTerm`],
+    /// without attempting to convert the arguments into integers.
+    fn iter_all(slf: Bound<'_, Self>) -> iter::IteratorOf<(PauliGate, String)> {
+        let len = slf.get().arguments.len();
+        iter::IteratorOf::new(slf, len, |term, index| {
+            Ok(term.arguments.get(index).cloned())
+        })
     }
 
     /// Return the product of this [`PauliTerm`] with another `PauliTerm`,
@@ -985,11 +1014,9 @@ impl PauliTerm {
                 // using a HashMap<Qubit, PauliGate> rather than the Quil-specific representation.
                 let mut qubit_map: HashMap<u64, PauliGate> = HashMap::new();
                 for (gate, qubit) in &self.arguments {
-                    qubit
-                        .strip_prefix('q')
-                        .and_then(|q| q.parse::<u64>().ok())
-                        .or_else(|| qubit.parse::<u64>().ok())
-                        .map(|index| qubit_map.insert(index, *gate));
+                    if let Some(index) = arg_as_index(qubit) {
+                        qubit_map.insert(index, *gate);
+                    }
                 }
                 qubits
                     .iter()
@@ -1417,88 +1444,11 @@ impl std::ops::MulAssign<(PauliGate, String)> for PauliTerm {
     }
 }
 
-/// An iterator over the qubit indices and Pauli operators in a [`PauliTerm`].
-#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyclass(module = "quil._quil.instructions", frozen)]
-pub(crate) struct PauliArgIter {
-    // Using `Py<_>` avoids cloning the entire `PauliTerm`,
-    // and since that class is frozen, we can skip all the Python reference counting
-    // by using an atomic index.
-    // Note that individual `(PauliGate, String)` pairs still must be cloned when iterated.
-    inner: Py<PauliTerm>,
-    index: AtomicUsize,
-}
-
-impl PauliArgIter {
-    fn new(inner: Py<PauliTerm>) -> Self {
-        Self {
-            inner,
-            index: AtomicUsize::new(0),
-        }
-    }
-}
-
-#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl PauliArgIter {
-    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
-        slf
-    }
-
-    #[gen_stub(override_return_type(type_repr = "builtins.tuple[PauliGate, builtins.str]", imports = ("builtins")))]
-    fn __next__(slf: PyRef<'_, Self>) -> Option<(PauliGate, String)> {
-        slf.inner
-            .get()
-            .arguments
-            .get(slf.index.fetch_add(1, Ordering::Relaxed))
-            .cloned()
-    }
-
-    #[gen_stub(skip)]
-    fn __traverse__(&self, visit: pyo3::PyVisit) -> Result<(), pyo3::PyTraverseError> {
-        visit.call(&self.inner)
-    }
-}
-
-/// An iterator over the [`PauliTerm`]s of a [`PauliSum`].
-#[cfg_attr(feature = "stubs", gen_stub_pyclass)]
-#[pyclass(module = "quil._quil.instructions", frozen)]
-pub(crate) struct PauliTermIter {
-    inner: Py<PauliSum>,
-    index: AtomicUsize,
-}
-
-impl PauliTermIter {
-    fn new(inner: Py<PauliSum>) -> Self {
-        Self {
-            inner,
-            index: AtomicUsize::new(0),
-        }
-    }
-}
-
-#[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
-#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
-#[pymethods]
-impl PauliTermIter {
-    fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
-        slf
-    }
-
-    #[gen_stub(override_return_type(type_repr = "PauliTerm"))]
-    fn __next__(slf: PyRef<'_, Self>) -> Option<PauliTerm> {
-        slf.inner
-            .get()
-            .terms
-            .get(slf.index.fetch_add(1, Ordering::Relaxed))
-            .cloned()
-    }
-
-    #[gen_stub(skip)]
-    fn __traverse__(&self, visit: pyo3::PyVisit) -> Result<(), pyo3::PyTraverseError> {
-        visit.call(&self.inner)
-    }
+/// Parse a qubit argument string into an integer index, if possible.
+fn arg_as_index(arg: &str) -> Option<u64> {
+    arg.strip_prefix('q')
+        .and_then(|q| q.parse::<u64>().ok())
+        .or_else(|| arg.parse::<u64>().ok())
 }
 
 // PauliSum constructor stub overloads:
@@ -1629,6 +1579,10 @@ impl PauliSum {
 
     // TODO: Ideally, we'd store `Qubit`s instead. We could use a Python-specific class,
     // which has some advantages, or update the Rust version (as a breaking change).
+    // Additionally, we may want to establish a canonical ordering for arguments.
+    // If we expect to support very large numbers of arguments,
+    // we could likely optimize around a bit-packed representation of arguments
+    // within individual terms, but we should benchmark a hashmap-based approach first.
     fn __getnewargs__(&self) -> (Vec<PauliTerm>, Vec<String>) {
         (self.terms.clone(), self.arguments.clone())
     }
@@ -1662,10 +1616,10 @@ impl PauliSum {
         }
     }
 
-    // TODO: is this just going to clone the PauliSum anyway?
     /// Iterate over the [`PauliTerm`]s in this [`PauliSum`].
-    fn __iter__(slf: Bound<'_, Self>) -> PauliTermIter {
-        PauliTermIter::new(slf.unbind())
+    fn __iter__(slf: Bound<'_, Self>) -> iter::IteratorOf<PauliTerm> {
+        let len = slf.get().terms.len();
+        iter::IteratorOf::new(slf, len, |sum, index| Ok(sum.terms.get(index).cloned()))
     }
 
     fn __add__<'py>(
@@ -1769,7 +1723,12 @@ impl PauliSum {
         }
     }
 
-    // TODO(migration-guide): This used to return `Qubit`s.
+    // TODO(migration-guide): The PyQuil v4 PauliTerm stored index keys as they came,
+    // and this method returned them as they were:
+    // so given an integer, this would have returned an integer.
+    // Now, because we enforce that all arguments are Quil identifiers,
+    // this method always returns a list of strings,
+    // and the old behavior is not and cannot be supported.
     /// Get a list of all the qubits in the sum of the terms.
     fn get_qubits(&self) -> Vec<String> {
         self.arguments.clone()

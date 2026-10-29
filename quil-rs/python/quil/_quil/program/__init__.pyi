@@ -528,7 +528,10 @@ class Program:
     ```
     """
     @property
-    def body_instructions(self) -> builtins.list[instructions.Instruction]: ...
+    def body_instructions(self) -> collections.abc.Sequence[instructions.Instruction]:
+        r"""
+        This is an alternative alias for `instructions`.
+        """
     @property
     def calibrations(self) -> CalibrationSet: ...
     @calibrations.setter
@@ -548,7 +551,21 @@ class Program:
     @gate_definitions.setter
     def gate_definitions(self, value: typing.Mapping[builtins.str, instructions.GateDefinition]) -> None: ...
     @property
-    def instructions(self) -> builtins.list[instructions.Instruction]: ...
+    def instructions(self) -> collections.abc.Sequence[instructions.Instruction]:
+        r"""
+        Returns a read-only view over the program's instructions.
+        
+        The return value acts as a `collections.abc.Sequence` over the instructions,
+        and so acts much the same as would a `list` (including slicing),
+        but only copies `Instruction`s when accessed, not when the view is created.
+        This is *not* a fully live view: the view's length is captured once, at the time
+        this property is accessed, and is not re-checked afterward.
+        Holding instances while mutating the `Program`'s instructions
+        can lead to seemingly inconsistent behavior,
+        so users should either avoid mutating the `Program` while holding onto a view
+        (re-accessing the property after any mutation to get a new view),
+        or wrap the view in `list()` to get a snapshot of the instructions at that time.
+        """
     @instructions.setter
     def instructions(self, value: typing.Sequence[instructions.Instruction]) -> None: ...
     @property

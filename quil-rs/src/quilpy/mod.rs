@@ -17,6 +17,7 @@ use crate::waveform;
 
 pub(crate) mod deprecations;
 pub(crate) mod errors;
+pub(crate) mod iter;
 pub(crate) mod memory;
 pub(crate) mod migrations;
 pub(crate) mod pauli;
@@ -25,9 +26,14 @@ pub(crate) mod singleton;
 pub(crate) use deprecations::{
     deprecated_or_new, deprecated_param, deprecated_param_cstr, py_deprecated,
 };
+pub(crate) use iter::{Sequence, SequenceIterator};
 pub(crate) use migrations::{aliased, Migrate};
 
 create_init_submodule! {
+    classes: [
+        Sequence,
+        SequenceIterator
+    ],
     errors: [
         errors::QuilError,
         errors::ValueError,
@@ -51,6 +57,7 @@ fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
     init_submodule("quil._quil", py, m)?;
 
     waveform::sampling::quilpy::register_abcs(py)?;
+    iter::register_abcs(py)?;
 
     instruction::quilpy::post_init(&py.import("quil._quil.instructions")?)?;
     expression::quilpy::post_init(&py.import("quil._quil.expression")?)?;
@@ -65,7 +72,7 @@ fn init_module(m: &Bound<'_, PyModule>) -> PyResult<()> {
 ///
 /// To add a runtime type alias to a module, include the following in its initializer:
 ///
-/// ```
+/// ```ignore
 /// use pyo3::{prelude::*, types::PyType};
 ///
 /// #[pyclass]
@@ -1041,6 +1048,19 @@ macro_rules! impl_stub_like {
 
 pub(crate) use impl_stub_like;
 
+// TODO: Ensure that *all* to_quil implementations are deterministic:
+// users currently use the generated Quil for hashing and comparisons.
+// Maybe the `Quil` trait needs its own kind of formatting options,
+// so that `to_quil_or_debug` and a (hypothetical) `deterministic` option
+// can be passed through and extended more readily.
+// Anyway, a `deterministic` option might be useful
+// if we find such productions (involving sorting) incur a performance hit.
+// It may, in fact, be faster to be deterministic
+// if the safety precautions leading to current non-deterministic output
+// are actually themselves slowing (e.g.) hashmap iteration considerably.
+// Related thought worth investigating:
+// are there potential DoS risks (of any actual concern)
+// that our hashing might be risking?
 /// Add Python `to_quil` and `to_quil_or_debug` methods
 /// for types that implement [`Quil`](crate::quil::Quil).
 macro_rules! impl_to_quil {

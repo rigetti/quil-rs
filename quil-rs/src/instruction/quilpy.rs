@@ -31,12 +31,14 @@ use crate::{
         errors::{self, PickleError},
         impl_newargs, impl_stub_enum, impl_stub_like, impl_to_quil,
         memory::{DeclarationAt, MemoryReferenceLike, PyMemRef},
+        pauli::PauliArg,
         pickleable_enum, py_deprecated,
         singleton::{py_singleton, PyModuleSingletonExt},
         IntoNewArgs, Migrate, NewArgs, NonZeroU64, OneOrMore, Seq, Seq2, Via,
     },
     validation::identifier::IdentifierValidationError,
 };
+
 use macros::*;
 
 create_init_submodule! {
@@ -118,9 +120,6 @@ create_init_submodule! {
         HaltType,
         NopType,
         WaitType,
-
-        PauliArgIter,
-        PauliTermIter,
     ],
 
     complex_enums: [
@@ -3053,8 +3052,6 @@ impl FrameDefinition {
         self.identifier.clone()
     }
 }
-
-use crate::quilpy::pauli::{PauliArg, PauliArgIter, PauliTermIter};
 
 impl_stub_like!(pub(crate) PragmaArgumentLike = enum PragmaArgument | String as Identifier | u64 as Integer);
 

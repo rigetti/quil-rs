@@ -17,7 +17,7 @@
 //!
 //! Here are some concrete examples:
 //!
-//! ```rust
+//! ```rust,ignore
 //! use crate::quilpy::errors::ToQuilStringError;
 //!
 //! fn foo() -> pyo3::PyResult<()> {

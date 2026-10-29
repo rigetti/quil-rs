@@ -190,7 +190,9 @@ pub struct Program {
     pub gate_definitions: IndexMap<String, GateDefinition>,
     #[pyo3(get, set)]
     pub circuits: IndexMap<String, CircuitDefinition>,
-    #[pyo3(get, set)]
+    // This has a manually defined getter in the Python bindings, returning a `Sequence`
+    // view rather than cloning into a `list`.
+    #[pyo3(set)]
     instructions: Vec<Instruction>,
     // private field used for caching operations
     #[pyo3(get)]

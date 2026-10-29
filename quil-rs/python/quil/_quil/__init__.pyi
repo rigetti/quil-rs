@@ -9,6 +9,8 @@ and breaking changes should be expected between minor versions.
 """
 
 import builtins
+import collections.abc
+import typing
 from . import expression
 from . import instructions
 from . import program
@@ -18,6 +20,7 @@ __all__ = [
     "ArrayError",
     "PickleError",
     "QuilError",
+    "SequenceIterator",
     "ToQuilStringError",
     "ValueError",
     "expression",
@@ -45,6 +48,17 @@ class QuilError(builtins.Exception):
     """
     ...
 
+@typing.final
+class SequenceIterator:
+    r"""
+    A standalone, single-pass iterator handed back by `Sequence.__iter__`/`Sequence.__reversed__`.
+    
+    This is an internal class not intended for direct construction by Python users.
+    """
+    def __iter__(self) -> SequenceIterator: ...
+    def __length_hint__(self) -> builtins.int: ...
+    def __next__(self) -> typing.Any: ...
+
 class ToQuilStringError(QuilError):
     r"""
     Errors which can occur when converting a Quil item to a string.
@@ -56,4 +70,35 @@ class ValueError(QuilError):
     Raised when an argument to a quil function has an inappropriate value.
     """
     ...
+
+@typing.final
+class _Sequence:
+    r"""
+    A Python class that supports the `Sequence` protocol over data owned by a Rust type.
+    
+    This is an internal class not intended for direct construction by Python users.
+    Some classes in `quil` return this type to provide idiomatic and optimized data access.
+    """
+    def __contains__(self, value: typing.Any) -> builtins.bool: ...
+    def __eq__(self, other: typing.Any) -> builtins.bool: ...
+    def __getitem__(self, index: builtins.int | slice) -> typing.Any | collections.abc.Sequence[typing.Any]: ...
+    def __iter__(self) -> SequenceIterator: ...
+    def __len__(self) -> builtins.int: ...
+    def __length_hint__(self) -> builtins.int: ...
+    def __repr__(self) -> builtins.str: ...
+    def __reversed__(self) -> SequenceIterator: ...
+    def count(self, value: typing.Any) -> builtins.int:
+        r"""
+        Return the number of occurrences of `value`.
+        
+        Part of the `collections.abc.Sequence` interface.
+        """
+    def index(self, value: typing.Any, start: builtins.int = 0, stop: typing.Optional[builtins.int] = None) -> builtins.int:
+        r"""
+        Return the index of the first occurrence of `value`.
+        
+        Raises `ValueError` if `value` is not present.
+        
+        Part of the `collections.abc.Sequence` interface.
+        """
 
