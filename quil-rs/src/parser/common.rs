@@ -575,6 +575,14 @@ DEFCAL MEASURE 0 dest:
 \tDECLARE iq REAL[2]
 \tCAPTURE 0 \"out\" flat(duration: 1000000, iqs: (2+3i)) iq[0]
 
+DEFCAL RESET 0:
+\tDECLARE iq REAL[2]
+\tPULSE 0 \"xy\" my_waveform()
+\tCAPTURE 0 \"out\" flat(duration: 1000000, iqs: (2+3i)) iq[0]
+
+DEFCAL RESET 1:
+\tDELAY 1 \"xy\" 100000000
+
 DEFFRAME 0 \"xy\":
 \tSAMPLE-RATE: 3000
 

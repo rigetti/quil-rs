@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use crate::instruction::GateSignature;
 
-use super::{CalibrationSource, InstructionIndex};
+use super::{CalibrationIdentifier, InstructionIndex};
 
 /// A `SourceMap` provides information necessary to understand which parts of a target
 /// were derived from which parts of a source artifact, in such a way that they can be
@@ -123,11 +123,11 @@ where
     }
 }
 
-impl<R> SourceMapIndexable<CalibrationSource> for ExpansionResult<R>
+impl<R> SourceMapIndexable<CalibrationIdentifier> for ExpansionResult<R>
 where
-    R: SourceMapIndexable<CalibrationSource>,
+    R: SourceMapIndexable<CalibrationIdentifier>,
 {
-    fn contains(&self, other: &CalibrationSource) -> bool {
+    fn contains(&self, other: &CalibrationIdentifier) -> bool {
         if let Self::Rewritten(rewrite) = self {
             rewrite.contains(other)
         } else {
