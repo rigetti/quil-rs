@@ -1,3 +1,13 @@
+## 0.37.3 (2026-11-04)
+
+### Features
+
+- allow waveform durations to be 10% off of an integer number of samples instead of 1% (#537)
+
+### Fixes
+
+- update rigetti-pyo3 to 0.8.4 (#543)
+
 ## 0.37.3-beta.0 (2026-11-04)
 
 ### Features
