@@ -145,6 +145,9 @@ const _GUARANTEE_ITER_TRAIT_IMPLS: () =
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize, thiserror::Error)]
 pub enum SamplingError {
+    #[error("A sample rate must be finite and greater than zero, but got {sample_rate} Hz.")]
+    InvalidSampleRate { sample_rate: f64 },
+
     #[error(
         "A duration of {duration} s cannot be discretized with a sample rate of {sample_rate} Hz, \
          as the resulting number of samples ({sample_count}) \
