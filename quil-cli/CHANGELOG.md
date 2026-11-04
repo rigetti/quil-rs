@@ -1,3 +1,15 @@
+## 0.14.3-beta.0 (2026-11-04)
+
+### Features
+
+- allow waveform durations to be 10% off of an integer number of samples instead of 1% (#537)
+
+## 0.14.3-rc.1 (2026-11-04)
+
+### Features
+
+- allow waveform durations to be 10% off of an integer number of samples instead of 1% (#537)
+
 ## 0.14.3-rc.0 (2026-10-27)
 
 ### Features

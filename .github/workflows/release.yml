@@ -18,6 +18,13 @@ on:
           - release
           - prerelease
           - dry-run
+      prerelease-label:
+        description: >-
+          Label for prereleases (`type` = `prerelease`).
+          Must be valid for both semver and PEP 440 (e.g. `rc`, `beta`, `alpha`).
+        type: string
+        required: false
+        default: rc
 
 jobs:
   release:
@@ -45,7 +52,9 @@ jobs:
       if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.type == 'dry-run')
 
     - name: Prepare Prerelease
-      run: knope release --verbose --prerelease-label=rc
+      run: knope release --verbose --prerelease-label="${PRERELEASE_LABEL}"
+      env:
+        PRERELEASE_LABEL: ${{ inputs.prerelease-label || 'rc' }}
       if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.type == 'prerelease')
 
     - name: Prepare Release
