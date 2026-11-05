@@ -272,8 +272,6 @@ impl Program {
             Instruction::WaveformDefinition(WaveformDefinition { name, definition }) => {
                 self.waveforms.insert(name, definition);
             }
-
-            // Body instructions
             Instruction::Pragma(pragma) if pragma.name == RESERVED_PRAGMA_EXTERN => {
                 self.extern_pragma_map.insert(pragma);
             }
