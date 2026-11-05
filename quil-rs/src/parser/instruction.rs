@@ -164,9 +164,9 @@ mod tests {
     };
     use crate::instruction::{
         Arithmetic, ArithmeticOperand, ArithmeticOperator, AttributeValue, BinaryLogic,
-        BinaryOperand, BinaryOperator, CalibrationDefinition, CalibrationIdentifier, Capture,
-        Comparison, ComparisonOperand, ComparisonOperator, Convert, FrameDefinition,
-        FrameIdentifier, Gate, GateDefinition, GateSpecification, Include, Instruction, Jump,
+        BinaryOperand, BinaryOperator, Capture, Comparison, ComparisonOperand, ComparisonOperator,
+        Convert, FrameDefinition, FrameIdentifier, Gate, GateCalibrationDefinition,
+        GateCalibrationIdentifier, GateDefinition, GateSpecification, Include, Instruction, Jump,
         JumpWhen, Label, MemoryReference, Move, Pulse, Qubit, RawCapture, Reset, SetFrequency,
         SetPhase, SetScale, ShiftFrequency, ShiftPhase, SwapPhases, Target, UnaryLogic,
         UnaryOperator, Waveform, WaveformDefinition, WaveformInvocation, WaveformParameters,
@@ -648,27 +648,29 @@ mod tests {
         parametric_calibration,
         parse_instructions,
         "DEFCAL RX(%theta) %qubit:\n\tPULSE 1 \"xy\" custom_waveform(a: 1)",
-        vec![Instruction::CalibrationDefinition(CalibrationDefinition {
-            identifier: CalibrationIdentifier {
-                name: "RX".to_owned(),
-                parameters: vec![Expression::Variable("theta".to_owned())],
-                qubits: vec![Qubit::Variable("qubit".to_owned())],
-                modifiers: vec![],
-            },
-            instructions: vec![Instruction::Pulse(Pulse {
-                blocking: true,
-                frame: FrameIdentifier {
-                    name: "xy".to_owned(),
-                    qubits: vec![Qubit::Fixed(1)]
+        vec![Instruction::GateCalibrationDefinition(
+            GateCalibrationDefinition {
+                identifier: GateCalibrationIdentifier {
+                    name: "RX".to_owned(),
+                    parameters: vec![Expression::Variable("theta".to_owned())],
+                    qubits: vec![Qubit::Variable("qubit".to_owned())],
+                    modifiers: vec![],
                 },
-                waveform: WaveformInvocation {
-                    name: "custom_waveform".to_owned(),
-                    parameters: [("a".to_owned(), Expression::Number(crate::real![1f64]))]
-                        .into_iter()
-                        .collect()
-                }
-            })]
-        })]
+                instructions: vec![Instruction::Pulse(Pulse {
+                    blocking: true,
+                    frame: FrameIdentifier {
+                        name: "xy".to_owned(),
+                        qubits: vec![Qubit::Fixed(1)]
+                    },
+                    waveform: WaveformInvocation {
+                        name: "custom_waveform".to_owned(),
+                        parameters: [("a".to_owned(), Expression::Number(crate::real![1f64]))]
+                            .into_iter()
+                            .collect()
+                    }
+                })]
+            }
+        )]
     );
 
     make_test!(
@@ -769,10 +771,18 @@ mod tests {
     make_test!(
         parse_reset,
         parse_instructions,
-        "RESET\nRESET 0",
+        "RESET\nRESET 0\nRESET!foo 0",
         vec![
-            Instruction::Reset(Reset { qubit: None }),
             Instruction::Reset(Reset {
+                name: None,
+                qubit: None
+            }),
+            Instruction::Reset(Reset {
+                name: None,
+                qubit: Some(Qubit::Fixed(0))
+            }),
+            Instruction::Reset(Reset {
+                name: Some("foo".to_string()),
                 qubit: Some(Qubit::Fixed(0))
             })
         ]

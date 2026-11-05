@@ -17,10 +17,10 @@ use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pyclass_complex_enum, gen
 
 use crate::{
     instruction::{
-        quilpy::OwnedGateSignature, CalibrationDefinition, Declaration, DefaultHandler,
-        ExternPragmaMap, FrameAttributes, FrameIdentifier, Gate, Instruction,
-        MeasureCalibrationDefinition, Measurement, MemoryReference, Qubit, QubitPlaceholder,
-        Target, TargetPlaceholder, Waveform,
+        quilpy::OwnedGateSignature, CalibrationIdentifier, Declaration, DefaultHandler,
+        ExternPragmaMap, FrameAttributes, FrameIdentifier, GateCalibrationDefinition, Instruction,
+        MeasureCalibrationDefinition, MemoryReference, Qubit, QubitPlaceholder,
+        ResetCalibrationDefinition, Target, TargetPlaceholder, Waveform,
     },
     quil::Quil,
     quilpy::{errors, impl_to_quil},
@@ -32,16 +32,14 @@ use super::{
         ControlFlowGraph, ControlFlowGraphOwned, QubitGraph, QubitGraphError,
     },
     scheduling::{ComputedScheduleItem, Schedule, Seconds, TimeSpan},
-    CalibrationExpansion, CalibrationSource, Calibrations, DefGateSequenceExpansion,
-    ExpansionResult, FrameSet, InstructionIndex, MemoryRegion, Program, Result, SourceMap,
-    SourceMapEntry, SourceMapIndexable,
+    CalibrationExpansion, Calibrations, DefGateSequenceExpansion, ExpansionResult, FrameSet,
+    InstructionIndex, MemoryRegion, Program, Result, SourceMap, SourceMapEntry, SourceMapIndexable,
 };
 
 create_init_submodule! {
     classes: [
         BasicBlockOwned, // Python name: BasicBlock
         CalibrationExpansion,
-        CalibrationSource,
         Calibrations, // Python: CalibrationSet
         ControlFlowGraphOwned, // Python: ControlFlowGraph
         FlatExpansionResult,
@@ -55,7 +53,7 @@ create_init_submodule! {
         ScheduleSecondsItem,
         TimeSpanSeconds
     ],
-    complex_enums: [ CalibrationSource, FlatExpansionResult ],
+    complex_enums: [ FlatExpansionResult ],
     errors: [
         errors::ProgramError,
         errors::ComputedScheduleError,
@@ -67,7 +65,6 @@ create_init_submodule! {
 impl_repr!(BasicBlockOwned);
 impl_repr!(CalibrationExpansion);
 impl_repr!(Calibrations);
-impl_repr!(CalibrationSource);
 impl_repr!(ControlFlowGraphOwned);
 impl_repr!(FrameSet);
 impl_repr!(FlatExpansionResult);
@@ -690,25 +687,33 @@ where
 impl Calibrations {
     #[new]
     fn new(
-        calibrations: Vec<CalibrationDefinition>,
+        gate_calibrations: Vec<GateCalibrationDefinition>,
         measure_calibrations: Vec<MeasureCalibrationDefinition>,
+        reset_calibrations: Vec<ResetCalibrationDefinition>,
     ) -> Self {
         Self {
-            calibrations: calibrations.into(),
+            gate_calibrations: gate_calibrations.into(),
             measure_calibrations: measure_calibrations.into(),
+            reset_calibrations: reset_calibrations.into(),
         }
     }
 
-    /// Return a list of all [`CalibrationDefinition`]s in the set.
-    #[getter(calibrations)]
-    fn py_calibrations(&self) -> Vec<CalibrationDefinition> {
-        self.iter_calibrations().cloned().collect()
+    /// Return a list of all [`GateCalibrationDefinition`]s in the set.
+    #[getter(gate_calibrations)]
+    fn py_gate_calibrations(&self) -> Vec<GateCalibrationDefinition> {
+        self.iter_gate_calibrations().cloned().collect()
     }
 
     /// Return a list of all [`MeasureCalibrationDefinition`]s in the set.
     #[getter(measure_calibrations)]
     fn py_measure_calibrations(&self) -> Vec<MeasureCalibrationDefinition> {
         self.iter_measure_calibrations().cloned().collect()
+    }
+
+    /// Return a list of all [`ResetCalibrationDefinition`]s in the set.
+    #[getter(reset_calibrations)]
+    fn py_reset_calibrations(&self) -> Vec<ResetCalibrationDefinition> {
+        self.iter_reset_calibrations().cloned().collect()
     }
 
     /// Given an instruction, return the instructions to which it is expanded if there is a match.
@@ -722,40 +727,9 @@ impl Calibrations {
         &self,
         instruction: &Instruction,
         previous_calibrations: Vec<Instruction>,
+        qubits_available: HashSet<Qubit>,
     ) -> Result<Option<Vec<Instruction>>> {
-        self.expand(instruction, &previous_calibrations)
-    }
-
-    /// Returns the last-specified ``MeasureCalibrationDefinition`` that matches the target
-    /// qubit (if any), or otherwise the last-specified one that specified no qubit.
-    ///
-    /// If multiple calibrations match the measurement, the precedence is as follows:
-    ///
-    ///   1. Match fixed qubit.
-    ///   2. Match variable qubit.
-    ///   3. Match no qubit.
-    ///
-    /// In the case of multiple calibrations with equal precedence, the last one wins.
-    #[pyo3(name = "get_match_for_measurement")]
-    fn py_get_match_for_measurement(
-        &self,
-        measurement: &Measurement,
-    ) -> Option<MeasureCalibrationDefinition> {
-        self.get_match_for_measurement(measurement).cloned()
-    }
-
-    /// Return the final calibration which matches the gate per the `QuilT` specification:
-    ///
-    /// A calibration matches a gate if:
-    /// 1. It has the same name
-    /// 2. It has the same modifiers
-    /// 3. It has the same qubit count (any mix of fixed & variable)
-    /// 4. It has the same parameter count (both specified and unspecified)
-    /// 5. All fixed qubits in the calibration definition match those in the gate
-    /// 6. All specified parameters in the calibration definition match those in the gate
-    #[pyo3(name = "get_match_for_gate")]
-    fn py_get_match_for_gate(&self, gate: &Gate) -> Option<CalibrationDefinition> {
-        self.get_match_for_gate(gate).cloned()
+        self.expand(instruction, &previous_calibrations, &qubits_available)
     }
 }
 
@@ -811,15 +785,20 @@ impl FrameSet {
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
-impl CalibrationSource {
+impl CalibrationIdentifier {
     #[gen_stub(override_return_type(
-        type_repr = "builtins.tuple[_quil.instructions.CalibrationIdentifier | _quil.instructions.MeasureCalibrationIdentifier]",
+        type_repr = "builtins.tuple[
+            _quil.instructions.GateCalibrationIdentifier 
+            | _quil.instructions.MeasureCalibrationIdentifier 
+            | _quil.instructions.ResetCalibrationIdentifier
+        ]",
         imports = ("quil._quil.instructions", "builtins")
     ))]
     fn __getnewargs__<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         match self {
-            Self::Calibration(value) => (value.clone(),).into_pyobject(py),
+            Self::GateCalibration(value) => (value.clone(),).into_pyobject(py),
             Self::MeasureCalibration(value) => (value.clone(),).into_pyobject(py),
+            Self::ResetCalibration(value) => (value.clone(),).into_pyobject(py),
         }
     }
 }
@@ -894,14 +873,14 @@ impl InstructionSourceMap {
         self.0.list_sources(&target_index)
     }
 
-    /// Given a particular calibration (`DEFCAL` or `DEFCAL MEASURE`), =
+    /// Given a particular calibration (`DEFCAL`, `DEFCAL MEASURE`, or `DEFCAL RESET`),
     /// return the locations in the source which were expanded using that calibration.
     ///
     /// This is `O(n)` where `n` is the number of first-level calibration expansions performed,
     /// which is at worst `O(i)` where `i` is the number of source instructions.
     fn list_sources_for_calibration_used(
         &self,
-        calibration_used: CalibrationSource,
+        calibration_used: CalibrationIdentifier,
     ) -> Vec<&InstructionIndex> {
         self.0.list_sources(&calibration_used)
     }
@@ -1119,8 +1098,8 @@ impl SourceMapIndexable<InstructionIndex> for FlatExpansionResult {
     }
 }
 
-impl SourceMapIndexable<CalibrationSource> for FlatExpansionResult {
-    fn contains(&self, other: &CalibrationSource) -> bool {
+impl SourceMapIndexable<CalibrationIdentifier> for FlatExpansionResult {
+    fn contains(&self, other: &CalibrationIdentifier) -> bool {
         if let Self::Calibration(expansion) = self {
             expansion.contains(other)
         } else {
