@@ -1,0 +1,16 @@
+DEFFRAME 4 "Transmon-4_charge_tx":
+	DIRECTION: "tx"
+	INITIAL-FREQUENCY: 4496525603.132212
+	HARDWARE-OBJECT: "{\"instrument_name\":\"tsunami04\",\"card_index\":5,\"channel_type\":\"QGSx2Channel\",\"channel_index\":1,\"sequencer_index\":1,\"nco_index\":0}"
+	SAMPLE-RATE: 1000000000
+	CENTER-FREQUENCY: 4500000000
+	CHANNEL-DELAY: 2.52e-7
+
+DEFCAL RX(3.141592653589793) 4:
+	FENCE 4
+	NONBLOCKING PULSE 4 "Transmon-4_charge_tx" drag_gaussian(alpha: 0.9242727982847737, anh: -215000000, detuning: 0, duration: 4e-8, fwhm: 2e-8, phase: 0, scale: 0.7140148554083958, t0: 2e-8)
+	FENCE 4
+
+RX(pi) 4
+SET-SCALE 4 "Transmon-4_charge_tx" 0.5
+RX(pi) 4

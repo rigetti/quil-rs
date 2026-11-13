@@ -735,10 +735,47 @@ mod main {
         )])
     }
 
+    /// The block re-added to the generated `quil/__init__.py` by [`extend_root_package_path`].
+    const EXTEND_PATH: &str = "\
+import pkgutil
+
+# Extension distributions (such as `quil-plotting`, which provides
+# `quil.plotting`) ship a `quil/` directory with no `__init__.py`. Extending
+# `__path__` makes those part of this package.
+__path__ = pkgutil.extend_path(__path__, __name__)
+";
+
+    /// Re-add [`EXTEND_PATH`] to the generated `quil/__init__.py`.
+    ///
+    /// `pyo3-stub-gen` rewrites that file on every run with no hook for extra content, so the
+    /// block has to be re-inserted afterwards.
+    fn extend_root_package_path(python_root: &std::path::Path) -> anyhow::Result<()> {
+        use std::fs;
+
+        let init_py = python_root.join("quil").join("__init__.py");
+        let generated = fs::read_to_string(&init_py)?;
+        if generated.contains("pkgutil.extend_path") {
+            anyhow::bail!(
+                "{}: pyo3-stub-gen now emits `pkgutil.extend_path` itself; drop this workaround",
+                init_py.display()
+            );
+        }
+
+        // Insert after the generated header comments so the block precedes the re-export imports.
+        let body_start = generated
+            .find("\n\n")
+            .map(|index| index + 2)
+            .unwrap_or(generated.len());
+        let (header, body) = generated.split_at(body_start);
+        fs::write(&init_py, format!("{header}{EXTEND_PATH}\n{body}"))?;
+        Ok(())
+    }
+
     pub fn main() -> anyhow::Result<()> {
         let mut stub = quil_rs::quilpy::stub_info()?;
         rigetti_pyo3::stubs::sort(&mut stub);
         stub.generate()?;
+        extend_root_package_path(&stub.python_root)?;
         for (module, classes) in pyi_edits() {
             editor::edit_module(&stub.python_root, &module, &classes)?;
         }

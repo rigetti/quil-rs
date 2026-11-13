@@ -18,6 +18,12 @@ classifiers = [
 ]
 dependencies = ["numpy>=1.26"]
 
+[project.optional-dependencies]
+# Deliberately unpinned: `quil-plotting` pins `quil==` exactly, so the resolver
+# can only pick the `quil-plotting` released alongside the `quil` being
+# installed.
+plotting = ["quil-plotting"]
+
 [tool.maturin]
 features = ["python"]
 bindings = "pyo3"

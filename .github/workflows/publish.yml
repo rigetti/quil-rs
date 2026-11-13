@@ -136,3 +136,22 @@ jobs:
         with:
           command: upload
           args: --skip-existing wheels/*
+
+  publish-quil-plotting:
+    name: Publish quil-plotting
+    runs-on: ubuntu-latest
+    # Uninstallable until the `quil` it pins is on PyPI, hence the ordering.
+    needs: [ is-release, publish-python-package ]
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v5
+      - name: Build sdist and wheel
+        run: uv build --out-dir dist
+        working-directory: quil-plotting
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: quil-plotting/dist

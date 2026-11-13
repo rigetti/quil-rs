@@ -1,0 +1,125 @@
+[project]
+name = "quil-plotting"
+version = "0.37.2"
+requires-python = ">=3.11"
+description = "A Python package for visualizing Quil programs."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Rigetti Computing", email = "softapps@rigetti.com" }]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Operating System :: OS Independent",
+]
+dependencies = [
+    # Shares a version number with `quil`; kept in sync by
+    # `.github/scripts/plotting_version.py`, which CI verifies.
+    "quil==0.37.2",
+    "numpy>=1.26",
+    "altair>=5.5",
+    # `vl-convert-python` renders charts to png/svg in process, so it does
+    # not need an installed copy of Chrome.
+    "vl-convert-python>=1.7",
+    "anywidget>=0.9",
+    "ipywidgets>=8",
+    # `typing.override` landed in 3.12, one minor above this package's floor.
+    # typing_extensions re-exports the stdlib one there, so the import is
+    # correct on every supported version and this line goes away when the
+    # floor reaches 3.12.
+    "typing-extensions>=4.4"
+]
+
+[project.urls]
+documentation = "https://rigetti.github.io/quil-rs/plotting/"
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.16",
+    "mypy>=1.1.1",
+    "pytest>=7.2.2"
+]
+docs = [
+    "sphinx>=8",
+    "myst-nb>=1.2",
+    "ipykernel>=6",
+    "sphinx-autodoc2>=0.5",
+    "sphinx-autobuild>=2024",
+    "sphinx_rtd_theme>=3.1.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.9,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+# Ships only `quil/plotting/`. `namespace = true` keeps a `quil/__init__.py` out of the
+# wheel, where it would collide with the one the `quil` distribution installs.
+module-name = "quil.plotting"
+module-root = ""
+namespace = true
+source-exclude = ["tests", "examples", "docs"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.pydocfmt]
+line-length = 80
+indent-style = "space"
+indent-width = 4
+line-ending = "lf"
+docstring-convention = "google"
+docstring-missing-documentation = "non-summary-docstrings"
+docstring-missing-documentation-public-only = false
+docstring-require-init-attribute-documentation = true
+docstring-include-assertion-errors = true
+
+[tool.ruff]
+line-length = 100
+indent-width = 4
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["D", "E4", "E7", "E9", "F", "I", "B", "S", "W"]
+ignore = [
+    "E741" # Mathematical variable names like "I" are allowed here.
+]
+fixable = ["ALL"]
+unfixable = []
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "D",    # docstrings are not enforced in tests
+    "S101", # asserts are allowed in tests
+    "S301", # we need to test pickling
+]
+
+[tool.pydocfmt.per-file-ignores]
+"tests/**/*.py" = ["ALL"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.pyright]
+# This diagnostic is raised when a type stub is found without a corresponding source file. This is
+# necessarily the case for a pure Rust pyo3 module, so disabling it.
+reportMissingModuleSource = false
+
+[[tool.mypy.overrides]]
+# quil is a pyo3 module and ipywidgets ships no marker, so neither is analyzable.
+module = [
+    "quil.*",
+    "ipywidgets",
+]
+ignore_missing_imports = true

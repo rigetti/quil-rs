@@ -1,0 +1,1237 @@
+PRAGMA EXTERN choose_random_real_sub_regions "(destination : mut REAL[], source : REAL[], sub_region_size : INTEGER, seed : mut INTEGER)"
+DECLARE shadow_q8 REAL[3]
+DECLARE shadow_q1 REAL[3]
+DECLARE shadow_q26 REAL[3]
+DECLARE shadow_q9 REAL[3]
+DECLARE shadow_seed_q8 INTEGER[1]
+DECLARE shadow_seed_q4 INTEGER[1]
+DECLARE shadow_q15 REAL[3]
+DECLARE shadow_seed_q6 INTEGER[1]
+DECLARE shadow_q2 REAL[3]
+DECLARE shadow_seed_q26 INTEGER[1]
+DECLARE shadow_seed_q21 INTEGER[1]
+DECLARE shadow_seed_q14 INTEGER[1]
+DECLARE shadow_seed_q1 INTEGER[1]
+DECLARE shadow_angle_source REAL[36]
+DECLARE shadow_seed_q25 INTEGER[1]
+DECLARE shadow_seed_q12 INTEGER[1]
+DECLARE shadow_q3 REAL[3]
+DECLARE shadow_q6 REAL[3]
+DECLARE shadow_q4 REAL[3]
+DECLARE shadow_seed_q2 INTEGER[1]
+DECLARE shadow_q21 REAL[3]
+DECLARE shadow_q20 REAL[3]
+DECLARE shadow_q12 REAL[3]
+DECLARE ro BIT[16]
+DECLARE shadow_seed_q15 INTEGER[1]
+DECLARE shadow_seed_q9 INTEGER[1]
+DECLARE shadow_seed_q7 INTEGER[1]
+DECLARE shadow_seed_q20 INTEGER[1]
+DECLARE shadow_q7 REAL[3]
+DECLARE shadow_seed_q3 INTEGER[1]
+DECLARE shadow_q25 REAL[3]
+DECLARE shadow_q13 REAL[3]
+DECLARE shadow_seed_q13 INTEGER[1]
+DECLARE shadow_q14 REAL[3]
+DEFFRAME 1 "Transmon-1_charge_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4445941166.408247
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega02\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":31,\"sequencer_index\":26,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4250000000
+    CHANNEL-DELAY: 4.36e-7
+DEFFRAME 21 "Transmon-21_charge_tx_f12":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4164676046.4597106
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega06\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":26,\"sequencer_index\":16,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4250000000
+    CHANNEL-DELAY: 4.24e-7
+DEFFRAME 8 "Transmon-8_charge_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4636836673.806847
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":27,\"sequencer_index\":17,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4500000000
+    CHANNEL-DELAY: 4.32e-7
+DEFFRAME 4 "Transmon-4_charge_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4530624832.7855215
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega08\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":31,\"sequencer_index\":26,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4500000000
+    CHANNEL-DELAY: 4.32e-7
+DEFFRAME 4 "Transmon-4_readout_rx":
+    DIRECTION: "rx"
+    INITIAL-FREQUENCY: 7243423257.5932045
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega08\",\"card_index\":0,\"channel_type\":\"OmegaReadoutReceiveChannel\",\"channel_index\":0,\"sequencer_index\":0,\"nco_index\":0}"
+    SAMPLE-RATE: 2000000000
+    CHANNEL-DELAY: 7.36e-7
+DEFFRAME 26 "Transmon-26_readout_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 7203367775.041766
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaReadoutTransmitChannel\",\"channel_index\":28,\"sequencer_index\":22,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 7250000000
+    CHANNEL-DELAY: 4.56e-7
+DEFFRAME 1 "Transmon-1_charge_tx_f12":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4226708425.3930845
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega02\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":31,\"sequencer_index\":26,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4250000000
+    CHANNEL-DELAY: 4.36e-7
+DEFFRAME 47 "Transmon-47_flux_tx_cz":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 0
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega00\",\"card_index\":0,\"channel_type\":\"OmegaFastFluxChannel\",\"channel_index\":24,\"sequencer_index\":14,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CHANNEL-DELAY: 2.4e-8
+DEFFRAME 1 "Transmon-1_readout_rx":
+    DIRECTION: "rx"
+    INITIAL-FREQUENCY: 7452400779.804934
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega02\",\"card_index\":0,\"channel_type\":\"OmegaReadoutReceiveChannel\",\"channel_index\":0,\"sequencer_index\":0,\"nco_index\":0}"
+    SAMPLE-RATE: 2000000000
+    CHANNEL-DELAY: 7.4e-7
+DEFFRAME 54 "Transmon-54_flux_tx_cz":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 0
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaFastFluxChannel\",\"channel_index\":22,\"sequencer_index\":12,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CHANNEL-DELAY: 2.4e-8
+DEFFRAME 39 "Transmon-39_flux_tx_cz":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 0
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega07\",\"card_index\":0,\"channel_type\":\"OmegaFastFluxChannel\",\"channel_index\":24,\"sequencer_index\":14,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CHANNEL-DELAY: 1.6e-8
+DEFFRAME 13 "Transmon-13_readout_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 7354876875.222959
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega02\",\"card_index\":0,\"channel_type\":\"OmegaReadoutTransmitChannel\",\"channel_index\":28,\"sequencer_index\":20,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 7250000000
+    CHANNEL-DELAY: 4.56e-7
+DEFFRAME 25 "Transmon-25_charge_tx_f12":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4384405325.219621
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega02\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":29,\"sequencer_index\":24,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4500000000
+    CHANNEL-DELAY: 4.32e-7
+DEFFRAME 20 "Transmon-20_readout_rx":
+    DIRECTION: "rx"
+    INITIAL-FREQUENCY: 7457414497.96225
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaReadoutReceiveChannel\",\"channel_index\":0,\"sequencer_index\":3,\"nco_index\":0}"
+    SAMPLE-RATE: 2000000000
+    CHANNEL-DELAY: 7.4e-7
+DEFFRAME 25 "Transmon-25_readout_rx":
+    DIRECTION: "rx"
+    INITIAL-FREQUENCY: 7397420967.216649
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega02\",\"card_index\":0,\"channel_type\":\"OmegaReadoutReceiveChannel\",\"channel_index\":0,\"sequencer_index\":4,\"nco_index\":0}"
+    SAMPLE-RATE: 2000000000
+    CHANNEL-DELAY: 7.4e-7
+DEFFRAME 4 "Transmon-4_readout_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 7243423257.5932045
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega08\",\"card_index\":0,\"channel_type\":\"OmegaReadoutTransmitChannel\",\"channel_index\":28,\"sequencer_index\":18,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 7250000000
+    CHANNEL-DELAY: 4.52e-7
+DEFFRAME 12 "Transmon-12_readout_rx":
+    DIRECTION: "rx"
+    INITIAL-FREQUENCY: 7106502962.414347
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega00\",\"card_index\":0,\"channel_type\":\"OmegaReadoutReceiveChannel\",\"channel_index\":0,\"sequencer_index\":2,\"nco_index\":0}"
+    SAMPLE-RATE: 2000000000
+    CHANNEL-DELAY: 7.4e-7
+DEFFRAME 20 "Transmon-20_readout_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 7457414497.96225
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaReadoutTransmitChannel\",\"channel_index\":28,\"sequencer_index\":21,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 7250000000
+    CHANNEL-DELAY: 4.56e-7
+DEFFRAME 81 "Transmon-81_flux_tx_cz":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 0
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega03\",\"card_index\":0,\"channel_type\":\"OmegaFastFluxChannel\",\"channel_index\":18,\"sequencer_index\":8,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CHANNEL-DELAY: 1.6e-8
+DEFFRAME 2 "Transmon-2_readout_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 7057155099.924469
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaReadoutTransmitChannel\",\"channel_index\":28,\"sequencer_index\":18,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 7250000000
+    CHANNEL-DELAY: 4.56e-7
+DEFFRAME 25 "Transmon-25_charge_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4602966412.737168
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega02\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":29,\"sequencer_index\":24,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4500000000
+    CHANNEL-DELAY: 4.32e-7
+DEFFRAME 9 "Transmon-9_charge_tx_f12":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4343894725.250547
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega06\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":27,\"sequencer_index\":17,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4500000000
+    CHANNEL-DELAY: 4.24e-7
+DEFFRAME 13 "Transmon-13_readout_rx":
+    DIRECTION: "rx"
+    INITIAL-FREQUENCY: 7354876875.222959
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega02\",\"card_index\":0,\"channel_type\":\"OmegaReadoutReceiveChannel\",\"channel_index\":0,\"sequencer_index\":2,\"nco_index\":0}"
+    SAMPLE-RATE: 2000000000
+    CHANNEL-DELAY: 7.4e-7
+DEFFRAME 6 "Transmon-6_readout_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 7378774425.821004
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega00\",\"card_index\":0,\"channel_type\":\"OmegaReadoutTransmitChannel\",\"channel_index\":28,\"sequencer_index\":19,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 7250000000
+    CHANNEL-DELAY: 4.56e-7
+DEFFRAME 48 "Transmon-48_flux_tx_cz":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 0
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega02\",\"card_index\":0,\"channel_type\":\"OmegaFastFluxChannel\",\"channel_index\":24,\"sequencer_index\":14,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CHANNEL-DELAY: 2.4e-8
+DEFFRAME 49 "Transmon-49_flux_tx_cz":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 0
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaFastFluxChannel\",\"channel_index\":24,\"sequencer_index\":14,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CHANNEL-DELAY: 2.4e-8
+DEFFRAME 14 "Transmon-14_readout_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 7301987485.916043
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaReadoutTransmitChannel\",\"channel_index\":28,\"sequencer_index\":20,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 7250000000
+    CHANNEL-DELAY: 4.56e-7
+DEFFRAME 3 "Transmon-3_charge_tx_f12":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4257478794.0627384
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega06\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":31,\"sequencer_index\":26,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4250000000
+    CHANNEL-DELAY: 4.32e-7
+DEFFRAME 2 "Transmon-2_charge_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4341057285.975078
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":31,\"sequencer_index\":26,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4250000000
+    CHANNEL-DELAY: 4.32e-7
+DEFFRAME 25 "Transmon-25_readout_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 7397420967.216649
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega02\",\"card_index\":0,\"channel_type\":\"OmegaReadoutTransmitChannel\",\"channel_index\":28,\"sequencer_index\":22,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 7250000000
+    CHANNEL-DELAY: 4.56e-7
+DEFFRAME 21 "Transmon-21_charge_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4379151432.710689
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega06\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":26,\"sequencer_index\":16,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4250000000
+    CHANNEL-DELAY: 4.24e-7
+DEFFRAME 76 "Transmon-76_flux_tx_cz":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 0
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaFastFluxChannel\",\"channel_index\":19,\"sequencer_index\":9,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CHANNEL-DELAY: 1.6e-8
+DEFFRAME 7 "Transmon-7_readout_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 7198565169.144009
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega02\",\"card_index\":0,\"channel_type\":\"OmegaReadoutTransmitChannel\",\"channel_index\":28,\"sequencer_index\":19,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 7250000000
+    CHANNEL-DELAY: 4.56e-7
+DEFFRAME 3 "Transmon-3_charge_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4470239615.916833
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega06\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":31,\"sequencer_index\":26,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4250000000
+    CHANNEL-DELAY: 4.32e-7
+DEFFRAME 8 "Transmon-8_readout_rx":
+    DIRECTION: "rx"
+    INITIAL-FREQUENCY: 7136262923.438973
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaReadoutReceiveChannel\",\"channel_index\":0,\"sequencer_index\":1,\"nco_index\":0}"
+    SAMPLE-RATE: 2000000000
+    CHANNEL-DELAY: 7.4e-7
+DEFFRAME 3 "Transmon-3_readout_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 7052358426.962004
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega06\",\"card_index\":0,\"channel_type\":\"OmegaReadoutTransmitChannel\",\"channel_index\":28,\"sequencer_index\":18,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 7250000000
+    CHANNEL-DELAY: 4.52e-7
+DEFFRAME 21 "Transmon-21_readout_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 7254233503.785622
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega06\",\"card_index\":0,\"channel_type\":\"OmegaReadoutTransmitChannel\",\"channel_index\":28,\"sequencer_index\":21,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 7250000000
+    CHANNEL-DELAY: 4.52e-7
+DEFFRAME 20 "Transmon-20_charge_tx_f12":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4441990126.318049
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":26,\"sequencer_index\":16,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4500000000
+    CHANNEL-DELAY: 4.36e-7
+DEFFRAME 3 "Transmon-3_readout_rx":
+    DIRECTION: "rx"
+    INITIAL-FREQUENCY: 7052358426.962004
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega06\",\"card_index\":0,\"channel_type\":\"OmegaReadoutReceiveChannel\",\"channel_index\":0,\"sequencer_index\":0,\"nco_index\":0}"
+    SAMPLE-RATE: 2000000000
+    CHANNEL-DELAY: 7.36e-7
+DEFFRAME 13 "Transmon-13_charge_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4678402924.367942
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega02\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":30,\"sequencer_index\":25,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4500000000
+    CHANNEL-DELAY: 4.36e-7
+DEFFRAME 7 "Transmon-7_readout_rx":
+    DIRECTION: "rx"
+    INITIAL-FREQUENCY: 7198565169.144009
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega02\",\"card_index\":0,\"channel_type\":\"OmegaReadoutReceiveChannel\",\"channel_index\":0,\"sequencer_index\":1,\"nco_index\":0}"
+    SAMPLE-RATE: 2000000000
+    CHANNEL-DELAY: 7.4e-7
+DEFFRAME 59 "Transmon-59_flux_tx_cz":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 0
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega03\",\"card_index\":0,\"channel_type\":\"OmegaFastFluxChannel\",\"channel_index\":21,\"sequencer_index\":11,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CHANNEL-DELAY: 1.2e-8
+DEFFRAME 9 "Transmon-9_charge_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4561543660.231022
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega06\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":27,\"sequencer_index\":17,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4500000000
+    CHANNEL-DELAY: 4.24e-7
+DEFFRAME 7 "Transmon-7_charge_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4501904888.402406
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega02\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":27,\"sequencer_index\":17,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4500000000
+    CHANNEL-DELAY: 4.28e-7
+DEFFRAME 8 "Transmon-8_readout_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 7136262923.438973
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaReadoutTransmitChannel\",\"channel_index\":28,\"sequencer_index\":19,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 7250000000
+    CHANNEL-DELAY: 4.56e-7
+DEFFRAME 65 "Transmon-65_flux_tx_cz":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 0
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega05\",\"card_index\":0,\"channel_type\":\"OmegaFastFluxChannel\",\"channel_index\":19,\"sequencer_index\":9,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CHANNEL-DELAY: 1.6e-8
+DEFFRAME 15 "Transmon-15_readout_rx":
+    DIRECTION: "rx"
+    INITIAL-FREQUENCY: 7305507776.879995
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega06\",\"card_index\":0,\"channel_type\":\"OmegaReadoutReceiveChannel\",\"channel_index\":0,\"sequencer_index\":2,\"nco_index\":0}"
+    SAMPLE-RATE: 2000000000
+    CHANNEL-DELAY: 7.36e-7
+DEFFRAME 14 "Transmon-14_readout_rx":
+    DIRECTION: "rx"
+    INITIAL-FREQUENCY: 7301987485.916043
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaReadoutReceiveChannel\",\"channel_index\":0,\"sequencer_index\":2,\"nco_index\":0}"
+    SAMPLE-RATE: 2000000000
+    CHANNEL-DELAY: 7.4e-7
+DEFFRAME 60 "Transmon-60_flux_tx_cz":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 0
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega05\",\"card_index\":0,\"channel_type\":\"OmegaFastFluxChannel\",\"channel_index\":21,\"sequencer_index\":11,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CHANNEL-DELAY: 1.6e-8
+DEFFRAME 58 "Transmon-58_flux_tx_cz":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 0
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega01\",\"card_index\":0,\"channel_type\":\"OmegaFastFluxChannel\",\"channel_index\":21,\"sequencer_index\":11,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CHANNEL-DELAY: 2e-8
+DEFFRAME 38 "Transmon-38_flux_tx_cz":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 0
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega05\",\"card_index\":0,\"channel_type\":\"OmegaFastFluxChannel\",\"channel_index\":24,\"sequencer_index\":14,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CHANNEL-DELAY: 2e-8
+DEFFRAME 9 "Transmon-9_readout_rx":
+    DIRECTION: "rx"
+    INITIAL-FREQUENCY: 7136625125.791728
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega06\",\"card_index\":0,\"channel_type\":\"OmegaReadoutReceiveChannel\",\"channel_index\":0,\"sequencer_index\":1,\"nco_index\":0}"
+    SAMPLE-RATE: 2000000000
+    CHANNEL-DELAY: 7.36e-7
+DEFFRAME 37 "Transmon-37_flux_tx_cz":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 0
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega03\",\"card_index\":0,\"channel_type\":\"OmegaFastFluxChannel\",\"channel_index\":24,\"sequencer_index\":14,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CHANNEL-DELAY: 2e-8
+DEFFRAME 9 "Transmon-9_readout_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 7136625125.791728
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega06\",\"card_index\":0,\"channel_type\":\"OmegaReadoutTransmitChannel\",\"channel_index\":28,\"sequencer_index\":19,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 7250000000
+    CHANNEL-DELAY: 4.52e-7
+DEFFRAME 43 "Transmon-43_flux_tx_cz":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 0
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega05\",\"card_index\":0,\"channel_type\":\"OmegaFastFluxChannel\",\"channel_index\":22,\"sequencer_index\":12,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CHANNEL-DELAY: 1.6e-8
+DEFFRAME 6 "Transmon-6_charge_tx_f12":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4249162469.4354453
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega00\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":27,\"sequencer_index\":17,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4250000000
+    CHANNEL-DELAY: 4.32e-7
+DEFFRAME 12 "Transmon-12_charge_tx_f12":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4392065536.6942
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega00\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":30,\"sequencer_index\":25,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4500000000
+    CHANNEL-DELAY: 4.36e-7
+DEFFRAME 26 "Transmon-26_readout_rx":
+    DIRECTION: "rx"
+    INITIAL-FREQUENCY: 7203367775.041766
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaReadoutReceiveChannel\",\"channel_index\":0,\"sequencer_index\":4,\"nco_index\":0}"
+    SAMPLE-RATE: 2000000000
+    CHANNEL-DELAY: 7.4e-7
+DEFFRAME 2 "Transmon-2_readout_rx":
+    DIRECTION: "rx"
+    INITIAL-FREQUENCY: 7057155099.924469
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaReadoutReceiveChannel\",\"channel_index\":0,\"sequencer_index\":0,\"nco_index\":0}"
+    SAMPLE-RATE: 2000000000
+    CHANNEL-DELAY: 7.4e-7
+DEFFRAME 26 "Transmon-26_charge_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4691205692.539423
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":29,\"sequencer_index\":24,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4500000000
+    CHANNEL-DELAY: 4.28e-7
+DEFFRAME 14 "Transmon-14_charge_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4796720952.504599
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":30,\"sequencer_index\":25,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4750000000
+    CHANNEL-DELAY: 4.44e-7
+DEFFRAME 26 "Transmon-26_charge_tx_f12":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4473594161.915516
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":29,\"sequencer_index\":24,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4500000000
+    CHANNEL-DELAY: 4.28e-7
+DEFFRAME 6 "Transmon-6_charge_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4464828239.127081
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega00\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":27,\"sequencer_index\":17,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4250000000
+    CHANNEL-DELAY: 4.32e-7
+DEFFRAME 14 "Transmon-14_charge_tx_f12":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4579028813.768436
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":30,\"sequencer_index\":25,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4750000000
+    CHANNEL-DELAY: 4.44e-7
+DEFFRAME 20 "Transmon-20_charge_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4658304325.042291
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":26,\"sequencer_index\":16,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4500000000
+    CHANNEL-DELAY: 4.36e-7
+DEFFRAME 12 "Transmon-12_charge_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4608614607.937315
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega00\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":30,\"sequencer_index\":25,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4500000000
+    CHANNEL-DELAY: 4.36e-7
+DEFFRAME 1 "Transmon-1_readout_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 7452400779.804934
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega02\",\"card_index\":0,\"channel_type\":\"OmegaReadoutTransmitChannel\",\"channel_index\":28,\"sequencer_index\":18,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 7250000000
+    CHANNEL-DELAY: 4.56e-7
+DEFFRAME 12 "Transmon-12_readout_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 7106502962.414347
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega00\",\"card_index\":0,\"channel_type\":\"OmegaReadoutTransmitChannel\",\"channel_index\":28,\"sequencer_index\":20,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 7250000000
+    CHANNEL-DELAY: 4.56e-7
+DEFFRAME 15 "Transmon-15_charge_tx_f12":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4471429212.712622
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega06\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":30,\"sequencer_index\":25,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4500000000
+    CHANNEL-DELAY: 4.36e-7
+DEFFRAME 15 "Transmon-15_readout_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 7305507776.879995
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega06\",\"card_index\":0,\"channel_type\":\"OmegaReadoutTransmitChannel\",\"channel_index\":28,\"sequencer_index\":20,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 7250000000
+    CHANNEL-DELAY: 4.52e-7
+DEFFRAME 15 "Transmon-15_charge_tx":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4688297624.135645
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega06\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":30,\"sequencer_index\":25,\"nco_index\":0}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4500000000
+    CHANNEL-DELAY: 4.36e-7
+DEFFRAME 71 "Transmon-71_flux_tx_cz":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 0
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega04\",\"card_index\":0,\"channel_type\":\"OmegaFastFluxChannel\",\"channel_index\":21,\"sequencer_index\":11,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CHANNEL-DELAY: 2.8e-8
+DEFFRAME 13 "Transmon-13_charge_tx_f12":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4457953376.60105
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega02\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":30,\"sequencer_index\":25,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4500000000
+    CHANNEL-DELAY: 4.36e-7
+DEFFRAME 6 "Transmon-6_readout_rx":
+    DIRECTION: "rx"
+    INITIAL-FREQUENCY: 7378774425.821004
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega00\",\"card_index\":0,\"channel_type\":\"OmegaReadoutReceiveChannel\",\"channel_index\":0,\"sequencer_index\":1,\"nco_index\":0}"
+    SAMPLE-RATE: 2000000000
+    CHANNEL-DELAY: 7.4e-7
+DEFFRAME 21 "Transmon-21_readout_rx":
+    DIRECTION: "rx"
+    INITIAL-FREQUENCY: 7254233503.785622
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega06\",\"card_index\":0,\"channel_type\":\"OmegaReadoutReceiveChannel\",\"channel_index\":0,\"sequencer_index\":3,\"nco_index\":0}"
+    SAMPLE-RATE: 2000000000
+    CHANNEL-DELAY: 7.36e-7
+DEFFRAME 4 "Transmon-4_charge_tx_f12":
+    DIRECTION: "tx"
+    INITIAL-FREQUENCY: 4315008843.144651
+    HARDWARE-OBJECT: "{\"instrument_name\":\"omega08\",\"card_index\":0,\"channel_type\":\"OmegaGateDriveChannel\",\"channel_index\":31,\"sequencer_index\":26,\"nco_index\":1}"
+    SAMPLE-RATE: 1000000000
+    CENTER-FREQUENCY: 4500000000
+    CHANNEL-DELAY: 4.32e-7
+DEFWAVEFORM RaisedCosineEnvelope_8206623259641950772:
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.00033120259415042147, -0.0029735766230313265, -0.00821979291734391, -0.01599334983006689, -0.02618089139688698, -0.03863386032141422, -0.05317066427508513, -0.06957932392222342, -0.08762056405609028, -0.10703130277019897, -0.12752848778492104, -0.14881322398710076, -0.17057513199385835, -0.19249687418290642, -0.21425878218966418, -0.23554351839184373, -0.2560407034065658, -0.2754514421206746, -0.2934926822545414, -0.30990134190167967, -0.32443814585535063, -0.33689111477987793, -0.34707865634669804, -0.35485221325942096, -0.3600984295537336, -0.3627408035826145, -0.3627408035826146, -0.3600984295537337, -0.35485221325942107, -0.34707865634669816, -0.33689111477987815, -0.3244381458553508, -0.30990134190167995, -0.2934926822545417, -0.27545144212067474, -0.25604070340656604, -0.23554351839184398, -0.2142587821896644, -0.19249687418290684, -0.17057513199385874, -0.14881322398710117, -0.12752848778492157, -0.10703130277019933, -0.08762056405609064, -0.06957932392222363, -0.05317066427508535, -0.038633860321414276, -0.02618089139688708, -0.01599334983006699, -0.00821979291734403, -0.002973576623031407, -0.0003312025941504416, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+DEFWAVEFORM RaisedCosineEnvelope_6248620280033497659:
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.0003303998779798626, -0.002967364811146157, -0.008208133313441465, -0.015986799680184727, -0.026205542668526798, -0.038735855656336485, -0.053420162687535216, -0.07007380008117205, -0.08848733868435664, -0.10842921756537025, -0.12964865602673611, -0.15187880731799772, -0.17484011438843322, -0.19824382547917124, -0.22179562534409628, -0.2451993364348343, -0.26816064350526986, -0.29039079479653146, -0.3116102332578971, -0.3315521121389107, -0.3499656507420953, -0.36661928813573236, -0.38130359516693085, -0.3938339081547406, -0.40405265114308264, -0.411831317509826, -0.41707208601212126, -0.4197090509452876, -0.4197090509452876, -0.41707208601212126, -0.41183131750982593, -0.4040526511430827, -0.3938339081547407, -0.3813035951669309, -0.36661928813573236, -0.34996565074209535, -0.3315521121389106, -0.31161023325789716, -0.29039079479653135, -0.26816064350526997, -0.24519933643483421, -0.2217956253440962, -0.1982438254791712, -0.17484011438843353, -0.15187880731799744, -0.12964865602673606, -0.10842921756537034, -0.08848733868435672, -0.07007380008117191, -0.05342016268753514, -0.0387358556563366, -0.026205542668526635, -0.015986799680184658, -0.008208133313441465, -0.0029673648111461803, -0.0003303998779798626, 0, 0, 0, 0, 0, 0, 0, 0
+DEFWAVEFORM RaisedCosineEnvelope_5892546150694352858:
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.0003649237307430635, -0.003276329032719236, -0.009056684791454954, -0.01762170040376033, -0.028846478655272376, -0.042567337003084724, -0.058584194435804066, -0.0766634891052394, -0.09654158418408437, -0.11792861228451733, -0.14051270237744112, -0.16396452757435884, -0.18794210745498796, -0.21209579491186162, -0.2360733747924909, -0.2595251999894085, -0.28210929008233226, -0.3034963181827654, -0.3233744132616102, -0.3414537079310455, -0.3574705653637649, -0.3711914237115774, -0.3824162019630894, -0.3909812175753947, -0.3967615733341305, -0.39967297863610673, -0.3996729786361068, -0.3967615733341307, -0.3909812175753949, -0.38241620196308956, -0.3711914237115776, -0.3574705653637651, -0.34145370793104585, -0.3233744132616106, -0.3034963181827655, -0.28210929008233254, -0.25952519998940876, -0.2360733747924912, -0.21209579491186206, -0.1879421074549884, -0.16396452757435928, -0.1405127023774417, -0.11792861228451773, -0.09654158418408476, -0.07666348910523962, -0.05858419443580431, -0.04256733700308479, -0.028846478655272487, -0.017621700403760442, -0.009056684791455088, -0.0032763290327193248, -0.00036492373074308574, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+DEFWAVEFORM RaisedCosineEnvelope_-4407701911911191775:
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.0014285547538238357, -0.012710753202923461, -0.034506286921531154, -0.06532982630554621, -0.10308079808425524, -0.14518653591737002, -0.1887776033545852, -0.23088334118769985, -0.26863431296640883, -0.29945785235042394, -0.3212533860690316, -0.3325355845181312, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.333964139271955, -0.33253558451813114, -0.3212533860690316, -0.2994578523504241, -0.2686343129664088, -0.23088334118769985, -0.1887776033545854, -0.1451865359173697, -0.10308079808425524, -0.06532982630554583, -0.03450628692153101, -0.01271075320292348, -0.0014285547538237802, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+DEFWAVEFORM RaisedCosineEnvelope_-2837049471552145493:
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.00047956172855637033, -0.004297974584164767, -0.01183887327746402, -0.022912813672520956, -0.03724159377314902, -0.054465242775397424, -0.07415106433423399, -0.0958045068574645, -0.11888158774094204, -0.14280255942066367, -0.16696647392015415, -0.190766279999329, -0.2136040736309066, -0.23490611867850367, -0.25413726042359325, -0.2708143698414953, -0.2845184808763015, -0.29490531579941315, -0.30171393423129195, -0.30477328854377256, -0.3049459887301393, -0.3049459887301393, -0.3049459887301393, -0.3049459887301393, -0.30477328854377256, -0.301713934231292, -0.2949053157994131, -0.2845184808763015, -0.2708143698414953, -0.25413726042359325, -0.23490611867850353, -0.21360407363090664, -0.1907662799993287, -0.166966473920154, -0.14280255942066364, -0.11888158774094204, -0.09580450685746447, -0.07415106433423402, -0.05446524277539739, -0.03724159377314896, -0.02291281367252094, -0.011838873277464038, -0.00429797458416475, -0.00047956172855637033, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+DEFWAVEFORM RaisedCosineEnvelope_-5950767185271030895:
+    0, 0, 0, 0, 0, 0, 0, 0, -0.00025807949623451434, -0.002316089382328952, -0.006396896034778611, -0.012430675720346729, -0.020314188795733476, -0.02991254616649619, -0.04106151727685373, -0.053570340140029156, -0.06722498532873254, -0.08179181807800236, -0.09702159584080966, -0.11265373289714038, -0.12842075904791395, -0.1440528961042448, -0.159282673867052, -0.1738495066163218, -0.18750415180502517, -0.20001297466820064, -0.21116194577855812, -0.2207603031493209, -0.22864381622470767, -0.23467759591027573, -0.23875840256272543, -0.24081641244881985, -0.24107449194505437, -0.24107449194505437, -0.24107449194505437, -0.24107449194505437, -0.24107449194505437, -0.24107449194505437, -0.24107449194505437, -0.24107449194505437, -0.24107449194505437, -0.24107449194505437, -0.24107449194505437, -0.24107449194505437, -0.24081641244881985, -0.23875840256272537, -0.23467759591027573, -0.22864381622470759, -0.2207603031493208, -0.21116194577855812, -0.2000129746682005, -0.18750415180502517, -0.1738495066163217, -0.15928267386705186, -0.1440528961042447, -0.12842075904791384, -0.11265373289714031, -0.09702159584080952, -0.08179181807800227, -0.06722498532873242, -0.053570340140029, -0.04106151727685368, -0.029912546166496176, -0.020314188795733382, -0.012430675720346689, -0.0063968960347785975, -0.002316089382328912, -0.00025807949623450095, 0, 0, 0, 0, 0, 0, 0, 0
+DEFWAVEFORM RaisedCosineEnvelope_-4155448901740585949:
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.00034655627985645255, -0.003112467583872516, -0.008609507252437499, -0.016768546822262507, -0.02748698163677197, -0.04063002115919268, -0.056032384041761134, -0.0735003766345697, -0.09281432879559852, -0.11373135637020691, -0.13598841560030167, -0.15930561105221794, -0.18338971546419588, -0.2079378572493321, -0.23264132928151482, -0.257189471066651, -0.281273575478629, -0.30459077093054526, -0.3268478301606398, -0.34776485773524823, -0.367078809896277, -0.3845468024890858, -0.39994916537165404, -0.41309220489407483, -0.42381063970858424, -0.43196967927840935, -0.4374667189469743, -0.44023263025099035, -0.44023263025099035, -0.4374667189469743, -0.4319696792784093, -0.4238106397085843, -0.4130922048940749, -0.3999491653716541, -0.3845468024890858, -0.3670788098962771, -0.3477648577352481, -0.3268478301606399, -0.30459077093054515, -0.28127357547862913, -0.2571894710666509, -0.23264132928151474, -0.20793785724933203, -0.18338971546419622, -0.15930561105221763, -0.13598841560030162, -0.11373135637020701, -0.09281432879559862, -0.07350037663456954, -0.05603238404176106, -0.04063002115919281, -0.027486981636771796, -0.016768546822262434, -0.008609507252437499, -0.0031124675838725404, -0.00034655627985645255, 0, 0, 0, 0, 0, 0, 0, 0
+DEFWAVEFORM RaisedCosineEnvelope_-2154457562766303280:
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.00041526429182573853, -0.0037261637467160724, -0.010288374275037999, -0.019983791564201596, -0.0326379209695642, -0.04802301800648989, -0.06586218721393965, -0.08583436561971379, -0.1075801011167278, -0.13070802175317464, -0.15480187950460983, -0.17942804175667387, -0.20414329566943176, -0.22850282496317798, -0.25206821556237563, -0.27441534601502, -0.2951420206784877, -0.31387520829252913, -0.33027775566216094, -0.3440544556200038, -0.35495736005905054, -0.3627902424138092, -0.36741212927568306, -0.3687564541428384, -0.3687564541428384, -0.3687564541428384, -0.3687564541428384, -0.3687564541428384, -0.3687564541428384, -0.3674121292756831, -0.36279024241380936, -0.35495736005905076, -0.344054455620004, -0.3302777556621612, -0.3138752082925293, -0.29514202067848805, -0.2744153460150202, -0.2520682155623758, -0.2285028249631783, -0.20414329566943207, -0.1794280417566742, -0.1548018795046101, -0.1307080217531749, -0.10758010111672815, -0.08583436561971404, -0.0658621872139398, -0.048023018006490135, -0.032637920969564305, -0.019983791564201697, -0.010288374275038122, -0.0037261637467161544, -0.00041526429182573853, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+DEFWAVEFORM RaisedCosineEnvelope_9063551399334451499:
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.00035655623700115, -0.003201204670097201, -0.008849020156544325, -0.017217644828777304, -0.028185045294573288, -0.04159129215870595, -0.057240892153657394, -0.074905638871671, -0.09432794052805282, -0.11522457622943816, -0.13729082597217548, -0.16020491414614846, -0.18363270174774748, -0.20723255887895828, -0.2306603464805575, -0.25357443465453033, -0.27564068439726763, -0.29653732009865313, -0.31595962175503484, -0.3336243684730484, -0.3492739684679999, -0.3626802153321326, -0.3736476157979286, -0.3820162404701616, -0.38766405595660874, -0.3905087043897048, -0.3905087043897049, -0.3876640559566089, -0.3820162404701617, -0.37364761579792877, -0.36268021533213285, -0.3492739684680001, -0.3336243684730487, -0.31595962175503517, -0.2965373200986532, -0.2756406843972679, -0.25357443465453056, -0.23066034648055775, -0.20723255887895872, -0.18363270174774793, -0.1602049141461489, -0.13729082597217604, -0.11522457622943855, -0.09432794052805323, -0.07490563887167122, -0.05724089215365763, -0.041591292158706016, -0.028185045294573396, -0.017217644828777415, -0.008849020156544455, -0.0032012046700972876, -0.0003565562370011717, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+DEFWAVEFORM RaisedCosineEnvelope_-6810572592011131211:
+    0, 0, 0, 0, 0, 0, 0, 0, -0.00021634574152373416, -0.0019435553672171352, -0.005379050948503019, -0.010485192476869116, -0.017206035997201878, -0.02546794654146558, -0.03518040488882136, -0.046236999313153004, -0.058516591452206404, -0.07188464352483619, -0.08619469235509004, -0.1012899540534131, -0.11700504177375244, -0.13316777772645028, -0.14960107959413874, -0.1661249006826661, -0.1825582025503547, -0.1987209385030524, -0.21443602622339164, -0.22953128792171493, -0.24384133675196865, -0.25720938882459843, -0.26948898096365187, -0.28054557538798336, -0.2902580337353392, -0.29851994427960293, -0.30524078779993563, -0.3103469293283017, -0.31378242490958763, -0.315509634535281, -0.315509634535281, -0.31378242490958763, -0.31034692932830177, -0.30524078779993563, -0.2985199442796028, -0.29025803373533915, -0.2805455753879834, -0.2694889809636517, -0.2572093888245984, -0.24384133675196848, -0.22953128792171476, -0.21443602622339156, -0.19872093850305234, -0.18255820255035465, -0.16612490068266603, -0.14960107959413868, -0.13316777772645036, -0.11700504177375251, -0.10128995405341316, -0.08619469235508985, -0.07188464352483602, -0.05851659145220614, -0.04623699931315273, -0.035180404888821244, -0.02546794654146558, -0.017206035997201843, -0.010485192476869062, -0.005379050948503019, -0.0019435553672171352, -0.00021634574152373416, 0, 0, 0, 0, 0, 0, 0, 0
+DEFWAVEFORM RaisedCosineEnvelope_-3215604763122935230:
+    0, 0, 0, 0, 0, 0, 0, 0, -0.0003076313760950721, -0.0027624403438339857, -0.0076388611992083974, -0.01487094871557078, -0.024360901315791925, -0.03598038367081453, -0.04957226221482179, -0.0649527301071546, -0.0819137929045138, -0.10022608132899516, -0.11964195309409342, -0.13989884184180051, -0.16072280790217017, -0.181832242857414, -0.2029416778126577, -0.22376564387302722, -0.24402253262073442, -0.26343840438583255, -0.2817506928103141, -0.2987117556076734, -0.31409222350000615, -0.32768410204401327, -0.3393035843990359, -0.348793536999257, -0.3560256245156193, -0.3609020453709938, -0.3633568543387327, -0.3636644857148278, -0.3636644857148278, -0.3636644857148278, -0.3636644857148278, -0.3636644857148278, -0.3636644857148278, -0.3633568543387327, -0.36090204537099374, -0.3560256245156193, -0.3487935369992569, -0.33930358439903574, -0.32768410204401316, -0.314092223500006, -0.2987117556076732, -0.28175069281031395, -0.26343840438583244, -0.2440225326207344, -0.22376564387302716, -0.2029416778126575, -0.18183224285741384, -0.16072280790217003, -0.13989884184180038, -0.11964195309409333, -0.10022608132899506, -0.08191379290451363, -0.06495273010715431, -0.049572262214821666, -0.03598038367081455, -0.024360901315791786, -0.01487094871557072, -0.0076388611992083974, -0.0027624403438339454, -0.00030763137609505185, 0, 0, 0, 0, 0, 0, 0, 0
+DEFWAVEFORM RaisedCosineEnvelope_-8921347716489661319:
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.0005444486986527969, -0.004874069135901165, -0.013395725101538665, -0.02583861889485345, -0.041807345321946694, -0.060794456720393374, -0.08219658842367882, -0.10533363223699296, -0.12947034863750365, -0.1538397309154412, -0.17766737879986708, -0.2001961070340084, -0.2207100068989058, -0.23855719606811415, -0.25317053385786487, -0.26408564359194064, -0.2709556693739143, -0.273562298332075, -0.27358409016322616, -0.27358409016322616, -0.27358409016322616, -0.27358409016322616, -0.27358409016322616, -0.27358409016322616, -0.27358409016322616, -0.27358409016322616, -0.273562298332075, -0.2709556693739143, -0.26408564359194064, -0.2531705338578648, -0.23855719606811407, -0.22071000689890583, -0.20019610703400811, -0.17766737879986702, -0.15383973091544112, -0.12947034863750367, -0.10533363223699281, -0.08219658842367879, -0.06079445672039345, -0.04180734532194663, -0.025838618894853435, -0.013395725101538681, -0.004874069135901119, -0.0005444486986527969, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+DEFWAVEFORM RaisedCosineEnvelope_-4233665660692513888:
+    0, 0, 0, 0, 0, 0, 0, 0, -0.0002321278556073911, -0.0020853349664701187, -0.005771445063280474, -0.01125007235244964, -0.018461191846921056, -0.02732579701248949, -0.03774676537992311, -0.049609922639060465, -0.0627852935564452, -0.07712852601118278, -0.09248247254698493, -0.10867891211258508, -0.12554039312678025, -0.14288217767508687, -0.16051426553699183, -0.17824347586812864, -0.19587556373003376, -0.2132173482783402, -0.23007882929253526, -0.2462752688581357, -0.2616292153939377, -0.27597244784867525, -0.28914781876606, -0.3010109760251972, -0.3114319443926309, -0.32029654955819936, -0.3275076690526707, -0.3329862963418399, -0.33667240643865026, -0.338525613549513, -0.338525613549513, -0.33667240643865026, -0.3329862963418399, -0.3275076690526707, -0.32029654955819925, -0.31143194439263083, -0.3010109760251973, -0.2891478187660599, -0.2759724478486752, -0.26162921539393746, -0.2462752688581355, -0.23007882929253518, -0.21321734827834016, -0.19587556373003367, -0.17824347586812858, -0.16051426553699175, -0.14288217767508696, -0.12554039312678034, -0.10867891211258517, -0.09248247254698472, -0.0771285260111826, -0.06278529355644492, -0.04960992263906017, -0.03774676537992298, -0.02732579701248949, -0.018461191846921018, -0.011250072352449583, -0.005771445063280474, -0.0020853349664701187, -0.0002321278556073911, 0, 0, 0, 0, 0, 0, 0, 0
+DEFWAVEFORM RaisedCosineEnvelope_-2168849346545972698:
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.0006980347201003349, -0.006264390729638816, -0.01730186085410716, -0.033621590919510794, -0.05494434581974671, -0.08090528730668743, -0.11106021647375844, -0.14489317412238537, -0.1818252689669322, -0.2212245826250976, -0.2624169819166372, -0.30469765346898114, -0.3473431632694533, -0.3896238348217975, -0.4308162341133368, -0.47021554777150193, -0.5071476426160489, -0.5409806002646762, -0.571135529431747, -0.5970964709186878, -0.6184192258189237, -0.6347389558843274, -0.6457764260087957, -0.6513427820183342, -0.6513427820183342, -0.6457764260087958, -0.6347389558843274, -0.6184192258189238, -0.5970964709186878, -0.5711355294317472, -0.5409806002646761, -0.5071476426160492, -0.47021554777150204, -0.43081623411333697, -0.3896238348217977, -0.3473431632694537, -0.3046976534689813, -0.26241698191663676, -0.2212245826250983, -0.18182526896693207, -0.1448931741223855, -0.11106021647375836, -0.08090528730668715, -0.05494434581974703, -0.03362159091951068, -0.01730186085410716, -0.00626439072963878, -0.0006980347201002987, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+DEFWAVEFORM RaisedCosineEnvelope_5761332705823734506:
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.0004400469899407336, -0.00394698006455619, -0.01088945516954787, -0.021126143532223016, -0.034448655697689144, -0.05058578373720991, -0.06920902225953501, -0.08993925583333512, -0.11235447668410478, -0.13599837555548114, -0.16038963084981706, -0.1850317069478917, -0.20942296224222762, -0.233066861113604, -0.2554820819643735, -0.2762123155381736, -0.2948355540604988, -0.3109726821000195, -0.32429519426548564, -0.3345318826281608, -0.3414743577331525, -0.34498129080776796, -0.34498129080776796, -0.34147435773315243, -0.3345318826281608, -0.32429519426548564, -0.31097268210001955, -0.29483555406049883, -0.27621231553817355, -0.25548208196437344, -0.23306686111360392, -0.20942296224222753, -0.1850317069478915, -0.16038963084981697, -0.13599837555548122, -0.11235447668410471, -0.08993925583333505, -0.06920902225953508, -0.05058578373721003, -0.03444865569768901, -0.021126143532223, -0.010889455169547908, -0.0039469800645562094, -0.0004400469899407336, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+DEFCAL RZ(%theta) 14:
+    SHIFT-PHASE 14 "Transmon-14_charge_tx" -1*%theta
+DEFCAL RX(1.5707963267948966) 14:
+    FENCE 14
+    NONBLOCKING PULSE 14 "Transmon-14_charge_tx" drag_gaussian(alpha: -1.5673006278422426, anh: -217685582.8827362, detuning: 0, duration: 4e-8, fwhm: 2e-8, phase: 0, scale: 0.07799114193562758, t0: 2e-8)
+    SHIFT-PHASE 14 "Transmon-14_charge_tx" 0.0409230446189054
+    FENCE 14
+DEFCAL RZ(%theta) 8:
+    SHIFT-PHASE 8 "Transmon-8_charge_tx" -1*%theta
+DEFCAL RX(1.5707963267948966) 8:
+    FENCE 8
+    NONBLOCKING PULSE 8 "Transmon-8_charge_tx" drag_gaussian(alpha: -3.2663883973457724, anh: -212042023.43468857, detuning: 0, duration: 4e-8, fwhm: 2e-8, phase: 0, scale: 0.04827383640735302, t0: 2e-8)
+    SHIFT-PHASE 8 "Transmon-8_charge_tx" 0.02171845177690619
+    FENCE 8
+DEFCAL CZ 14 8:
+    FENCE 8 54 14
+    NONBLOCKING PULSE 54 "Transmon-54_flux_tx_cz" RaisedCosineEnvelope_8206623259641950772
+    SHIFT-PHASE 14 "Transmon-14_charge_tx" 3.8940690788300367
+    SHIFT-PHASE 8 "Transmon-8_charge_tx" 3.143949780811077
+    FENCE 8 54 14
+DEFCAL RZ(%theta) 2:
+    SHIFT-PHASE 2 "Transmon-2_charge_tx" -1*%theta
+DEFCAL RZ(%theta) 20:
+    SHIFT-PHASE 20 "Transmon-20_charge_tx" -1*%theta
+DEFCAL RX(1.5707963267948966) 2:
+    FENCE 2
+    NONBLOCKING PULSE 2 "Transmon-2_charge_tx" drag_gaussian(alpha: -0.8913386423412623, anh: -208290820.84295607, detuning: 0, duration: 4e-8, fwhm: 2e-8, phase: 0, scale: 0.06051452105673146, t0: 2e-8)
+    SHIFT-PHASE 2 "Transmon-2_charge_tx" -0.08087775588208301
+    FENCE 2
+DEFCAL RX(1.5707963267948966) 20:
+    FENCE 20
+    NONBLOCKING PULSE 20 "Transmon-20_charge_tx" drag_gaussian(alpha: -2.9650974325587125, anh: -215954059.1329317, detuning: 0, duration: 4e-8, fwhm: 2e-8, phase: 0, scale: 0.06591776889794494, t0: 2e-8)
+    SHIFT-PHASE 20 "Transmon-20_charge_tx" 0.0757186297998114
+    FENCE 20
+DEFCAL CZ 8 2:
+    CZ 2 8
+DEFCAL CZ 2 8:
+    FENCE 8 2 43
+    NONBLOCKING PULSE 43 "Transmon-43_flux_tx_cz" RaisedCosineEnvelope_6248620280033497659
+    SHIFT-PHASE 2 "Transmon-2_charge_tx" 5.856487007269647
+    SHIFT-PHASE 8 "Transmon-8_charge_tx" 4.741993496314964
+    FENCE 8 2 43
+DEFCAL CZ 14 20:
+    CZ 20 14
+DEFCAL CZ 20 14:
+    FENCE 65 20 14
+    NONBLOCKING PULSE 65 "Transmon-65_flux_tx_cz" RaisedCosineEnvelope_5892546150694352858
+    SHIFT-PHASE 14 "Transmon-14_charge_tx" 5.501638921788638
+    SHIFT-PHASE 20 "Transmon-20_charge_tx" 1.599300661490836
+    FENCE 65 20 14
+DEFCAL RZ(%theta) 3:
+    SHIFT-PHASE 3 "Transmon-3_charge_tx" -1*%theta
+DEFCAL RZ(%theta) 7:
+    SHIFT-PHASE 7 "Transmon-7_charge_tx" -1*%theta
+DEFCAL RZ(%theta) 13:
+    SHIFT-PHASE 13 "Transmon-13_charge_tx" -1*%theta
+DEFCAL RZ(%theta) 26:
+    SHIFT-PHASE 26 "Transmon-26_charge_tx" -1*%theta
+DEFCAL RX(1.5707963267948966) 3:
+    FENCE 3
+    NONBLOCKING PULSE 3 "Transmon-3_charge_tx" drag_gaussian(alpha: -3.761334626324194, anh: -199289774.7441311, detuning: 0, duration: 4e-8, fwhm: 2e-8, phase: 0, scale: 0.06207929801596679, t0: 2e-8)
+    SHIFT-PHASE 3 "Transmon-3_charge_tx" -0.08105067148512805
+    FENCE 3
+DEFCAL RX(1.5707963267948966) 7:
+    FENCE 7
+    NONBLOCKING PULSE 7 "Transmon-7_charge_tx" drag_gaussian(alpha: 3.8082897411777767, anh: -220216085.5589447, detuning: 0, duration: 4e-8, fwhm: 2e-8, phase: 0, scale: 0.04837512464329216, t0: 2e-8)
+    SHIFT-PHASE 7 "Transmon-7_charge_tx" 0.04382707824124156
+    FENCE 7
+DEFCAL RX(1.5707963267948966) 13:
+    FENCE 13
+    NONBLOCKING PULSE 13 "Transmon-13_charge_tx" drag_gaussian(alpha: -0.16370407766308126, anh: -220158951.70261002, detuning: 0, duration: 4e-8, fwhm: 2e-8, phase: 0, scale: 0.08994698006276705, t0: 2e-8)
+    SHIFT-PHASE 13 "Transmon-13_charge_tx" 0.029888097496874762
+    FENCE 13
+DEFCAL RX(1.5707963267948966) 26:
+    FENCE 26
+    NONBLOCKING PULSE 26 "Transmon-26_charge_tx" drag_gaussian(alpha: -0.767767650023127, anh: -216379889.07285404, detuning: 0, duration: 4e-8, fwhm: 2e-8, phase: 0, scale: 0.04198144414448116, t0: 2e-8)
+    SHIFT-PHASE 26 "Transmon-26_charge_tx" 0.03341651279516572
+    FENCE 26
+DEFCAL CZ 2 3:
+    CZ 3 2
+DEFCAL CZ 3 2:
+    FENCE 2 3 38
+    NONBLOCKING PULSE 38 "Transmon-38_flux_tx_cz" RaisedCosineEnvelope_-4407701911911191775
+    SHIFT-PHASE 3 "Transmon-3_charge_tx" 3.0540212564235065
+    SHIFT-PHASE 2 "Transmon-2_charge_tx" 5.123094798652938
+    FENCE 2 3 38
+DEFCAL CZ 8 7:
+    CZ 7 8
+DEFCAL CZ 7 8:
+    FENCE 48 8 7
+    NONBLOCKING PULSE 48 "Transmon-48_flux_tx_cz" RaisedCosineEnvelope_-2837049471552145493
+    SHIFT-PHASE 7 "Transmon-7_charge_tx" 2.98353948427004
+    SHIFT-PHASE 8 "Transmon-8_charge_tx" 4.0953293236797546
+    FENCE 48 8 7
+DEFCAL CZ 14 13:
+    CZ 13 14
+DEFCAL CZ 13 14:
+    FENCE 59 13 14
+    NONBLOCKING PULSE 59 "Transmon-59_flux_tx_cz" RaisedCosineEnvelope_-5950767185271030895
+    SHIFT-PHASE 13 "Transmon-13_charge_tx" 3.814996652574274
+    SHIFT-PHASE 14 "Transmon-14_charge_tx" 5.334268553891362
+    FENCE 59 13 14
+DEFCAL CZ 20 26:
+    FENCE 26 76 20
+    NONBLOCKING PULSE 76 "Transmon-76_flux_tx_cz" RaisedCosineEnvelope_-4155448901740585949
+    SHIFT-PHASE 26 "Transmon-26_charge_tx" 1.972848643309558
+    SHIFT-PHASE 20 "Transmon-20_charge_tx" 2.1998406041445535
+    FENCE 26 76 20
+DEFCAL RZ(%theta) 1:
+    SHIFT-PHASE 1 "Transmon-1_charge_tx" -1*%theta
+DEFCAL RZ(%theta) 4:
+    SHIFT-PHASE 4 "Transmon-4_charge_tx" -1*%theta
+DEFCAL RZ(%theta) 6:
+    SHIFT-PHASE 6 "Transmon-6_charge_tx" -1*%theta
+DEFCAL RZ(%theta) 9:
+    SHIFT-PHASE 9 "Transmon-9_charge_tx" -1*%theta
+DEFCAL RZ(%theta) 12:
+    SHIFT-PHASE 12 "Transmon-12_charge_tx" -1*%theta
+DEFCAL RZ(%theta) 15:
+    SHIFT-PHASE 15 "Transmon-15_charge_tx" -1*%theta
+DEFCAL RZ(%theta) 21:
+    SHIFT-PHASE 21 "Transmon-21_charge_tx" -1*%theta
+DEFCAL RZ(%theta) 25:
+    SHIFT-PHASE 25 "Transmon-25_charge_tx" -1*%theta
+DEFCAL RX(1.5707963267948966) 1:
+    FENCE 1
+    NONBLOCKING PULSE 1 "Transmon-1_charge_tx" drag_gaussian(alpha: -1.071093635241119, anh: -209991196.1207266, detuning: 0, duration: 4e-8, fwhm: 2e-8, phase: 0, scale: 0.12446867252284197, t0: 2e-8)
+    SHIFT-PHASE 1 "Transmon-1_charge_tx" -0.0282141766505514
+    FENCE 1
+DEFCAL RX(1.5707963267948966) 4:
+    FENCE 4
+    NONBLOCKING PULSE 4 "Transmon-4_charge_tx" drag_gaussian(alpha: -0.4730849425267389, anh: -207970919.61634445, detuning: 0, duration: 4e-8, fwhm: 2e-8, phase: 0, scale: 0.07458706447664938, t0: 2e-8)
+    SHIFT-PHASE 4 "Transmon-4_charge_tx" 0.006090765605625271
+    FENCE 4
+DEFCAL RX(1.5707963267948966) 6:
+    FENCE 6
+    NONBLOCKING PULSE 6 "Transmon-6_charge_tx" drag_gaussian(alpha: -4.370582244385242, anh: -208592886.69520378, detuning: 0, duration: 4e-8, fwhm: 2e-8, phase: 0, scale: 0.2095716631338795, t0: 2e-8)
+    SHIFT-PHASE 6 "Transmon-6_charge_tx" -0.02311509053839496
+    FENCE 6
+DEFCAL RX(1.5707963267948966) 9:
+    FENCE 9
+    NONBLOCKING PULSE 9 "Transmon-9_charge_tx" drag_gaussian(alpha: -2.9989594866802665, anh: -206831674.15652275, detuning: 0, duration: 4e-8, fwhm: 2e-8, phase: 0, scale: 0.09592693556890772, t0: 2e-8)
+    SHIFT-PHASE 9 "Transmon-9_charge_tx" 0.011906409832525467
+    FENCE 9
+DEFCAL RX(1.5707963267948966) 12:
+    FENCE 12
+    NONBLOCKING PULSE 12 "Transmon-12_charge_tx" drag_gaussian(alpha: -0.5017081016534833, anh: -210191202.20761013, detuning: 0, duration: 4e-8, fwhm: 2e-8, phase: 0, scale: 0.3367117376572117, t0: 2e-8)
+    SHIFT-PHASE 12 "Transmon-12_charge_tx" 0.012534752996214905
+    FENCE 12
+DEFCAL RX(1.5707963267948966) 15:
+    FENCE 15
+    NONBLOCKING PULSE 15 "Transmon-15_charge_tx" drag_gaussian(alpha: 0.09591253505554326, anh: -206106168.63983727, detuning: 0, duration: 4e-8, fwhm: 2e-8, phase: 0, scale: 0.11574581481043779, t0: 2e-8)
+    SHIFT-PHASE 15 "Transmon-15_charge_tx" 0.05041971704608219
+    FENCE 15
+DEFCAL RX(1.5707963267948966) 21:
+    FENCE 21
+    NONBLOCKING PULSE 21 "Transmon-21_charge_tx" drag_gaussian(alpha: -0.2413791550798407, anh: -201307328.04421806, detuning: 0, duration: 4e-8, fwhm: 2e-8, phase: 0, scale: 0.022035446193895022, t0: 2e-8)
+    SHIFT-PHASE 21 "Transmon-21_charge_tx" 0.06130311867383134
+    FENCE 21
+DEFCAL RX(1.5707963267948966) 25:
+    FENCE 25
+    NONBLOCKING PULSE 25 "Transmon-25_charge_tx" drag_gaussian(alpha: 4.312434306012322, anh: -218269580.5578184, detuning: 0, duration: 4e-8, fwhm: 2e-8, phase: 0, scale: 0.0660383354094304, t0: 2e-8)
+    SHIFT-PHASE 25 "Transmon-25_charge_tx" 0.16580697932439623
+    FENCE 25
+DEFCAL CZ 2 1:
+    CZ 1 2
+DEFCAL CZ 1 2:
+    FENCE 1 2 37
+    NONBLOCKING PULSE 37 "Transmon-37_flux_tx_cz" RaisedCosineEnvelope_-2154457562766303280
+    SHIFT-PHASE 2 "Transmon-2_charge_tx" 4.407908107787772
+    SHIFT-PHASE 1 "Transmon-1_charge_tx" 4.912551465069194
+    FENCE 1 2 37
+DEFCAL CZ 3 4:
+    CZ 4 3
+DEFCAL CZ 4 3:
+    FENCE 3 4 39
+    NONBLOCKING PULSE 39 "Transmon-39_flux_tx_cz" RaisedCosineEnvelope_9063551399334451499
+    SHIFT-PHASE 4 "Transmon-4_charge_tx" 6.277262573220812
+    SHIFT-PHASE 3 "Transmon-3_charge_tx" 3.2237497744059227
+    FENCE 3 4 39
+DEFCAL CZ 7 6:
+    FENCE 7 6 47
+    NONBLOCKING PULSE 47 "Transmon-47_flux_tx_cz" RaisedCosineEnvelope_-6810572592011131211
+    SHIFT-PHASE 7 "Transmon-7_charge_tx" 1.453249399600314
+    SHIFT-PHASE 6 "Transmon-6_charge_tx" 2.3421326385120955
+    FENCE 7 6 47
+DEFCAL CZ 8 9:
+    CZ 9 8
+DEFCAL CZ 9 8:
+    FENCE 8 49 9
+    NONBLOCKING PULSE 49 "Transmon-49_flux_tx_cz" RaisedCosineEnvelope_-3215604763122935230
+    SHIFT-PHASE 9 "Transmon-9_charge_tx" 1.6353788115116015
+    SHIFT-PHASE 8 "Transmon-8_charge_tx" 2.3562099822376483
+    FENCE 8 49 9
+DEFCAL CZ 13 12:
+    FENCE 58 12 13
+    NONBLOCKING PULSE 58 "Transmon-58_flux_tx_cz" RaisedCosineEnvelope_-8921347716489661319
+    SHIFT-PHASE 13 "Transmon-13_charge_tx" 5.969259267633669
+    SHIFT-PHASE 12 "Transmon-12_charge_tx" 2.95317563364035
+    FENCE 58 12 13
+DEFCAL CZ 14 15:
+    CZ 15 14
+DEFCAL CZ 15 14:
+    FENCE 60 14 15
+    NONBLOCKING PULSE 60 "Transmon-60_flux_tx_cz" RaisedCosineEnvelope_-4233665660692513888
+    SHIFT-PHASE 14 "Transmon-14_charge_tx" 0.9128250496475152
+    SHIFT-PHASE 15 "Transmon-15_charge_tx" 1.6509037687057064
+    FENCE 60 14 15
+DEFCAL CZ 20 21:
+    FENCE 20 21 71
+    NONBLOCKING PULSE 71 "Transmon-71_flux_tx_cz" RaisedCosineEnvelope_-2168849346545972698
+    SHIFT-PHASE 20 "Transmon-20_charge_tx" 2.3447662777975244
+    SHIFT-PHASE 21 "Transmon-21_charge_tx" 3.8107677538073528
+    FENCE 20 21 71
+DEFCAL CZ 26 25:
+    FENCE 81 26 25
+    NONBLOCKING PULSE 81 "Transmon-81_flux_tx_cz" RaisedCosineEnvelope_5761332705823734506
+    SHIFT-PHASE 25 "Transmon-25_charge_tx" 2.7998861100775905
+    SHIFT-PHASE 26 "Transmon-26_charge_tx" 5.318380673956624
+    FENCE 81 26 25
+DEFCAL MEASURE 1 addr_1:
+	FENCE 1
+	NONBLOCKING PULSE 1 "Transmon-1_charge_tx_f12" gaussian(detuning: 0, duration: 6e-8, fwhm: 3e-8, phase: 0, scale: 0.06590622220566789, t0: 3e-8)
+	DECLARE q1_unclassified REAL[2]
+	PRAGMA SET-BIAS 1 Transmon-1_readout_rx "-1.73053208684576631526e+01"
+	NONBLOCKING PULSE 1 "Transmon-1_readout_tx" flat(detuning: 0, duration: 8e-7, iq: 1, phase: 0, scale: 0.17160826788555175)
+	NONBLOCKING CAPTURE 1 "Transmon-1_readout_rx" flat(detuning: 0, duration: 8e-7, iq: 1, phase: 0.6171585090177905, scale: 1) q1_unclassified[0]
+	PRAGMA FILTER-NODE q1_unclassified "{'module': 'lodgepole.filters.io', 'filter_type': 'DataBuffer', 'params': {}, 'source': 'q1_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q1_unclassified "q1_unclassified"
+	PRAGMA FILTER-NODE q1_classified "{'module': 'lodgepole.filters.classifiers', 'filter_type': 'SingleQLinear', 'params': {'a': [1.0000000000000002, 0.0], 'threshold': 0.0}, 'source': 'q1_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q1_classified "addr_1"
+	FENCE 1
+
+DEFCAL MEASURE 2 addr_2:
+	FENCE 2
+	DECLARE q2_unclassified REAL[2]
+	PRAGMA SET-BIAS 2 Transmon-2_readout_rx "-1.96633170227192657364e+01"
+	NONBLOCKING PULSE 2 "Transmon-2_readout_tx" flat(detuning: 0, duration: 1.3e-6, iq: 1, phase: 0, scale: 0.10005327935748752)
+	NONBLOCKING CAPTURE 2 "Transmon-2_readout_rx" flat(detuning: 0, duration: 1.3e-6, iq: 1, phase: 0.6273482706197088, scale: 1) q2_unclassified[0]
+	PRAGMA FILTER-NODE q2_unclassified "{'module': 'lodgepole.filters.io', 'filter_type': 'DataBuffer', 'params': {}, 'source': 'q2_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q2_unclassified "q2_unclassified"
+	PRAGMA FILTER-NODE q2_classified "{'module': 'lodgepole.filters.classifiers', 'filter_type': 'SingleQLinear', 'params': {'a': [1.0, 0.0], 'threshold': 0.0}, 'source': 'q2_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q2_classified "addr_2"
+	FENCE 2
+
+DEFCAL MEASURE 3 addr_3:
+	FENCE 3
+	NONBLOCKING PULSE 3 "Transmon-3_charge_tx_f12" gaussian(detuning: 0, duration: 6e-8, fwhm: 3e-8, phase: 0, scale: 0.04968470290156879, t0: 3e-8)
+	DECLARE q3_unclassified REAL[2]
+	PRAGMA SET-BIAS 3 Transmon-3_readout_rx "-6.41067083208849020082e+00"
+	NONBLOCKING PULSE 3 "Transmon-3_readout_tx" flat(detuning: 0, duration: 1.1e-6, iq: 1, phase: 0, scale: 0.10417186825316607)
+	NONBLOCKING CAPTURE 3 "Transmon-3_readout_rx" flat(detuning: 0, duration: 1.1e-6, iq: 1, phase: 0.8559905045140158, scale: 1) q3_unclassified[0]
+	PRAGMA FILTER-NODE q3_unclassified "{'module': 'lodgepole.filters.io', 'filter_type': 'DataBuffer', 'params': {}, 'source': 'q3_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q3_unclassified "q3_unclassified"
+	PRAGMA FILTER-NODE q3_classified "{'module': 'lodgepole.filters.classifiers', 'filter_type': 'SingleQLinear', 'params': {'a': [0.9999999999999999, 0.0], 'threshold': 0.0}, 'source': 'q3_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q3_classified "addr_3"
+	FENCE 3
+
+DEFCAL MEASURE 4 addr_4:
+	FENCE 4
+	NONBLOCKING PULSE 4 "Transmon-4_charge_tx_f12" gaussian(detuning: 0, duration: 6e-8, fwhm: 3e-8, phase: 0, scale: 0.07552394191188105, t0: 3e-8)
+	DECLARE q4_unclassified REAL[2]
+	PRAGMA SET-BIAS 4 Transmon-4_readout_rx "-1.37904544357170184554e+01"
+	NONBLOCKING PULSE 4 "Transmon-4_readout_tx" erf_square(detuning: 0, duration: 1e-6, pad_left: 0, pad_right: 0, phase: 0, risetime: 2.4e-8, scale: 0.06339367474487945)
+	NONBLOCKING CAPTURE 4 "Transmon-4_readout_rx" erf_square(detuning: 0, duration: 1e-6, pad_left: 0, pad_right: 0, phase: 0.6485724376494233, risetime: 2.4e-8, scale: 1) q4_unclassified[0]
+	PRAGMA FILTER-NODE q4_unclassified "{'module': 'lodgepole.filters.io', 'filter_type': 'DataBuffer', 'params': {}, 'source': 'q4_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q4_unclassified "q4_unclassified"
+	PRAGMA FILTER-NODE q4_classified "{'module': 'lodgepole.filters.classifiers', 'filter_type': 'SingleQLinear', 'params': {'a': [1.0, 0.0], 'threshold': 0.0}, 'source': 'q4_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q4_classified "addr_4"
+	FENCE 4
+
+DEFCAL MEASURE 6 addr_6:
+	FENCE 6
+	NONBLOCKING PULSE 6 "Transmon-6_charge_tx_f12" gaussian(detuning: 0, duration: 6e-8, fwhm: 3e-8, phase: 0, scale: 0.23370499001358505, t0: 3e-8)
+	DECLARE q6_unclassified REAL[2]
+	PRAGMA SET-BIAS 6 Transmon-6_readout_rx "-5.09069164050588440773e-01"
+	NONBLOCKING PULSE 6 "Transmon-6_readout_tx" flat(detuning: 0, duration: 1e-6, iq: 1, phase: 0, scale: 0.10386933955946799)
+	NONBLOCKING CAPTURE 6 "Transmon-6_readout_rx" flat(detuning: 0, duration: 1e-6, iq: 1, phase: 0.6406356328131736, scale: 1) q6_unclassified[0]
+	PRAGMA FILTER-NODE q6_unclassified "{'module': 'lodgepole.filters.io', 'filter_type': 'DataBuffer', 'params': {}, 'source': 'q6_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q6_unclassified "q6_unclassified"
+	PRAGMA FILTER-NODE q6_classified "{'module': 'lodgepole.filters.classifiers', 'filter_type': 'SingleQLinear', 'params': {'a': [1.0, 0.0], 'threshold': 0.0}, 'source': 'q6_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q6_classified "addr_6"
+	FENCE 6
+
+DEFCAL MEASURE 7 addr_7:
+	FENCE 7
+	DECLARE q7_unclassified REAL[2]
+	PRAGMA SET-BIAS 7 Transmon-7_readout_rx "-1.88513905154328553770e+00"
+	NONBLOCKING PULSE 7 "Transmon-7_readout_tx" erf_square(detuning: 0, duration: 1e-6, pad_left: 0, pad_right: 0, phase: 0, risetime: 2.4e-8, scale: 0.05957057308080079)
+	NONBLOCKING CAPTURE 7 "Transmon-7_readout_rx" erf_square(detuning: 0, duration: 1e-6, pad_left: 0, pad_right: 0, phase: 0.7399891926166359, risetime: 2.4e-8, scale: 1) q7_unclassified[0]
+	PRAGMA FILTER-NODE q7_unclassified "{'module': 'lodgepole.filters.io', 'filter_type': 'DataBuffer', 'params': {}, 'source': 'q7_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q7_unclassified "q7_unclassified"
+	PRAGMA FILTER-NODE q7_classified "{'module': 'lodgepole.filters.classifiers', 'filter_type': 'SingleQLinear', 'params': {'a': [1.0, 0.0], 'threshold': 0.0}, 'source': 'q7_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q7_classified "addr_7"
+	FENCE 7
+
+DEFCAL MEASURE 8 addr_8:
+	FENCE 8
+	DECLARE q8_unclassified REAL[2]
+	PRAGMA SET-BIAS 8 Transmon-8_readout_rx "1.21552406291301622332e+01"
+	NONBLOCKING PULSE 8 "Transmon-8_readout_tx" erf_square(detuning: 0, duration: 7e-7, pad_left: 0, pad_right: 0, phase: 0, risetime: 4e-9, scale: 0.08067843259090722)
+	NONBLOCKING CAPTURE 8 "Transmon-8_readout_rx" erf_square(detuning: 0, duration: 7e-7, pad_left: 0, pad_right: 0, phase: 0.4354212954117996, risetime: 4e-9, scale: 1) q8_unclassified[0]
+	PRAGMA FILTER-NODE q8_unclassified "{'module': 'lodgepole.filters.io', 'filter_type': 'DataBuffer', 'params': {}, 'source': 'q8_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q8_unclassified "q8_unclassified"
+	PRAGMA FILTER-NODE q8_classified "{'module': 'lodgepole.filters.classifiers', 'filter_type': 'SingleQLinear', 'params': {'a': [1.0, 0.0], 'threshold': 0.0}, 'source': 'q8_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q8_classified "addr_8"
+	FENCE 8
+
+DEFCAL MEASURE 9 addr_9:
+	FENCE 9
+	NONBLOCKING PULSE 9 "Transmon-9_charge_tx_f12" gaussian(detuning: 0, duration: 6e-8, fwhm: 3e-8, phase: 0, scale: 0.09355364036837854, t0: 3e-8)
+	DECLARE q9_unclassified REAL[2]
+	PRAGMA SET-BIAS 9 Transmon-9_readout_rx "-4.97199887872867751781e+00"
+	NONBLOCKING PULSE 9 "Transmon-9_readout_tx" erf_square(detuning: 0, duration: 1e-6, pad_left: 0, pad_right: 0, phase: 0, risetime: 2.4e-8, scale: 0.0860022131140653)
+	NONBLOCKING CAPTURE 9 "Transmon-9_readout_rx" erf_square(detuning: 0, duration: 1e-6, pad_left: 0, pad_right: 0, phase: 0.9183425476278024, risetime: 2.4e-8, scale: 1) q9_unclassified[0]
+	PRAGMA FILTER-NODE q9_unclassified "{'module': 'lodgepole.filters.io', 'filter_type': 'DataBuffer', 'params': {}, 'source': 'q9_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q9_unclassified "q9_unclassified"
+	PRAGMA FILTER-NODE q9_classified "{'module': 'lodgepole.filters.classifiers', 'filter_type': 'SingleQLinear', 'params': {'a': [1.0, 2.7755575615628914e-17], 'threshold': 0.0}, 'source': 'q9_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q9_classified "addr_9"
+	FENCE 9
+
+DEFCAL MEASURE 12 addr_12:
+	FENCE 12
+	NONBLOCKING PULSE 12 "Transmon-12_charge_tx_f12" gaussian(detuning: 0, duration: 6e-8, fwhm: 3e-8, phase: 0, scale: 0.14433034479117365, t0: 3e-8)
+	DECLARE q12_unclassified REAL[2]
+	PRAGMA SET-BIAS 12 Transmon-12_readout_rx "-1.49270142515432158170e+00"
+	NONBLOCKING PULSE 12 "Transmon-12_readout_tx" flat(detuning: 0, duration: 1.2e-6, iq: 1, phase: 0, scale: 0.09086653581962685)
+	NONBLOCKING CAPTURE 12 "Transmon-12_readout_rx" flat(detuning: 0, duration: 1.2e-6, iq: 1, phase: 0.5001744519640999, scale: 1) q12_unclassified[0]
+	PRAGMA FILTER-NODE q12_unclassified "{'module': 'lodgepole.filters.io', 'filter_type': 'DataBuffer', 'params': {}, 'source': 'q12_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q12_unclassified "q12_unclassified"
+	PRAGMA FILTER-NODE q12_classified "{'module': 'lodgepole.filters.classifiers', 'filter_type': 'SingleQLinear', 'params': {'a': [1.0, -2.7755575615628914e-17], 'threshold': 0.0}, 'source': 'q12_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q12_classified "addr_12"
+	FENCE 12
+
+DEFCAL MEASURE 13 addr_13:
+	FENCE 13
+	NONBLOCKING PULSE 13 "Transmon-13_charge_tx_f12" gaussian(detuning: 0, duration: 6e-8, fwhm: 3e-8, phase: 0, scale: 0.07508142172838261, t0: 3e-8)
+	DECLARE q13_unclassified REAL[2]
+	PRAGMA SET-BIAS 13 Transmon-13_readout_rx "-1.23414934616627416375e+01"
+	NONBLOCKING PULSE 13 "Transmon-13_readout_tx" flat(detuning: 0, duration: 1.1e-6, iq: 1, phase: 0, scale: 0.12538747663781205)
+	NONBLOCKING CAPTURE 13 "Transmon-13_readout_rx" flat(detuning: 0, duration: 1.1e-6, iq: 1, phase: 0.30029501902454075, scale: 1) q13_unclassified[0]
+	PRAGMA FILTER-NODE q13_unclassified "{'module': 'lodgepole.filters.io', 'filter_type': 'DataBuffer', 'params': {}, 'source': 'q13_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q13_unclassified "q13_unclassified"
+	PRAGMA FILTER-NODE q13_classified "{'module': 'lodgepole.filters.classifiers', 'filter_type': 'SingleQLinear', 'params': {'a': [1.0000000000000002, 2.7755575615628914e-17], 'threshold': 0.0}, 'source': 'q13_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q13_classified "addr_13"
+	FENCE 13
+
+DEFCAL MEASURE 14 addr_14:
+	FENCE 14
+	NONBLOCKING PULSE 14 "Transmon-14_charge_tx_f12" gaussian(detuning: 0, duration: 6e-8, fwhm: 3e-8, phase: 0, scale: 0.07446861390689519, t0: 3e-8)
+	DECLARE q14_unclassified REAL[2]
+	PRAGMA SET-BIAS 14 Transmon-14_readout_rx "-2.76449079909489503493e+00"
+	NONBLOCKING PULSE 14 "Transmon-14_readout_tx" erf_square(detuning: 0, duration: 1e-6, pad_left: 0, pad_right: 0, phase: 0, risetime: 2.4e-8, scale: 0.07200655886812259)
+	NONBLOCKING CAPTURE 14 "Transmon-14_readout_rx" erf_square(detuning: 0, duration: 1e-6, pad_left: 0, pad_right: 0, phase: 0.7039175062644933, risetime: 2.4e-8, scale: 1) q14_unclassified[0]
+	PRAGMA FILTER-NODE q14_unclassified "{'module': 'lodgepole.filters.io', 'filter_type': 'DataBuffer', 'params': {}, 'source': 'q14_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q14_unclassified "q14_unclassified"
+	PRAGMA FILTER-NODE q14_classified "{'module': 'lodgepole.filters.classifiers', 'filter_type': 'SingleQLinear', 'params': {'a': [1.0, 0.0], 'threshold': 0.0}, 'source': 'q14_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q14_classified "addr_14"
+	FENCE 14
+
+DEFCAL MEASURE 15 addr_15:
+	FENCE 15
+	NONBLOCKING PULSE 15 "Transmon-15_charge_tx_f12" gaussian(detuning: 0, duration: 6e-8, fwhm: 3e-8, phase: 0, scale: 0.07079090423869072, t0: 3e-8)
+	DECLARE q15_unclassified REAL[2]
+	PRAGMA SET-BIAS 15 Transmon-15_readout_rx "-1.58726192521665119273e+01"
+	NONBLOCKING PULSE 15 "Transmon-15_readout_tx" flat(detuning: 0, duration: 1e-6, iq: 1, phase: 0, scale: 0.11369800498629012)
+	NONBLOCKING CAPTURE 15 "Transmon-15_readout_rx" flat(detuning: 0, duration: 1e-6, iq: 1, phase: 0.1387754659532264, scale: 1) q15_unclassified[0]
+	PRAGMA FILTER-NODE q15_unclassified "{'module': 'lodgepole.filters.io', 'filter_type': 'DataBuffer', 'params': {}, 'source': 'q15_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q15_unclassified "q15_unclassified"
+	PRAGMA FILTER-NODE q15_classified "{'module': 'lodgepole.filters.classifiers', 'filter_type': 'SingleQLinear', 'params': {'a': [1.0, 0.0], 'threshold': 0.0}, 'source': 'q15_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q15_classified "addr_15"
+	FENCE 15
+
+DEFCAL MEASURE 20 addr_20:
+	FENCE 20
+	NONBLOCKING PULSE 20 "Transmon-20_charge_tx_f12" gaussian(detuning: 0, duration: 6e-8, fwhm: 3e-8, phase: 0, scale: 0.11958953554523477, t0: 3e-8)
+	DECLARE q20_unclassified REAL[2]
+	PRAGMA SET-BIAS 20 Transmon-20_readout_rx "-2.56485395194093506177e+01"
+	NONBLOCKING PULSE 20 "Transmon-20_readout_tx" flat(detuning: 0, duration: 1.3e-6, iq: 1, phase: 0, scale: 0.1275170703874777)
+	NONBLOCKING CAPTURE 20 "Transmon-20_readout_rx" flat(detuning: 0, duration: 1.3e-6, iq: 1, phase: 0.9043692334045983, scale: 1) q20_unclassified[0]
+	PRAGMA FILTER-NODE q20_unclassified "{'module': 'lodgepole.filters.io', 'filter_type': 'DataBuffer', 'params': {}, 'source': 'q20_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q20_unclassified "q20_unclassified"
+	PRAGMA FILTER-NODE q20_classified "{'module': 'lodgepole.filters.classifiers', 'filter_type': 'SingleQLinear', 'params': {'a': [1.0, -2.7755575615628914e-17], 'threshold': 0.0}, 'source': 'q20_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q20_classified "addr_20"
+	FENCE 20
+
+DEFCAL MEASURE 21 addr_21:
+	FENCE 21
+	NONBLOCKING PULSE 21 "Transmon-21_charge_tx_f12" gaussian(detuning: 0, duration: 6e-8, fwhm: 3e-8, phase: 0, scale: 0.02703728201508278, t0: 3e-8)
+	DECLARE q21_unclassified REAL[2]
+	PRAGMA SET-BIAS 21 Transmon-21_readout_rx "-5.15022539724692496321e+00"
+	NONBLOCKING PULSE 21 "Transmon-21_readout_tx" erf_square(detuning: 0, duration: 1e-6, pad_left: 0, pad_right: 0, phase: 0, risetime: 2.4e-8, scale: 0.10239439069728777)
+	NONBLOCKING CAPTURE 21 "Transmon-21_readout_rx" erf_square(detuning: 0, duration: 1e-6, pad_left: 0, pad_right: 0, phase: 0.9086176156095762, risetime: 2.4e-8, scale: 1) q21_unclassified[0]
+	PRAGMA FILTER-NODE q21_unclassified "{'module': 'lodgepole.filters.io', 'filter_type': 'DataBuffer', 'params': {}, 'source': 'q21_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q21_unclassified "q21_unclassified"
+	PRAGMA FILTER-NODE q21_classified "{'module': 'lodgepole.filters.classifiers', 'filter_type': 'SingleQLinear', 'params': {'a': [1.0000000000000002, 2.7755575615628914e-17], 'threshold': 0.0}, 'source': 'q21_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q21_classified "addr_21"
+	FENCE 21
+
+DEFCAL MEASURE 25 addr_25:
+	FENCE 25
+	NONBLOCKING PULSE 25 "Transmon-25_charge_tx_f12" gaussian(detuning: 0, duration: 6e-8, fwhm: 3e-8, phase: 0, scale: 0.05332387343372558, t0: 3e-8)
+	DECLARE q25_unclassified REAL[2]
+	PRAGMA SET-BIAS 25 Transmon-25_readout_rx "-1.81030293404930908707e+01"
+	NONBLOCKING PULSE 25 "Transmon-25_readout_tx" flat(detuning: 0, duration: 6e-7, iq: 1, phase: 0, scale: 0.21383744578978156)
+	NONBLOCKING CAPTURE 25 "Transmon-25_readout_rx" flat(detuning: 0, duration: 6e-7, iq: 1, phase: 0.4133541516666276, scale: 1) q25_unclassified[0]
+	PRAGMA FILTER-NODE q25_unclassified "{'module': 'lodgepole.filters.io', 'filter_type': 'DataBuffer', 'params': {}, 'source': 'q25_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q25_unclassified "q25_unclassified"
+	PRAGMA FILTER-NODE q25_classified "{'module': 'lodgepole.filters.classifiers', 'filter_type': 'SingleQLinear', 'params': {'a': [1.0, 0.0], 'threshold': 0.0}, 'source': 'q25_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q25_classified "addr_25"
+	FENCE 25
+
+DEFCAL MEASURE 26 addr_26:
+	FENCE 26
+	NONBLOCKING PULSE 26 "Transmon-26_charge_tx_f12" gaussian(detuning: 0, duration: 6e-8, fwhm: 3e-8, phase: 0, scale: 0.049738226312350475, t0: 3e-8)
+	DECLARE q26_unclassified REAL[2]
+	PRAGMA SET-BIAS 26 Transmon-26_readout_rx "-1.30361499841020123114e+01"
+	NONBLOCKING PULSE 26 "Transmon-26_readout_tx" erf_square(detuning: 0, duration: 1e-6, pad_left: 0, pad_right: 0, phase: 0, risetime: 2.4e-8, scale: 0.051317466023351306)
+	NONBLOCKING CAPTURE 26 "Transmon-26_readout_rx" erf_square(detuning: 0, duration: 1e-6, pad_left: 0, pad_right: 0, phase: 0.7052348001213068, risetime: 2.4e-8, scale: 1) q26_unclassified[0]
+	PRAGMA FILTER-NODE q26_unclassified "{'module': 'lodgepole.filters.io', 'filter_type': 'DataBuffer', 'params': {}, 'source': 'q26_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q26_unclassified "q26_unclassified"
+	PRAGMA FILTER-NODE q26_classified "{'module': 'lodgepole.filters.classifiers', 'filter_type': 'SingleQLinear', 'params': {'a': [0.9999999999999999, 1.3877787807814457e-17], 'threshold': 0.0}, 'source': 'q26_ro_rx/filter', 'publish': true}"
+	PRAGMA LOAD-MEMORY q26_classified "addr_26"
+	FENCE 26
+
+DELAY 1 0.00005
+DELAY 2 0.00005
+DELAY 3 0.00005
+DELAY 4 0.00005
+DELAY 6 0.00005
+DELAY 7 0.00005
+DELAY 8 0.00005
+DELAY 9 0.00005
+DELAY 12 0.00005
+DELAY 13 0.00005
+DELAY 14 0.00005
+DELAY 15 0.00005
+DELAY 20 0.00005
+DELAY 21 0.00005
+DELAY 25 0.00005
+DELAY 26 0.00005
+CALL choose_random_real_sub_regions shadow_q1 shadow_angle_source 3 shadow_seed_q1[0]
+CALL choose_random_real_sub_regions shadow_q2 shadow_angle_source 3 shadow_seed_q2[0]
+CALL choose_random_real_sub_regions shadow_q3 shadow_angle_source 3 shadow_seed_q3[0]
+CALL choose_random_real_sub_regions shadow_q4 shadow_angle_source 3 shadow_seed_q4[0]
+CALL choose_random_real_sub_regions shadow_q6 shadow_angle_source 3 shadow_seed_q6[0]
+CALL choose_random_real_sub_regions shadow_q7 shadow_angle_source 3 shadow_seed_q7[0]
+CALL choose_random_real_sub_regions shadow_q8 shadow_angle_source 3 shadow_seed_q8[0]
+CALL choose_random_real_sub_regions shadow_q9 shadow_angle_source 3 shadow_seed_q9[0]
+CALL choose_random_real_sub_regions shadow_q12 shadow_angle_source 3 shadow_seed_q12[0]
+CALL choose_random_real_sub_regions shadow_q13 shadow_angle_source 3 shadow_seed_q13[0]
+CALL choose_random_real_sub_regions shadow_q14 shadow_angle_source 3 shadow_seed_q14[0]
+CALL choose_random_real_sub_regions shadow_q15 shadow_angle_source 3 shadow_seed_q15[0]
+CALL choose_random_real_sub_regions shadow_q20 shadow_angle_source 3 shadow_seed_q20[0]
+CALL choose_random_real_sub_regions shadow_q21 shadow_angle_source 3 shadow_seed_q21[0]
+CALL choose_random_real_sub_regions shadow_q25 shadow_angle_source 3 shadow_seed_q25[0]
+CALL choose_random_real_sub_regions shadow_q26 shadow_angle_source 3 shadow_seed_q26[0]
+FENCE
+RZ(1.5707963267948966) 14
+RX(1.5707963267948966) 14
+RZ(1.5707963267948966) 14
+RZ(1.5707963267948966) 8
+RX(1.5707963267948966) 8
+RZ(1.5707963267948966) 8
+FENCE
+CZ 14 8
+FENCE
+RZ(1.5707963267948966) 8
+RX(1.5707963267948966) 8
+RZ(1.5707963267948966) 8
+RZ(1.5707963267948966) 2
+RZ(1.5707963267948966) 20
+RX(1.5707963267948966) 2
+RX(1.5707963267948966) 20
+RZ(1.5707963267948966) 2
+RZ(1.5707963267948966) 20
+FENCE
+CZ 8 2
+CZ 14 20
+FENCE
+RZ(1.5707963267948966) 2
+RZ(1.5707963267948966) 20
+RX(1.5707963267948966) 2
+RX(1.5707963267948966) 20
+RZ(1.5707963267948966) 2
+RZ(1.5707963267948966) 20
+RZ(1.5707963267948966) 3
+RZ(1.5707963267948966) 7
+RZ(1.5707963267948966) 13
+RZ(1.5707963267948966) 26
+RX(1.5707963267948966) 3
+RX(1.5707963267948966) 7
+RX(1.5707963267948966) 13
+RX(1.5707963267948966) 26
+RZ(1.5707963267948966) 3
+RZ(1.5707963267948966) 7
+RZ(1.5707963267948966) 13
+RZ(1.5707963267948966) 26
+FENCE
+CZ 2 3
+CZ 8 7
+CZ 14 13
+CZ 20 26
+FENCE
+RZ(1.5707963267948966) 3
+RZ(1.5707963267948966) 7
+RZ(1.5707963267948966) 13
+RZ(1.5707963267948966) 26
+RX(1.5707963267948966) 3
+RX(1.5707963267948966) 7
+RX(1.5707963267948966) 13
+RX(1.5707963267948966) 26
+RZ(1.5707963267948966) 3
+RZ(1.5707963267948966) 7
+RZ(1.5707963267948966) 13
+RZ(1.5707963267948966) 26
+RZ(1.5707963267948966) 1
+RZ(1.5707963267948966) 4
+RZ(1.5707963267948966) 6
+RZ(1.5707963267948966) 9
+RZ(1.5707963267948966) 12
+RZ(1.5707963267948966) 15
+RZ(1.5707963267948966) 21
+RZ(1.5707963267948966) 25
+RX(1.5707963267948966) 1
+RX(1.5707963267948966) 4
+RX(1.5707963267948966) 6
+RX(1.5707963267948966) 9
+RX(1.5707963267948966) 12
+RX(1.5707963267948966) 15
+RX(1.5707963267948966) 21
+RX(1.5707963267948966) 25
+RZ(1.5707963267948966) 1
+RZ(1.5707963267948966) 4
+RZ(1.5707963267948966) 6
+RZ(1.5707963267948966) 9
+RZ(1.5707963267948966) 12
+RZ(1.5707963267948966) 15
+RZ(1.5707963267948966) 21
+RZ(1.5707963267948966) 25
+FENCE
+CZ 2 1
+CZ 3 4
+CZ 7 6
+CZ 8 9
+CZ 13 12
+CZ 14 15
+CZ 20 21
+CZ 26 25
+FENCE
+RZ(1.5707963267948966) 1
+RZ(1.5707963267948966) 4
+RZ(1.5707963267948966) 6
+RZ(1.5707963267948966) 9
+RZ(1.5707963267948966) 12
+RZ(1.5707963267948966) 15
+RZ(1.5707963267948966) 21
+RZ(1.5707963267948966) 25
+RX(1.5707963267948966) 1
+RX(1.5707963267948966) 4
+RX(1.5707963267948966) 6
+RX(1.5707963267948966) 9
+RX(1.5707963267948966) 12
+RX(1.5707963267948966) 15
+RX(1.5707963267948966) 21
+RX(1.5707963267948966) 25
+RZ(1.5707963267948966) 1
+RZ(1.5707963267948966) 4
+RZ(1.5707963267948966) 6
+RZ(1.5707963267948966) 9
+RZ(1.5707963267948966) 12
+RZ(1.5707963267948966) 15
+RZ(1.5707963267948966) 21
+RZ(1.5707963267948966) 25
+RZ(6.283185307179586*shadow_q1[0]) 1
+RZ(6.283185307179586*shadow_q2[0]) 2
+RZ(6.283185307179586*shadow_q3[0]) 3
+RZ(6.283185307179586*shadow_q4[0]) 4
+RZ(6.283185307179586*shadow_q6[0]) 6
+RZ(6.283185307179586*shadow_q7[0]) 7
+RZ(6.283185307179586*shadow_q8[0]) 8
+RZ(6.283185307179586*shadow_q9[0]) 9
+RZ(6.283185307179586*shadow_q12[0]) 12
+RZ(6.283185307179586*shadow_q13[0]) 13
+RZ(6.283185307179586*shadow_q14[0]) 14
+RZ(6.283185307179586*shadow_q15[0]) 15
+RZ(6.283185307179586*shadow_q20[0]) 20
+RZ(6.283185307179586*shadow_q21[0]) 21
+RZ(6.283185307179586*shadow_q25[0]) 25
+RZ(6.283185307179586*shadow_q26[0]) 26
+RX(1.5707963267948966) 1
+RX(1.5707963267948966) 2
+RX(1.5707963267948966) 3
+RX(1.5707963267948966) 4
+RX(1.5707963267948966) 6
+RX(1.5707963267948966) 7
+RX(1.5707963267948966) 8
+RX(1.5707963267948966) 9
+RX(1.5707963267948966) 12
+RX(1.5707963267948966) 13
+RX(1.5707963267948966) 14
+RX(1.5707963267948966) 15
+RX(1.5707963267948966) 20
+RX(1.5707963267948966) 21
+RX(1.5707963267948966) 25
+RX(1.5707963267948966) 26
+RZ(6.283185307179586*shadow_q1[1]) 1
+RZ(6.283185307179586*shadow_q2[1]) 2
+RZ(6.283185307179586*shadow_q3[1]) 3
+RZ(6.283185307179586*shadow_q4[1]) 4
+RZ(6.283185307179586*shadow_q6[1]) 6
+RZ(6.283185307179586*shadow_q7[1]) 7
+RZ(6.283185307179586*shadow_q8[1]) 8
+RZ(6.283185307179586*shadow_q9[1]) 9
+RZ(6.283185307179586*shadow_q12[1]) 12
+RZ(6.283185307179586*shadow_q13[1]) 13
+RZ(6.283185307179586*shadow_q14[1]) 14
+RZ(6.283185307179586*shadow_q15[1]) 15
+RZ(6.283185307179586*shadow_q20[1]) 20
+RZ(6.283185307179586*shadow_q21[1]) 21
+RZ(6.283185307179586*shadow_q25[1]) 25
+RZ(6.283185307179586*shadow_q26[1]) 26
+RX(1.5707963267948966) 1
+RX(1.5707963267948966) 2
+RX(1.5707963267948966) 3
+RX(1.5707963267948966) 4
+RX(1.5707963267948966) 6
+RX(1.5707963267948966) 7
+RX(1.5707963267948966) 8
+RX(1.5707963267948966) 9
+RX(1.5707963267948966) 12
+RX(1.5707963267948966) 13
+RX(1.5707963267948966) 14
+RX(1.5707963267948966) 15
+RX(1.5707963267948966) 20
+RX(1.5707963267948966) 21
+RX(1.5707963267948966) 25
+RX(1.5707963267948966) 26
+RZ(6.283185307179586*shadow_q1[2]) 1
+RZ(6.283185307179586*shadow_q2[2]) 2
+RZ(6.283185307179586*shadow_q3[2]) 3
+RZ(6.283185307179586*shadow_q4[2]) 4
+RZ(6.283185307179586*shadow_q6[2]) 6
+RZ(6.283185307179586*shadow_q7[2]) 7
+RZ(6.283185307179586*shadow_q8[2]) 8
+RZ(6.283185307179586*shadow_q9[2]) 9
+RZ(6.283185307179586*shadow_q12[2]) 12
+RZ(6.283185307179586*shadow_q13[2]) 13
+RZ(6.283185307179586*shadow_q14[2]) 14
+RZ(6.283185307179586*shadow_q15[2]) 15
+RZ(6.283185307179586*shadow_q20[2]) 20
+RZ(6.283185307179586*shadow_q21[2]) 21
+RZ(6.283185307179586*shadow_q25[2]) 25
+RZ(6.283185307179586*shadow_q26[2]) 26
+FENCE
+MEASURE 1 ro[0]
+MEASURE 2 ro[1]
+MEASURE 3 ro[2]
+MEASURE 4 ro[3]
+MEASURE 6 ro[4]
+MEASURE 7 ro[5]
+MEASURE 8 ro[6]
+MEASURE 9 ro[7]
+MEASURE 12 ro[8]
+MEASURE 13 ro[9]
+MEASURE 14 ro[10]
+MEASURE 15 ro[11]
+MEASURE 20 ro[12]
+MEASURE 21 ro[13]
+MEASURE 25 ro[14]
+MEASURE 26 ro[15]
