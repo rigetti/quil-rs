@@ -424,7 +424,7 @@ pub(crate) struct AnyInstruction(pub Instruction);
 #[cfg(feature = "stubs")]
 impl pyo3_stub_gen::PyStubType for AnyInstruction {
     fn type_output() -> pyo3_stub_gen::TypeInfo {
-        pyo3_stub_gen::TypeInfo::with_module("_quil.instructions.Instructions", "quil._quil".into())
+        pyo3_stub_gen::TypeInfo::with_module("_quil.instructions.Instruction", "quil._quil".into())
     }
 }
 
@@ -702,9 +702,39 @@ impl ComparisonOperand {
     }
 }
 
-// TODO: submit! type stubs overload indicating the signature is one or the other of
-// `(operator, destination, lhs, rhs)` or `(operator, target, left, right)`,
-// but that in either case, the arguments are required and shoud not be mixed.
+#[cfg(feature = "stubs")]
+submit! {
+    gen_methods_from_python! {
+        r#"
+        import typing
+        import typing_extensions
+
+        class Comparison:
+            @typing.overload
+            def __new__(
+                cls,
+                operator: ComparisonOperator,
+                destination: pyo3_stub_gen.RustType["MemoryReferenceLike"],
+                lhs: pyo3_stub_gen.RustType["MemoryReferenceLike"],
+                rhs: pyo3_stub_gen.RustType["ComparisonOperandLike"],
+            ) -> Comparison: ...
+
+            @typing.overload
+            @typing_extensions.deprecated(
+                "`target`/`left`/`right` are deprecated; use `destination`/`lhs`/`rhs` instead"
+            )
+            def __new__(
+                cls,
+                operator: ComparisonOperator,
+                *,
+                target: pyo3_stub_gen.RustType["MemoryReferenceLike"],
+                left: pyo3_stub_gen.RustType["MemoryReferenceLike"],
+                right: pyo3_stub_gen.RustType["ComparisonOperandLike"],
+            ) -> Comparison: ...
+        "#
+    }
+}
+
 // TODO(migration-guide):
 // - PyQuil v4 called `Comparison` `ClassicalComparison`, with subclasses
 //   (`ClassicalEqual`, `ClassicalLessThan`, etc.) providing `operator` as a class attribute.
@@ -985,10 +1015,49 @@ pickleable_new! {
 // which does somewhat motivate dropping its explicit representation.
 // On the other hand, it may instead be worth introducing the type back
 // in order to enable backwards compatibility, and to enable more restrictive parameter typing.
-// TODO: make a formal argument qubit a thing.
-// TODO: submit! type stubs overload for the signature options (instructions is actually required,
-// but in order to allow specifying `qubits` as a kwarg instead of `qubit_variables`,
-// we need to give `qubit_variables` a default, which means `instructions` needs a default).
+
+#[cfg(feature = "stubs")]
+submit! {
+    gen_methods_from_python! {
+        r#"
+        import typing
+        import typing_extensions
+
+        class CircuitDefinition:
+            @typing.overload
+            def __new__(
+                cls,
+                name: builtins.str,
+                parameters: pyo3_stub_gen.RustType["Vec<ParameterLike>"],
+                qubit_variables: pyo3_stub_gen.RustType["Vec<FormalArgumentLike>"],
+                instructions: pyo3_stub_gen.RustType["Vec<Instruction>"],
+            ) -> CircuitDefinition: ...
+
+            @typing.overload
+            @typing_extensions.deprecated("`qubits` is deprecated; use `qubits_variables` instead")
+            def __new__(
+                cls,
+                name: builtins.str,
+                parameters: pyo3_stub_gen.RustType["Vec<ParameterLike>"],
+                *,
+                instructions: pyo3_stub_gen.RustType["Vec<Instruction>"],
+                qubits: pyo3_stub_gen.RustType["Vec<FormalArgumentLike>"],
+            ) -> CircuitDefinition: ...
+
+            @typing.overload
+            def __new__(
+                cls,
+                name: builtins.str,
+                parameters: pyo3_stub_gen.RustType["Vec<ParameterLike>"],
+                *,
+                instructions: pyo3_stub_gen.RustType["Vec<Instruction>"],
+                qubits: pyo3_stub_gen.RustType["Vec<FormalArgumentLike>"],
+                qubits_variables: pyo3_stub_gen.RustType["Vec<FormalArgumentLike>"],
+            ) -> typing.NoReturn:
+                """Passing both `qubits` and `qubit_variables` is not allowed."""
+        "#
+    }
+}
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -2264,24 +2333,51 @@ impl Label {
     }
 }
 
+// TODO(migration-guide): This has been modified to allow the PyQuil v4 signature,
+// and now allows `instrs` as an alias for `instructions`.
+
+#[cfg(feature = "stubs")]
+submit! {
+    gen_methods_from_python! {
+        r#"
+        import typing
+        import typing_extensions
+
+        class MeasureCalibrationDefinition:
+            @typing.overload
+            def __new__(
+                cls,
+                qubit: pyo3_stub_gen.RustType["Qubit"],
+                memory_reference: pyo3_stub_gen.RustType["Option<MemoryReferenceLike>"],
+                instructions: pyo3_stub_gen.RustType["Vec<Instruction>"],
+            ) -> MeasureCalibrationDefinition: ...
+
+            @typing.overload
+            def __new__(
+                cls,
+                qubit: pyo3_stub_gen.RustType["Qubit"],
+                memory_reference: pyo3_stub_gen.RustType["Option<MemoryReferenceLike>"],
+                *,
+                instrs: pyo3_stub_gen.RustType["Vec<Instruction>"],
+            ) -> MeasureCalibrationDefinition: ...
+
+            @typing.overload
+            def __new__(
+                cls,
+                qubit: pyo3_stub_gen.RustType["Qubit"],
+                memory_reference: pyo3_stub_gen.RustType["Option<MemoryReferenceLike>"],
+                *,
+                instrs: pyo3_stub_gen.RustType["Vec<Instruction>"],
+                instructions: pyo3_stub_gen.RustType["Vec<Instruction>"],
+            ) -> typing.NoReturn:
+                """Passing both `instructions` and `instrs` is not allowed."""
+        "#
+    }
+}
+
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl MeasureCalibrationDefinition {
-    // TODO(migration-guide): This has been modified to allow the PyQuil v4 signature,
-    // but indicates that that usage is deprecated and users should use `from_parts` instead.
-    //
-    // In addition, this now allows `instrs` as an alias for `instructions`
-
-    // TODO:
-    // - Add a `from_parts` constructor that makes the PyQuil v4 signature
-    // (except allow `instrs` as an alias for `instructions`).
-    // - Make this constructor accept either form,
-    //   raising deprecation warnings for the PyQuil v4 signature,
-    //   telling users to use `from_parts` instead.
-    // - `sumbit!` appropriate `@overloads` so users are directed to the newer usage,
-    //   but permits (and warns about) the older usage,
-    //   and marks mixed-usage as NoReturn.
-
     // TODO(testing): Add tests to confirm the aliases work as expected.
     #[new]
     #[pyo3(signature = (qubit, memory_reference, instructions=None, *, instrs=None))]
@@ -2305,6 +2401,7 @@ impl MeasureCalibrationDefinition {
         )
     }
 
+    /// Construct a new `MeasureCalibrationDefinition` from a `MeasureCalibrationIdentifier` and a list of instructions.
     #[staticmethod]
     fn from_calibration(
         identifier: MeasureCalibrationIdentifier,
@@ -2374,8 +2471,45 @@ impl MeasureCalibrationIdentifier {
     }
 }
 
-// TODO: Add a `sumbit!` here with overrides for `Measurement` constructor
-// to handle the `classical_reg` parameter as an alias for `target`.
+#[cfg(feature = "stubs")]
+submit! {
+    gen_methods_from_python! {
+        r#"
+        import typing
+        import typing_extensions
+
+        class Measurement:
+            @typing.overload
+            def __new__(
+                cls,
+                qubit: pyo3_stub_gen.RustType["Qubit"],
+                target: pyo3_stub_gen.RustType["Option<MemoryReferenceLike>"] = None,
+                *,
+                name: typing.Optional[builtins.str] = None,
+            ) -> Measurement: ...
+
+            @typing.overload
+            def __new__(
+                cls,
+                qubit: pyo3_stub_gen.RustType["Qubit"],
+                *,
+                name: typing.Optional[builtins.str] = None,
+                classical_reg: pyo3_stub_gen.RustType["MemoryReferenceLike"],
+            ) -> Measurement: ...
+
+            @typing.overload
+            def __new__(
+                cls,
+                qubit: pyo3_stub_gen.RustType["Qubit"],
+                *,
+                name: typing.Optional[builtins.str] = None,
+                target: pyo3_stub_gen.RustType["Option<MemoryReferenceLike>"],
+                classical_reg: pyo3_stub_gen.RustType["MemoryReferenceLike"],
+            ) -> typing.NoReturn:
+                """Passing both `target` and `classical_reg` is not allowed."""
+        "#
+    }
+}
 
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
@@ -2390,6 +2524,12 @@ impl Measurement {
     // Make sure `__getnewargs_ex__` is consistent with `__new__`!
 
     // TODO(testing): add tests to confirm alias/args work as expected.
+    /// Create a new `Measurement` instruction.
+    ///
+    /// The optional `name` argument can be used for Named Measurements.
+    ///
+    /// This constructor supports the keyword parameter `classical_reg`
+    /// as a backwards-compatible alias for `target`, the canonical name of this property.
     #[pyo3(signature = (qubit, target = None, *, name = None, classical_reg = None))]
     #[new]
     fn __new__(
@@ -2418,8 +2558,15 @@ impl Measurement {
         (positional, keyword)
     }
 
+    /// Return the fixed qubit indices or return a `ValueError` if any aren't `Fixed`.
     fn get_qubit_indices(&self) -> PyResult<HashSet<u64>> {
         qubit_indices([&self.qubit])
+    }
+
+    /// An alias for `target`, the canonical name of this property.
+    #[getter]
+    fn classical_reg(&self) -> Option<MemoryReference> {
+        self.target.clone()
     }
 }
 
@@ -2453,13 +2600,59 @@ impl Reset {
 
 // TODO: Likely, most places that "use" MemoryReferences for things like __add__
 // should actually be applied to the `Address` type.
+#[cfg(feature = "stubs")]
+submit! {
+    gen_methods_from_python! {
+        r#"
+        import typing
+        import typing_extensions
+
+        class MemoryReference:
+            @typing.overload
+            def __new__(
+                cls,
+                name: builtins.str,
+                index: builtins.int = 0,
+                declared_size: typing.Optional[builtins.int] = None,
+            ) -> MemoryReference: ...
+
+            @typing.overload
+            @typing_extensions.deprecated("`offset` is deprecated; use `index` instead")
+            def __new__(
+                cls,
+                name: builtins.str,
+                declared_size: typing.Optional[builtins.int] = None,
+                *,
+                offset: builtins.int,
+            ) -> MemoryReference: ...
+
+            @typing.overload
+            def __new__(
+                cls,
+                name: builtins.str,
+                index: builtins.int,
+                declared_size: typing.Optional[builtins.int] = None,
+                *,
+                offset: builtins.int,
+            ) -> typing.NoReturn:
+                """Passing both `index` and `offset` is not supported."""
+        "#
+    }
+}
+
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl MemoryReference {
     // TODO(migration-guide): PyQuil v4 uses the term `offset` instead of `index`, so this handles both.
-    // TODO: submit! overrides for correct type stubs (note the default `index` is 0).
     /// Construct a new `MemoryReference`.
+    ///
+    /// As an alternative to using this class directly,
+    /// you can create a [`Declaration`] instance and add it to your `Program`,
+    /// then "index into it" to get [`DeclarationAt`] instances,
+    /// which can be used in places that require a `MemoryReference`,
+    /// and has several convenience methods to directly generate specific `Instruction`s
+    /// that require a `MemoryReference` as an argument.
     ///
     /// The `declared_size` parameter is deprecated and no longer used.
     /// Previously, it was only used to pretty-print `MemoryReference`s
@@ -2745,7 +2938,46 @@ fn qubit_indices<'a, C: FromIterator<u64>>(
 //
 // This is implemented manually (rather than with `pickleable_new!`)
 // because `nonblocking` isn't a field on the underlying struct.
-// TODO: `sumbit!` override for the `Pulse` constructor to handle the `nonblocking` parameter.
+#[cfg(feature = "stubs")]
+submit! {
+    gen_methods_from_python! {
+        r#"
+        import typing
+        import typing_extensions
+
+        class Pulse:
+            @typing.overload
+            def __new__(
+                cls,
+                frame: FrameIdentifier,
+                waveform: WaveformInvocation,
+                *,
+                blocking: builtins.bool = True,
+            ) -> Pulse: ...
+
+            @typing.overload
+            @typing_extensions.deprecated("`nonblocking` is deprecated; use `not blocking` instead")
+            def __new__(
+                cls,
+                frame: FrameIdentifier,
+                waveform: WaveformInvocation,
+                *,
+                nonblocking: builtins.bool,
+            ) -> Pulse: ...
+
+            @typing.overload
+            def __new__(
+                cls,
+                frame: FrameIdentifier,
+                waveform: WaveformInvocation,
+                *,
+                blocking: builtins.bool,
+                nonblocking: builtins.bool,
+            ) -> typing.NoReturn:
+                """Passing both `blocking` and `nonblocking` is not supported."""
+        "#
+    }
+}
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
@@ -3385,6 +3617,15 @@ impl<'a, 'py> FromPyObject<'a, 'py> for FixedQubit {
 /// A Quil formal argument: a name used in Quil definitions that a qubit will be bound to.
 ///
 /// This corresponds to the [`Qubit::Variable`] variant.
+/// A [`FormalArgument`] is a specific kind of [`Qubit`]
+/// that represents a variable name used in Quil definitions.
+/// Although many places that need a [`Qubit`] can accept any variant,
+/// some places limit the acceptable variants (typically to exclude [`QubitPlaceholder`]s),
+/// so its necessary to have a separate type for formal arguments.
+///
+/// Since we need the type anyway, we can take advantage of it
+/// to provide one that operates more efficiently within the Python runtime,
+/// and hence this type wraps a `PyString` living in the Python heap.
 #[derive(Debug)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
@@ -3444,6 +3685,10 @@ impl FormalArgument {
     }
 }
 
+/// A type that should used for in places that accept a [`FormalArgument`].
+///
+/// This generates type stubs as a union of [`FormalArgument`] and [`String`],
+/// making it clear to Python users that either can be used in those contexts.
 #[derive(Debug, FromPyObject)]
 #[cfg_attr(feature = "stubs", derive(IntoPyObject))]
 pub(crate) struct FormalArgumentLike(FormalArgument);
@@ -3536,11 +3781,53 @@ impl QubitPlaceholder {
 //
 // This is implemented manually (rather than with `pickleable_new!`)
 // because `nonblocking` isn't a field on the underlying struct.
+#[cfg(feature = "stubs")]
+submit! {
+    gen_methods_from_python! {
+        r#"
+        import typing
+        import typing_extensions
+
+        class RawCapture:
+            @typing.overload
+            def __new__(
+                cls,
+                frame: FrameIdentifier,
+                duration: pyo3_stub_gen.RustType["ExpressionLike"],
+                memory_region: pyo3_stub_gen.RustType["MemoryReferenceLike"],
+                *,
+                blocking: builtins.bool = True,
+            ) -> RawCapture: ...
+
+            @typing.overload
+            @typing_extensions.deprecated("`nonblocking` is deprecated; use `not blocking` instead")
+            def __new__(
+                cls,
+                frame: FrameIdentifier,
+                duration: pyo3_stub_gen.RustType["ExpressionLike"],
+                memory_region: pyo3_stub_gen.RustType["MemoryReferenceLike"],
+                *,
+                nonblocking: builtins.bool,
+            ) -> RawCapture: ...
+
+            @typing.overload
+            def __new__(
+                cls,
+                frame: FrameIdentifier,
+                duration: pyo3_stub_gen.RustType["ExpressionLike"],
+                memory_region: pyo3_stub_gen.RustType["MemoryReferenceLike"],
+                *,
+                blocking: builtins.bool,
+                nonblocking: builtins.bool,
+            ) -> typing.NoReturn:
+                """Passing both `blocking` and `nonblocking` is not supported."""
+        "#
+    }
+}
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl RawCapture {
-    // TODO: submit! overrides
     #[new]
     #[pyo3(signature = (frame, duration, memory_region, *, blocking = None, nonblocking = None))]
     fn __new__(
@@ -3608,11 +3895,46 @@ impl RawCapture {
 //
 // This is implemented manually (rather than with `pickleable_new!`)
 // because `freq` isn't a field on the underlying struct.
+#[cfg(feature = "stubs")]
+submit! {
+    gen_methods_from_python! {
+        r#"
+        import typing
+        import typing_extensions
+
+        class SetFrequency:
+            @typing.overload
+            def __new__(
+                cls,
+                frame: FrameIdentifier,
+                frequency: pyo3_stub_gen.RustType["ExpressionLike"],
+            ) -> SetFrequency: ...
+
+            @typing.overload
+            @typing_extensions.deprecated("`freq` is deprecated; use `frequency` instead")
+            def __new__(
+                cls,
+                frame: FrameIdentifier,
+                *,
+                freq: pyo3_stub_gen.RustType["ExpressionLike"],
+            ) -> SetFrequency: ...
+
+            @typing.overload
+            def __new__(
+                cls,
+                frame: FrameIdentifier,
+                *,
+                frequency: pyo3_stub_gen.RustType["ExpressionLike"],
+                freq: pyo3_stub_gen.RustType["ExpressionLike"],
+            ) -> typing.NoReturn:
+                """Passing both `frequency` and `freq` is not allowed."""
+        "#
+    }
+}
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl SetFrequency {
-    // TODO: submit! overrides
     #[new]
     #[pyo3(signature = (frame, frequency = None, *, freq = None))]
     fn __new__(
@@ -3647,11 +3969,46 @@ impl SetFrequency {
 //
 // This is implemented manually (rather than with `pickleable_new!`)
 // because `freq` isn't a field on the underlying struct.
+#[cfg(feature = "stubs")]
+submit! {
+    gen_methods_from_python! {
+        r#"
+        import typing
+        import typing_extensions
+
+        class ShiftFrequency:
+            @typing.overload
+            def __new__(
+                cls,
+                frame: FrameIdentifier,
+                frequency: pyo3_stub_gen.RustType["ExpressionLike"],
+            ) -> ShiftFrequency: ...
+
+            @typing.overload
+            @typing_extensions.deprecated("`freq` is deprecated; use `frequency` instead")
+            def __new__(
+                cls,
+                frame: FrameIdentifier,
+                *,
+                freq: pyo3_stub_gen.RustType["ExpressionLike"],
+            ) -> ShiftFrequency: ...
+
+            @typing.overload
+            def __new__(
+                cls,
+                frame: FrameIdentifier,
+                *,
+                frequency: pyo3_stub_gen.RustType["ExpressionLike"],
+                freq: pyo3_stub_gen.RustType["ExpressionLike"],
+            ) -> typing.NoReturn:
+                """Passing both `frequency` and `freq` is not allowed."""
+        "#
+    }
+}
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl ShiftFrequency {
-    // TODO: submit! overrides
     #[new]
     #[pyo3(signature = (frame, frequency = None, *, freq = None))]
     fn __new__(
@@ -3751,12 +4108,48 @@ impl SetScale {
     }
 }
 
+#[cfg(feature = "stubs")]
+submit! {
+    gen_methods_from_python! {
+        r#"
+        import typing
+        import typing_extensions
+
+        class SwapPhases:
+            @typing.overload
+            def __new__(
+                cls,
+                frame_1: FrameIdentifier,
+                frame_2: FrameIdentifier,
+            ) -> SwapPhases: ...
+
+            @typing.overload
+            @typing_extensions.deprecated("`frameA`/`frameB` are deprecated; use `frame_1`/`frame_2` instead")
+            def __new__(
+                cls,
+                *,
+                frameA: FrameIdentifier,
+                frameB: FrameIdentifier,
+            ) -> SwapPhases: ...
+
+            @typing.overload
+            def __new__(
+                cls,
+                frame_1: FrameIdentifier,
+                frame_2: FrameIdentifier,
+                *,
+                frameA: FrameIdentifier,
+                frameB: FrameIdentifier,
+            ) -> typing.NoReturn:
+                """Mixing `frame_1`/`frame_2` with  `frameA`/`frameB` is not supported."""
+        "#
+    }
+}
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl SwapPhases {
     // TODO(migration-guide): The signature in PyQuil v4 was `(frameA, frameB)`.
-    // TODO: submit! overrides
     #[expect(non_snake_case)]
     #[new]
     #[pyo3(signature = (frame_1=None, frame_2=None, *, frameA=None, frameB=None))]
@@ -3767,6 +4160,14 @@ impl SwapPhases {
         frameA: Option<FrameIdentifier>,
         frameB: Option<FrameIdentifier>,
     ) -> PyResult<Self> {
+        if frame_1.is_some() && (frameA.is_some() || frameB.is_some())
+            || frame_2.is_some() && (frameA.is_some() || frameB.is_some())
+        {
+            return Err(PyValueError::new_err(
+                "mixing `frame_1`/`frame_2` with `frameA`/`frameB` is not supported",
+            ));
+        }
+
         let frame_1 = deprecated_or_new!(py, new = frame_1, old = frameA)?;
         let frame_2 = deprecated_or_new!(py, new = frame_2, old = frameB)?;
         Ok(Self { frame_1, frame_2 })

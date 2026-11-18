@@ -53,7 +53,7 @@ pub(crate) struct MemoryReferencePair {
 /// if the argument you're extracting is expected to used as a [`MemoryReference`],
 /// and probably _not_ to derive a new [`Declaration`] or [`DeclarationAt`].
 /// That said, this type does implement [`TryAsBorrowed`] for [`Declaration`],
-/// allow you to get the underlying [`Declaration`] if it exists.
+/// allowing you to get the underlying [`Declaration`] if it exists.
 /// This means it can be used to opportunistically provide additional validation
 /// while allowing a user to provide a plain [`MemoryReference`], if that's all they've got.
 #[derive(Debug, FromPyObject)]
@@ -139,15 +139,7 @@ impl PartialEq for PyMemRef<'_> {
 
 impl PartialEq<MemoryReference> for PyMemRef<'_> {
     fn eq(&self, other: &MemoryReference) -> bool {
-        match self {
-            PyMemRef::DeclarationAt(decl_at) => {
-                let d = decl_at.get();
-                d.index == other.index && d.declaration.bind(decl_at.py()).get().name == other.name
-            }
-            PyMemRef::Declaration(decl) => 0 == other.index && decl.get().name == other.name,
-            PyMemRef::MemoryReference(mem_ref) => mem_ref.get() == other,
-            PyMemRef::Address(addr) => addr.get().memory_reference.get() == other,
-        }
+        self.index() == other.index && self.name() == other.name
     }
 }
 

@@ -1607,7 +1607,7 @@ pub(crate) mod stubs {
     );
     type_alias!(
         "quil._quil.expression",
-        ExpressionDesignator = Expression | ExpressionValueDesignator
+        ExpressionDesignator = QualifiedExpression | ExpressionValueDesignator
     );
     type_alias!(
         "quil._quil.expression",
