@@ -1,12 +1,13 @@
 import pytest
 
+import quil
 from quil.instructions import Label, Target, TargetPlaceholder
 
 class TestLabel:
     def test_placeholder_mismatch(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(quil.ValueError):
             Label(Target.Fixed("x"), placeholder=True)
-        with pytest.raises(ValueError):
+        with pytest.raises(quil.ValueError):
             Label(placeholder=False)
 
     def test_from_existing(self):

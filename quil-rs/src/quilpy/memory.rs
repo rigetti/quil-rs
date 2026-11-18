@@ -697,12 +697,8 @@ mod tests {
     fn py_mem_ref_eq_compares_across_variants_by_underlying_value() {
         Python::initialize();
         Python::attach(|py| {
-            let decl_at = PyMemRef::DeclarationAt(make_declaration_at(
-                py,
-                "x",
-                ScalarType::Integer,
-                2,
-            ));
+            let decl_at =
+                PyMemRef::DeclarationAt(make_declaration_at(py, "x", ScalarType::Integer, 2));
             let mem_ref = PyMemRef::MemoryReference(
                 Bound::new(py, MemoryReference::new("x".to_string(), 2)).unwrap(),
             );
@@ -714,9 +710,12 @@ mod tests {
             // so a `DeclarationAt` and a `MemoryReference` are never considered equal
             // even when they refer to the same name and index.
             assert_ne!(decl_at, mem_ref);
-            assert_eq!(mem_ref, PyMemRef::MemoryReference(
-                Bound::new(py, MemoryReference::new("x".to_string(), 2)).unwrap(),
-            ));
+            assert_eq!(
+                mem_ref,
+                PyMemRef::MemoryReference(
+                    Bound::new(py, MemoryReference::new("x".to_string(), 2)).unwrap(),
+                )
+            );
             assert_ne!(mem_ref, different);
 
             // `PartialEq<MemoryReference> for PyMemRef`, on the other hand,
@@ -728,13 +727,16 @@ mod tests {
 
     #[test]
     fn declaration_memref_always_uses_the_given_index() {
-        let declaration = Declaration::new(
-            "x".to_string(),
-            Vector::new(ScalarType::Integer, 3),
-            None,
+        let declaration =
+            Declaration::new("x".to_string(), Vector::new(ScalarType::Integer, 3), None);
+        assert_eq!(
+            declaration.memref(0),
+            MemoryReference::new("x".to_string(), 0)
         );
-        assert_eq!(declaration.memref(0), MemoryReference::new("x".to_string(), 0));
-        assert_eq!(declaration.memref(7), MemoryReference::new("x".to_string(), 7));
+        assert_eq!(
+            declaration.memref(7),
+            MemoryReference::new("x".to_string(), 7)
+        );
     }
 
     #[test]
@@ -742,7 +744,10 @@ mod tests {
         Python::initialize();
         Python::attach(|py| {
             let decl_at = make_declaration_at(py, "x", ScalarType::Integer, 4);
-            assert_eq!(decl_at.get().memref(py), MemoryReference::new("x".to_string(), 4));
+            assert_eq!(
+                decl_at.get().memref(py),
+                MemoryReference::new("x".to_string(), 4)
+            );
         });
     }
 
@@ -814,9 +819,18 @@ mod tests {
     fn same_type_compares_declaration_backed_data_types() {
         Python::initialize();
         Python::attach(|py| {
-            let a = PyMemRef::Declaration(make_declaration(py, "a", ScalarType::Integer).bind(py).clone());
-            let b_same = PyMemRef::Declaration(make_declaration(py, "b", ScalarType::Integer).bind(py).clone());
-            let b_diff = PyMemRef::Declaration(make_declaration(py, "c", ScalarType::Real).bind(py).clone());
+            let a = PyMemRef::Declaration(
+                make_declaration(py, "a", ScalarType::Integer)
+                    .bind(py)
+                    .clone(),
+            );
+            let b_same = PyMemRef::Declaration(
+                make_declaration(py, "b", ScalarType::Integer)
+                    .bind(py)
+                    .clone(),
+            );
+            let b_diff =
+                PyMemRef::Declaration(make_declaration(py, "c", ScalarType::Real).bind(py).clone());
 
             assert_eq!(same_type(py, &a, &b_same), Some(true));
             assert_eq!(same_type(py, &a, &b_diff), Some(false));
@@ -829,15 +843,24 @@ mod tests {
         Python::attach(|py| {
             let mem_ref = Bound::new(py, MemoryReference::new("a".to_string(), 2)).unwrap();
             let extracted: MemoryReferenceLike = mem_ref.extract().unwrap();
-            assert_eq!(MemoryReference::from(extracted), MemoryReference::new("a".to_string(), 2));
+            assert_eq!(
+                MemoryReference::from(extracted),
+                MemoryReference::new("a".to_string(), 2)
+            );
 
             let declaration = make_declaration(py, "b", ScalarType::Integer);
             let extracted: MemoryReferenceLike = declaration.bind(py).extract().unwrap();
-            assert_eq!(MemoryReference::from(extracted), MemoryReference::new("b".to_string(), 0));
+            assert_eq!(
+                MemoryReference::from(extracted),
+                MemoryReference::new("b".to_string(), 0)
+            );
 
             let decl_at = make_declaration_at(py, "c", ScalarType::Integer, 3);
             let extracted: MemoryReferenceLike = decl_at.extract().unwrap();
-            assert_eq!(MemoryReference::from(extracted), MemoryReference::new("c".to_string(), 3));
+            assert_eq!(
+                MemoryReference::from(extracted),
+                MemoryReference::new("c".to_string(), 3)
+            );
 
             // Tuples are `(str, int)`, so pass the index as an actual `int`, not a string.
             let tuple = pyo3::types::PyTuple::new(
@@ -849,7 +872,10 @@ mod tests {
             )
             .unwrap();
             let extracted: MemoryReferenceLike = tuple.extract().unwrap();
-            assert_eq!(MemoryReference::from(extracted), MemoryReference::new("d".to_string(), 4));
+            assert_eq!(
+                MemoryReference::from(extracted),
+                MemoryReference::new("d".to_string(), 4)
+            );
 
             let list = pyo3::types::PyList::new(
                 py,
@@ -860,7 +886,10 @@ mod tests {
             )
             .unwrap();
             let extracted: MemoryReferenceLike = list.extract().unwrap();
-            assert_eq!(MemoryReference::from(extracted), MemoryReference::new("e".to_string(), 5));
+            assert_eq!(
+                MemoryReference::from(extracted),
+                MemoryReference::new("e".to_string(), 5)
+            );
         });
     }
 

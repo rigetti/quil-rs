@@ -420,8 +420,7 @@ mod tests {
     fn py_deprecated_becomes_an_error_under_error_filter() {
         Python::initialize();
         Python::attach(|py| {
-            let (result, ..) =
-                with_recorded_warnings(py, "error", || py_deprecated!(py, c"oh no"));
+            let (result, ..) = with_recorded_warnings(py, "error", || py_deprecated!(py, c"oh no"));
             let err = result.unwrap_err();
             assert!(err.is_instance_of::<PyDeprecationWarning>(py));
         });
@@ -477,7 +476,9 @@ mod tests {
             let (result, ..) = with_recorded_warnings(py, "error", || {
                 _deprecated_or_new(py, 0u32, Some(7u32), Ok, c"use `new` instead")
             });
-            assert!(result.unwrap_err().is_instance_of::<PyDeprecationWarning>(py));
+            assert!(result
+                .unwrap_err()
+                .is_instance_of::<PyDeprecationWarning>(py));
         });
     }
 }

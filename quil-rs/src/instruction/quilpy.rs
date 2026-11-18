@@ -7,7 +7,6 @@ use numpy::{PyArray2, ToPyArray};
 use pyo3::{
     exceptions::{
         PyDeprecationWarning, PyIndexError, PyKeyError, PyNotImplementedError, PyTypeError,
-        PyValueError,
     },
     prelude::*,
     types::{IntoPyDict as _, PyDict, PyInt, PyString, PyTuple, PyType},
@@ -929,7 +928,7 @@ impl CalibrationDefinition {
                     c"this constructor is deprecated; use `CalibrationDefinition.from_parts` instead"
                 )?;
                 Self::from_parts(name, parameters, qubits, instructions, modifiers)
-            },
+            }
 
             _ => Err(errors::ValueError::new_err(
                 "CalibrationDefinition does not permit mixing old and new constructor arguments",
@@ -1832,7 +1831,7 @@ impl GateModifier {
             "CONTROLLED" => Ok(GateModifier::Controlled),
             "DAGGER" => Ok(GateModifier::Dagger),
             "FORKED" => Ok(GateModifier::Forked),
-            _ => Err(PyValueError::new_err("unknown gate modifier")),
+            _ => Err(errors::ValueError::new_err("unknown gate modifier")),
         }
     }
 }
@@ -2249,21 +2248,21 @@ impl Label {
         let target = match (target, placeholder) {
             // Label(target=Target.Placeholder(TargetPlaceholder()), placeholder=False)
             (Some(LabelTargetLike::Existing(Target::Placeholder(_))), Some(false)) => {
-                return Err(PyValueError::new_err(
+                return Err(errors::ValueError::new_err(
                     "`target` is a `Placeholder`, so `placeholder=False` is invalid",
                 ));
             }
 
             // Label(target=Target.Fixed(name), placeholder=True)
             (Some(LabelTargetLike::Existing(Target::Fixed(_))), Some(true)) => {
-                return Err(PyValueError::new_err(
+                return Err(errors::ValueError::new_err(
                     "`target` is `Fixed`, so `placeholder=True` is invalid",
                 ));
             }
 
             // Label(placeholder=False)
             (None, Some(false)) => {
-                return Err(PyValueError::new_err(
+                return Err(errors::ValueError::new_err(
                     "`target` cannot be `None` if `placeholder=False`",
                 ));
             }
@@ -2695,7 +2694,7 @@ impl MemoryReference {
     /// This requires that `self` has an `index` of 0.
     fn __getitem__(&self, index: u64) -> PyResult<Self> {
         if self.index != 0 {
-            return Err(PyValueError::new_err(
+            return Err(errors::ValueError::new_err(
                 "indexing only allowed on base MemoryReferences (those with 0 `index`)",
             ));
         }
@@ -2794,7 +2793,7 @@ impl MemoryReference {
     fn _from_parameter_str(memory_reference_str: &str) -> PyResult<Self> {
         match <Expression as std::str::FromStr>::from_str(memory_reference_str)? {
             Expression::Address(addr) => Ok(addr),
-            _ => Err(PyValueError::new_err(
+            _ => Err(errors::ValueError::new_err(
                 "not a valid memory reference expression",
             )),
         }
@@ -2862,7 +2861,7 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ScalarType {
                 "REAL" => ScalarType::Real,
                 "OCTET" => ScalarType::Octet,
                 _ => {
-                    return Err(PyValueError::new_err(format!(
+                    return Err(errors::ValueError::new_err(format!(
                         "{type_str} is not a valid ScalarType"
                     )))
                 }
@@ -4170,7 +4169,7 @@ impl SwapPhases {
         if frame_1.is_some() && (frameA.is_some() || frameB.is_some())
             || frame_2.is_some() && (frameA.is_some() || frameB.is_some())
         {
-            return Err(PyValueError::new_err(
+            return Err(errors::ValueError::new_err(
                 "mixing `frame_1`/`frame_2` with `frameA`/`frameB` is not supported",
             ));
         }

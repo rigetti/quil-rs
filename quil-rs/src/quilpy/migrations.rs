@@ -214,7 +214,9 @@ mod tests {
     #[test]
     fn aliased_macro_accepts_a_custom_default_closure() {
         fn pick(a: Option<u64>, b: Option<u64>) -> PyResult<u64> {
-            aliased!(a, b, || Err(pyo3::exceptions::PyValueError::new_err("need `a`")))
+            aliased!(a, b, || Err(pyo3::exceptions::PyValueError::new_err(
+                "need `a`"
+            )))
         }
         assert!(pick(None, None).is_err());
         assert_eq!(pick(Some(5), None).unwrap(), 5);
@@ -235,12 +237,16 @@ mod tests {
         fn pick(name: Option<String>, nm: Option<i64>) -> PyResult<String> {
             aliased!(
                 |name| if name.is_empty() {
-                    Err(pyo3::exceptions::PyValueError::new_err("`name` must not be empty"))
+                    Err(pyo3::exceptions::PyValueError::new_err(
+                        "`name` must not be empty",
+                    ))
                 } else {
                     Ok(name)
                 },
                 |nm| Ok(nm.to_string()),
-                || Err(pyo3::exceptions::PyValueError::new_err("missing required parameter `name`"))
+                || Err(pyo3::exceptions::PyValueError::new_err(
+                    "missing required parameter `name`"
+                ))
             )
         }
         assert_eq!(pick(Some("ok".to_string()), None).unwrap(), "ok");

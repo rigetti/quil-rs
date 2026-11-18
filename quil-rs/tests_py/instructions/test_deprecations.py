@@ -1,24 +1,17 @@
 """Tests for deprecation warnings (and intentionally non-deprecated aliases)
 on the constructors and properties of `quil.instructions` classes.
 
-Most classes below use the internal `deprecated_or_new!` macro to accept an
-old parameter name as a backwards-compatible alias for a new one; using the
-old name raises a `DeprecationWarning`. A few classes instead use the
-`aliased!` macro, which accepts an old name silently, with no warning -- this
-is an intentional, permanent alias, not a deprecation.
-
-Note that the `ValueError` raised when *both* an old and a new parameter are
-given is **not** necessarily Python's builtin `ValueError`: constructors that
-funnel through `aliased!`/`deprecated_or_new!` raise `quil`'s own `ValueError`
-(imported below as `QuilValueError`), which does not inherit from the builtin
-exception. A couple of hand-written checks (e.g. `SwapPhases`) raise the
-builtin `ValueError` directly instead.
+Most classes below use the internal `deprecated_or_new!` macro
+to accept an old parameter name as a backwards-compatible alias for a new one;
+using the old name should raise a `DeprecationWarning`,
+but a few classes instead use the `aliased!` macro,
+which intentionally accepts an old name without a warning.
 """
 
 import warnings
 
 import pytest
-from quil import ValueError as QuilValueError
+import quil
 from quil.instructions import (
     CalibrationDefinition,
     CalibrationIdentifier,
@@ -158,10 +151,7 @@ class TestConstructorAliasDeprecationWarnings:
 
     def test_swap_phases_rejects_mixing_old_and_new(self):
         f1, f2 = _frame("f1"), _frame("f2")
-        # This check happens before the `deprecated_or_new!` logic, so it
-        # raises the builtin `ValueError`, unlike the `MutuallyExclusive`
-        # cases below, which raise `quil`'s own `ValueError`.
-        with pytest.raises(ValueError):
+        with pytest.raises(quil.ValueError):
             SwapPhases(f1, frameB=f2)
 
     def test_pragma_command_and_freeform_string(self):
@@ -176,15 +166,10 @@ class TestConstructorAliasDeprecationWarnings:
 
 
 class TestMutuallyExclusiveAliasErrors:
-    """Passing both the old and new parameter names should raise an error.
-
-    These constructors route through the `aliased!`/`deprecated_or_new!`
-    machinery, so the resulting error is `quil`'s own `ValueError`
-    (`QuilValueError` here), not the Python builtin.
-    """
+    """Passing both the old and new parameter names should raise an error."""
 
     def test_comparison_rejects_both_destination_and_target(self):
-        with pytest.raises(QuilValueError):
+        with pytest.raises(quil.ValueError):
             Comparison(
                 ComparisonOperator.EQUAL,
                 MemoryReference("dst", 0),
@@ -196,15 +181,15 @@ class TestMutuallyExclusiveAliasErrors:
     def test_measurement_rejects_both_target_and_classical_reg(self):
         qubit = Qubit(0)
         target = MemoryReference("ro", 0)
-        with pytest.raises(QuilValueError):
+        with pytest.raises(quil.ValueError):
             Measurement(qubit, target, classical_reg=target)
 
     def test_measure_calibration_definition_rejects_both_instructions_and_instrs(self):
-        with pytest.raises(QuilValueError):
+        with pytest.raises(quil.ValueError):
             MeasureCalibrationDefinition(Qubit(0), None, instructions=[], instrs=[])
 
     def test_gate_rejects_both_parameters_and_params(self):
-        with pytest.raises(QuilValueError):
+        with pytest.raises(quil.ValueError):
             Gate("RX", parameters=[1.0], params=[1.0], qubits=[Qubit(0)])
 
 
