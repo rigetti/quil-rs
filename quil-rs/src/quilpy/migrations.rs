@@ -10,7 +10,7 @@ use crate::quilpy::errors::PyValueError;
 ///
 /// The first two arguments must be `Option` types.
 /// If exactly one of them is `Some`, then it is the value that will be returned.
-/// If both are `Some`, then this returns a [`QuilPyValueError::MutuallyExclusive`].
+/// If both are `Some`, then this returns a [`PyValueError::MutuallyExclusive`].
 /// If both are `None`, then this returns a default value inferred for the return type.
 ///
 /// If you need to convert the parameters, use a closure instead of just the parameter name.
