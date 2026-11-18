@@ -22,3 +22,11 @@ quil-rs/pyrightconfig.json
 
 # unversioned developer notes
 scratch/
+
+# images written by the quil-plotting example notebook
+quil-plotting/examples/plots/
+.ipynb_checkpoints/
+
+# plots written by the quil-plotting tests, for visual inspection of a run
+quil-plotting/tests/test_plots/
+quil-plotting/tests/test_plots_altair/
