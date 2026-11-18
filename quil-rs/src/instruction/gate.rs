@@ -860,13 +860,6 @@ pub enum PauliGate {
     Z,
 }
 
-// TODO(migration-guide):
-// In PyQuil v4, `PauliTerm`'s implemention of `__eq__` allowed comparison to `PauliSum`s,
-// violating the Python requirement that objects which compare equal have the same hash.
-// We fix this bug by virtue of not implementing such comparisons,
-// but this may break code which relied on the old behavior.
-// For users that need to compare a `PauliTerm` to a `PauliSum`,
-// they should wrap the `PauliTerm` in a `PauliSum` with a single term and compare those.
 /// A `PauliTerm` is a coefficient multiplied by the tensor product of Pauli operators
 /// operating on different qubit indices.
 ///
@@ -915,7 +908,6 @@ impl PauliTerm {
     }
 }
 
-// TODO(migration-guide): See note about `__eq__` in `PauliTerm` above.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(

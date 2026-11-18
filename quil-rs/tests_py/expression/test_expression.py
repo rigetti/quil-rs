@@ -208,7 +208,6 @@ def test_gate_definition() -> None:
     arr = np.array(crx, dtype=object)
 
     from_list = GateDefinition("CRX", ["theta"], crx)
-    # TODO: Figure out a way to satisfy Pyright that `arr` is a 2D array of `ExpressionLike` values.
     from_arr = GateDefinition("CRX", ["theta"], arr) # pyright: ignore[reportArgumentType,reportCallIssue]
     assert from_list == from_arr
     assert isinstance(from_list.specification, GateSpecification)

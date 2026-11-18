@@ -760,26 +760,6 @@ impl<T: for<'py> IntoPyObject<'py, Target = U>, U: DerefToPyAny + PyTypeInfo> Ca
     type PyType = U;
 }
 
-// TODO: remove this dead code if it isn't needed.
-/* Alternatively, this macro could be used to implement `CastAs` a bit more explicitly:
-macro_rules! impl_cast_as {
-    ($($PyType:ty),* $(,)?) => {
-        $(
-        impl<T: for<'py> IntoPyObject<'py, Target = $PyType>> CastAs for T {
-            type PyType = $PyType;
-        }
-        )*
-    };
-}
-
-impl_cast_as!(
-    pyo3::types::PyInt,
-    pyo3::types::PyString,
-    pyo3::types::PyFloat,
-    pyo3::types::PyComplex,
-);
-*/
-
 /// Attempts to extract `T` from a Python object.
 ///
 /// Succeeds if the object type checks to `T::PyType` and can be extracted into `T`.
@@ -1048,7 +1028,7 @@ macro_rules! impl_stub_like {
 
 pub(crate) use impl_stub_like;
 
-// TODO: Ensure that *all* to_quil implementations are deterministic:
+// TODO(#539): Ensure that *all* to_quil implementations are deterministic:
 // users currently use the generated Quil for hashing and comparisons.
 // Maybe the `Quil` trait needs its own kind of formatting options,
 // so that `to_quil_or_debug` and a (hypothetical) `deterministic` option

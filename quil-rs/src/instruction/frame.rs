@@ -95,9 +95,6 @@ impl Quil for FrameDefinition {
     }
 }
 
-// TODO(migration-guide): This class is now frozen.
-// The PyQuil version is `quilatom.Frame`.
-// This version also has a `name` property, which the PyQuil version didn't claim to have.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(

@@ -191,9 +191,6 @@ pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Ok(())
 }
 
-// TODO(perf,style): Determine if *all* `PyInstruction` subclasses can be marked `frozen`.
-// If so, we could likely make better use of `.get()` for frozen instances.
-
 // As described in the macro's docstring, those prefixed with `*` are `PyInstruction` subclasses,
 // parentheses are variant modifications, and square brackets are methods options,
 // the latter supporting `+ ..` to expand to `+ repr + quil`:
@@ -347,11 +344,6 @@ impl PyInstruction {
         Ok(Instruction::from_str(string)?)
     }
 
-    // TODO(style,perf): Is it better to make these "abstract", or should we forward an implementation?
-    // With `quilpy::expression`, we take a different approach:
-    // we have a `TryFrom<&'_ Bound<'_, PyExpression>> for Expression` that can get an instance,
-    // and add methods to `PyExpression` directly (but needs to extract `Bound<'_, PyExpression>`).
-
     /// Convert this ``Instruction`` to a Quil string, or raise an error if it is not valid Quil.
     fn to_quil(slf: &Bound<'_, Self>) -> PyResult<String> {
         Err(not_impl("to_quil", slf))
@@ -410,8 +402,6 @@ pub(crate) struct NopType;
     extends = PyInstruction, from_py_object, frozen, eq, hash
 )]
 pub(crate) struct WaitType;
-
-// TODO: likely just get rid of this and use `Instruction` directly.
 
 /// A wrapper around an [`Instruction`] for use in Python-exposed functions and methods
 /// where we want to accept any `Instruction` variant.
@@ -540,10 +530,6 @@ impl From<ComparisonOperandLike<'_>> for ComparisonOperand {
     }
 }
 
-// TODO(migration-guide):
-// - PyQuil v4 called `Arithmetic` `ArithmeticBinaryOp`
-// - The signature was `Arithmetic(left, right)`, with `operator` (called `op`)
-//   provided as a class attribute in subclasses.
 pickleable_new! {
     impl Arithmetic {
         fn __new__(
@@ -647,13 +633,6 @@ impl BinaryOperand {
     }
 }
 
-// TODO(migration-guide):
-// - PyQuil v4 called `BinaryLogic` `LogicalBinaryOp` and had subclassed variants.
-// - The constructor took two parameters: `left` and `right`, which it exposed as properties.
-//   The `left` corresponds to the `destination`, and the `right` corresponds to the `source`.
-// - The operator was stored as a class attribute called `op`, defined within subclasses.
-// - As with many other classes, those properties were mutable;
-//   that's no longer the case because we intended for the class to be hashable.
 pickleable_new! {
     impl BinaryLogic {
         fn __new__(
@@ -734,10 +713,6 @@ submit! {
     }
 }
 
-// TODO(migration-guide):
-// - PyQuil v4 called `Comparison` `ClassicalComparison`, with subclasses
-//   (`ClassicalEqual`, `ClassicalLessThan`, etc.) providing `operator` as a class attribute.
-// - The signature was `(target, left, right)`.
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
@@ -848,12 +823,6 @@ submit! {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl CalibrationDefinition {
-    // TODO(migration-guide):
-    // PyQuil v4's constructor was `(name, parameters, qubits, instrs, modifiers)`.
-    // Because the old constructor will be deprecated (in favor of `from_parts`),
-    // we don't treat the old names simply as aliases, but rather as separate arguments.
-    // Since users may have passed them as kwargs, we need to make the new names optional;
-    // to improve type checking, we provide `overload` stubs for valid argument combinations.
     #[pyo3(signature = (
             identifier = None,
             instructions = None,
@@ -1015,13 +984,6 @@ pickleable_new! {
     }
 }
 
-// TODO(migration-guide): So far, we've not replaced the `FormalArgument` type,
-// which was a wrapper around `name: str` (with special formatting rules).
-// In Rust, this is the `Qubit::Variable` variant,
-// which does somewhat motivate dropping its explicit representation.
-// On the other hand, it may instead be worth introducing the type back
-// in order to enable backwards compatibility, and to enable more restrictive parameter typing.
-
 #[cfg(feature = "stubs")]
 submit! {
     gen_methods_from_python! {
@@ -1069,7 +1031,6 @@ submit! {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl CircuitDefinition {
-    // TODO(migration-guide): PyQuil v4's constructor calls `qubit_variables` just `qubits`.
     #[new]
     #[pyo3(signature = (name, parameters, qubit_variables=None, instructions=Vec::new(), *, qubits = None))]
     fn __new__<'py>(
@@ -1106,7 +1067,6 @@ impl CircuitDefinition {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Declaration {
-    // TODO(migration-guide): The `__new__` method here is adjusted to match PyQuil v4's `Declare` constructor.
     #[new]
     #[pyo3(signature = (name, memory_type, memory_size = 1, shared_region = None, offsets = None))]
     fn __new__(
@@ -1232,9 +1192,6 @@ impl Declaration {
     }
 }
 
-// TODO(migration-guide):
-// - PyQuil v4 called `Convert` `ClassicalConvert`.
-// - The signature was `(left, right)`.
 pickleable_new! {
     impl Convert {
         fn __new__(
@@ -1363,12 +1320,6 @@ submit! {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Gate {
-    // TODO(migration-guide): The constructor now permits the alias `params` for `parameters`.
-
-    // TODO(testing): Add tests the giving both `parameters` and `params` raises an error,
-    // but that giving one or the other works as expected.
-    // If possible, add a test that confirms `mypy` will catch the error statically.
-
     /// Construct a new `Gate` instance.
     ///
     /// This constructor accepts `params` as an alias for `parameters`;
@@ -1387,9 +1338,6 @@ impl Gate {
         let modifiers = modifiers.unwrap_or_default().into();
         Ok(Self::new(&name, parameters, qubits, modifiers)?)
     }
-
-    // TODO(testing): Add pickle tests for this and other classes that manually implement
-    // `__getnewargs__` or `__getnewargs_ex__` (or for _all_ classes, just to be safe).
 
     fn __getnewargs__(&self) -> (String, Vec<Expression>, Vec<Qubit>, Vec<GateModifier>) {
         (
@@ -1836,9 +1784,6 @@ impl GateModifier {
     }
 }
 
-// TODO: This whole implementation around `GateSpecification` is a bit of a mess.
-// It would maybe be nicer afterall to have separate subclasses for the different kinds.
-
 /// Allow constructing a [`GateSpecification`] directly from the shapes of data it wraps,
 /// without requiring users to first wrap them in e.g. `GateSpecification.Matrix(...)`.
 ///
@@ -1985,7 +1930,6 @@ impl GateConstructor {
     #[pyo3(signature = (*qubits))]
     fn __call__(&self, qubits: Vec<Qubit>) -> PyResult<Gate> {
         let definition = self.definition.get();
-        // TODO: Should we check that the number of qubits matches the num_args?
         Ok(Gate::new(
             &definition.name,
             self.parameters.clone(),
@@ -2075,9 +2019,6 @@ pickleable_new! {
     }
 }
 
-// TODO(migration-guide):
-// - PyQuil v4 called `Load` `ClassicalLoad`.
-// - The signature was `(target, left, right)`.
 pickleable_new! {
     impl Load {
         fn __new__(
@@ -2113,16 +2054,6 @@ impl Load {
     }
 }
 
-// TODO(migration-guide): PyQuil v4 had a `quilatom.FormalArgument` class,
-// which corresponds to `Qubit.Variable`, which here is just backed by a `String`.
-// At best, we could create an "alias" class for it, but it probably isn't worth it,
-// since users need to update the namespace for `quilatom` anyway.
-
-// TODO(migration-guide): `pyquil`'s `unpack_classical_reg` would convert to a `MemoryReference`
-// from a `MemoryReference`, `(str,int)`, or `[str,int]`.
-// Now, all places that require a `MemoryReference` can extract it from those types,
-// as well as from a `DeclarationAt` or a `Declaration` (or its `Instruction` wrapper).
-
 /// Get the address for a classical register.
 ///
 /// This can be used to convert a `(str, int)` or `[str, int]` into a `MemoryReference`,
@@ -2144,64 +2075,6 @@ fn unpack_classical_reg<'py>(obj: &Bound<'py, PyAny>) -> PyResult<Bound<'py, Mem
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Label {
-    // TODO(migration-guide):
-    //   In `quil-rs`, the `Label` struct represents a Quil `LABEL` instruction,
-    //   but the real meat of its behavior comes from the `Target` enum,
-    //   which can be a `Fixed(String)` or a `Placeholder(TargetPlaceholder)`.
-    //   A Quil `LABEL` is `Label { target: Target::Fixed("jump-target") }`,
-    //   and hence `Label` is essentially just a wrapper around a `Target`.
-    //   The `Placeholder` is for the benefit of `Program` construction,
-    //   particularly loops.
-    //
-    //   The old PyQuil v4 had `quilatom.Label` and `quilatom.LabelPlaceholder`,
-    //   which each had a `target` parameter of type `quil.Target`.
-    //   The former was always `Target::Fixed` while the latter was `Target::Placeholder`,
-    //   meaning the class basically represented the `quil.Target` type anyway,
-    //   and neither was the actual `quil.Label` class.
-    //   Instead, v4 had `quilbase.JumpTarget`, which subclassed `quil.Label`,
-    //   and took a `target` parameter of type `quilatom.Label` or `quilatom.LabelPlaceholder`,
-    //   making it the closest equivalent to this type.
-    //
-    //   In other words, these are the equivalents:
-    //   - `quilatom.Label` -> `quil.Target.Fixed`
-    //   - `quilatom.LabelPlaceholder` -> `quil.Target.Placeholder`
-    //   - `quilbase.JumpTarget` -> `quil.Label`
-    //
-    //   So, in v5, we tell users to just use the `quil.Label` class directly,
-    //   and let them construct it from an existing `quil.Target`, or from a `str` or `None`,
-    //   letting the constructor create the `Target.Fixed` or `Target.Placeholder` for them.
-    //   On the off-chance they want to specify the `TargetPlaceholder`'s `base_label` explicitly,
-    //   they can pass a `str` and use the keyword-only `placeholder=True` argument.
-    //
-    //   The old `quil` uses can be updated as follows:
-    //
-    //   |  Deprecated Usage                      | Updated Usage                         |
-    //   | ---------------------------------------| ------------------------------------- |
-    //   | `Label("jump-target")`                 | No Need to Update                     |
-    //   | `Label(label_name="jump-target")`      | `Label(target="jump-target")`         |
-    //   | `LabelPlaceholder()`                   | `Label()`                             |
-    //   | `LabelPlaceholder("L")`                | `Label("L", placeholder=True)`        |
-    //   | `LabelPlaceholder(prefix="L")`         | `Label(target="L", placeholder=True)` |
-    //   | `LabelPlaceholder(placeholder=p)`      | `Label(target=p)`                     |
-    //   | `LabelPlaceholder("L", placeholder=p)` | Raises TypeError (see Note 1)         |
-    //
-    //   Note 1: the `LabelPlaceholder("L", placeholder=p)` before was technically legal,
-    //   but the `prefix` was ignored, so it is equivalent to just giving a `placeholder`.
-    //   Since we repurposed the `placeholder` name to be a `bool` for the new `Label` constructor,
-    //   that usage is no longer valid, and will raise a `TypeError`.
-    //
-    //   The old PyQuil v4 uses of `Label` and `LabelPlaceholder` can be updated as follows:
-    //   | Deprecated Usage                       | Updated Usage                         |
-    //   | ---------------------------------------| ------------------------------------- |
-    //   | `JumpTarget(Label("jump-target"))`     | `Label("jump-target")` (see Note 2)   |
-    //   | `JumpTarget(Label("jump-target"))`     | `Label("jump-target")` (see Note 2)   |
-    //
-    //   Note 2: The following aliases exist within PyQuil v5:
-    //   - `quilatom.JumpTarget` -> `quil.Label`
-    //   - `quilatom.Label` -> `quil.Target.Fixed`
-    //   - `quilatom.LabelPlaceholder` -> `quil.Target.Placeholder`
-    //   so existing usage of `JumpTarget(Label("jump-target"))` will still work for now.
-
     /// Create a new `Label`.
     ///
     /// A `Label` represents a ``LABEL`` instruction, which in Quil reads as ``LABEL @target-name``.
@@ -2339,9 +2212,6 @@ impl Label {
     }
 }
 
-// TODO(migration-guide): This has been modified to allow the PyQuil v4 signature,
-// and now allows `instrs` as an alias for `instructions`.
-
 #[cfg(feature = "stubs")]
 submit! {
     gen_methods_from_python! {
@@ -2384,7 +2254,6 @@ submit! {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl MeasureCalibrationDefinition {
-    // TODO(testing): Add tests to confirm the aliases work as expected.
     #[new]
     #[pyo3(signature = (qubit, memory_reference, instructions=None, *, instrs=None))]
     fn __new__(
@@ -2521,15 +2390,10 @@ submit! {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Measurement {
-    // TODO(migration-guide): The PyQuil v4 signature was `(qubit, classical_reg)`;
-    // we now accept `classical_reg` as an alias for `target`,
-    // and so `target` is now optional to support older code that used `classical_reg` as a kwarg.
-
     // Developer Note: the Python argument order is not the same as the Rust argument order,
     // and that this function requires keywords on the Python side!
     // Make sure `__getnewargs_ex__` is consistent with `__new__`!
 
-    // TODO(testing): add tests to confirm alias/args work as expected.
     /// Create a new `Measurement` instruction.
     ///
     /// The optional `name` argument can be used for Named Measurements.
@@ -2586,9 +2450,6 @@ pickleable_new! {
     }
 }
 
-// TODO(migration-guide): PyQuil v4 had a `Reset` class _and_ a `ResetQubit` class,
-// which was functionally equivalent to `Reset`, except required the `Qubit` argument.
-// In v5, we just make `ResetQubit` an alias for `Reset`.
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
@@ -2604,8 +2465,6 @@ impl Reset {
     }
 }
 
-// TODO: Likely, most places that "use" MemoryReferences for things like __add__
-// should actually be applied to the `Address` type.
 #[cfg(feature = "stubs")]
 submit! {
     gen_methods_from_python! {
@@ -2650,7 +2509,6 @@ submit! {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl MemoryReference {
-    // TODO(migration-guide): PyQuil v4 uses the term `offset` instead of `index`, so this handles both.
     /// Construct a new `MemoryReference`.
     ///
     /// As an alternative to using this class directly,
@@ -2772,15 +2630,12 @@ impl MemoryReference {
     // The following are deprecated PyQuil v4 methods present for backwards compatibility.
     // -------------------------------------------------------------------------------------
 
-    // TODO(migration-guide): `offset` was renamed `index`.
     #[getter]
     #[pyo3(warn(message = "use `index` instead", category = PyDeprecationWarning))]
     fn offset(&self) -> u64 {
         self.index
     }
 
-    // TODO(migration-guide): `declared_size` was only used for pretty-printing,
-    // and it can't be inferred from parsing, so we're dropping that implementation.
     #[gen_stub(override_return_type(type_repr = "None"))]
     #[getter]
     #[pyo3(warn(message = "`declared_size` is deprecated", category=PyDeprecationWarning))]
@@ -2800,9 +2655,6 @@ impl MemoryReference {
     }
 }
 
-// TODO(migration-guide):
-// - PyQuil v4 called `Move` `ClassicalMove`.
-// - The signature was `Arithmetic(left, right)`.
 pickleable_new! {
     impl Move {
         fn __new__(
@@ -2935,13 +2787,6 @@ fn qubit_indices<'a, C: FromIterator<u64>>(
         .collect()
 }
 
-// TODO(migration-guide): PyQuil v4's `Pulse` took `nonblocking=False` instead of `blocking`.
-// This version has `blocking=True`, so for callers that didn't specify either, nothing changes.
-// For users that specified `nonblocking` as a keyword argument,
-// they'll now receive a deprecation warning, but the behavior will be consistent.
-// If a caller set `nonblocking` as a positional argument, they'll now receive an error,
-// as this change makes it keyword-only to avoid accidentally changing behavior when upgrading.
-//
 // This is implemented manually (rather than with `pickleable_new!`)
 // because `nonblocking` isn't a field on the underlying struct.
 #[cfg(feature = "stubs")]
@@ -3026,10 +2871,6 @@ impl Pulse {
     }
 }
 
-// TODO(migration-guide): PyQuil v4's `Capture` took `kernel` and `memory_region` (in that
-// order) and `nonblocking` (defaulting to `False`) instead of `waveform`, `memory_reference`,
-// and `blocking`.
-//
 // This is implemented manually (rather than with `pickleable_new!`)
 // because `nonblocking` isn't a field on the underlying struct.
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
@@ -3083,45 +2924,6 @@ impl Capture {
         qubit_indices(&self.frame.qubits)
     }
 }
-
-// TODO(migration-guide): The v4 constructor looked roughly like
-// `Delay(frames: list[FrameIdentifier], qubits: list[QubitDesignator], duration: float)`
-// while the old `quil` form looked roughly like
-// `Delay(duration: Expression, frame_names: list[str], qubits: list[Qubit])`.
-//
-// Quil indicates that the order of qubits in a `DEFFRAME` is significant,
-// but doesn't make it clear whether the order within a `DELAY` is significant.
-// The PyQuil constructor, when given `FrameIdentifier`s,
-// would extract its `qubits` and merge them with any `qubits` given to the constructor,
-// potentially change the order and/or adding qubits that weren't originally given.
-// Regardless, the actual usage seems to come via either `DelayFrames` or `DelayQubit`s,
-// subclasses of `Delay` that only accept a list of frames or list of qubits, respectively.
-// In the former case, merging the qubits into a single list is still a bit questionable,
-// but at least slightly less ambiguous what is meant by it.
-//
-// This signature has been updated to be more flexible with what it accepts
-// while making it more consistent with the required parameters of Quil's `DELAY` instruction:
-// a `duration` and at least one `Qubit` are required, but frame names are optional.
-// To accommodate some aspects of the old signature, this adds an alternative constructor
-// which makes it clear exactly how it handles `FrameIdentifier`s.
-//
-// - Users of PyQuil v4 who directly used the `Delay` constructor will get errors,
-//   but users of `DelayFrames` or `DelayQubits` will be not see a behavioral change.
-//   From code scans of relevant codebases, the latter seem to be the more common usage.
-// - Users of `quil` will also get errors from the constructor change,
-//   as the parameter order for `frame_names` and `qubits` has been swapped,
-//   but the type differences should make this obvious, and `quil`
-//   has fewer direct users/fewer backwards compatibility concerns than PyQuil.
-// - PyQuil v4 required that `duration` was a `float`, but here we accept arbitrary `Expression`s
-//   and things that can be converted into them (including `float`s);
-//   however, v4 _also_ coerced the `duration` back into a `float` in the property getter,
-//   which is no longer done in this version: instead, you must use `frame.duration.to_real()`.
-// - PyQuil v4's `DelayFrames` and `DelayQubits` were separate classes,
-//   but here we just have a single `Delay` class, but are more flexible in our constructor.
-//   Because there are no corresponding `Instruction` variants for those,
-//   operating on `DelayFrames` or `DelayQubits` would have quietly converted into a `Delay`.
-//   By getting rid of those subclasses, we prevent `isinstance` check from passing,
-//   reducing the risk of unexpected errors.
 
 pickleable_new! {
     impl Delay {
@@ -3197,7 +2999,6 @@ impl From<FrameAttributeValueLike> for AttributeValue {
     }
 }
 
-// TODO(migration-guide): The `FrameIdentifier` corresponds to PyQuil's `quilatom.Frame`.
 pickleable_new! {
     impl FrameIdentifier {
         fn __new__(qubits: Vec<Qubit>, name: String) -> FrameIdentifier {
@@ -3210,14 +3011,6 @@ pickleable_new! {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl FrameDefinition {
-    // TODO(migration-guide): This constructor differs from both PyQuil v4 and `quil` versions.
-    // Now, the initial `identifier` argument is required, and must be given positionally.
-    // Users can provide an optional `attributes` dictionary, with values taken mostly as-is,
-    // and optionally can provide additional/overriding attribute values as keyword arguments.
-    // The original PyQuil v4 signature took `frame: FrameIdentifier` and a specific list of args,
-    // all of which were optional, but potentially could be given as positional arguments.
-    // Since such usage would be (at the very least) really hard to read,
-    // this signature forces more explicit usage.
     /// Construct a new `FrameDefinition` with the given `identifier` and optional attributes.
     ///
     /// You can provide an optional `attributes` dictionary with pre-set values,
@@ -3249,10 +3042,6 @@ impl FrameDefinition {
         (positional, keyword).into_pyobject(py)
     }
 
-    // TODO(migration-guide): PyQuil v4 only took/returned `str | float | None`,
-    // not arbitrary `Expression`s as Quil allows these to be.
-    // Users should deconstruct the resulting `AttributeValue`, likely with a match statement,
-    // and handle the result appropriately.
     fn get_attribute(&self, name: &str) -> Option<AttributeValue> {
         self.attributes.get(name).cloned()
     }
@@ -3261,8 +3050,6 @@ impl FrameDefinition {
         let _ = self.attributes.insert(name.to_string(), value.into());
     }
 
-    // TODO(migration-guide): PyQuil v4 raised `AttributeError` here instead of `KeyError`.
-    // Also, like `get_attribute`, it only returned `str | float | None`, not `AttributeValue`s.
     fn __getitem__(&self, name: &str) -> PyResult<AttributeValue> {
         self.attributes
             .get(name)
@@ -3270,19 +3057,9 @@ impl FrameDefinition {
             .ok_or_else(|| PyKeyError::new_err(format!("attribute {name} not found")))
     }
 
-    // TODO(migration-guide): PyQuil v4 raised `AttributeError` here instead of `KeyError`.
-    // Also, like `get_attribute`, it only returned `str | float | None`, not `AttributeValue`s.
     fn __setitem__(&mut self, name: &str, value: FrameAttributeValueLike) {
         self.set_attribute(name, value);
     }
-
-    // TODO(migration-guide): PyQuil v4 allowed you to modify the `identifier` frame.
-    // That really seems like a bad idea, so that setter is removed.
-    // Additionally, you could set the `attributes` dictionary wholesale,
-    // but likewise, that seems like a bad idea compared to creating a new instance
-    // (as is the case with all our other `frozen` instruction types).
-    // Although for now we allow modifying the underlying dictionary,
-    // we may remove that in the future, and force it to be read-only as with other classes.
 
     /// Get the [`FrameIdentifier`] for this frame definition.
     #[getter]
@@ -3313,11 +3090,6 @@ impl PragmaArgument {
         }
     }
 }
-
-// TODO(migration-guide):
-// - PyQuil v4 accepted `Qubit | FormalArgument | int | str` items for `args`;
-//   only integers and identifiers (`str`) can be given directly as `PragmaArgument`s here.
-// - PyQuil v4's `Pragma` took `command` and `freeform_string` instead of `name` and `data`.
 
 // This is implemented manually (rather than with `pickleable_new!`) because `command`
 // and `freeform_string` aren't fields on the underlying struct.
@@ -3466,22 +3238,6 @@ impl<'py> pyo3::IntoPyObject<'py> for &Qubit {
         }
     }
 }
-
-// TODO: Check if other complex enums are returning Self instead of using a Bound;
-// if so, they will incorrectly convert into the base class rather than specific variant.
-//  #[new]
-//  fn __new__<'py>(qubit: QubitLike, py: Python<'py>) -> PyResult<Bound<'py, Self>> {
-//      Qubit::from(qubit).into_pyobject(py)
-//  }
-
-// TODO(migration-guide): Previously `quil`'s `Qubit` class was a `#[pyclass]` directly on the enum,
-// but now it's got a base class and variants, which is easier to use overall.
-// Prior instances that made use of `Qubit.Fixed`, `Qubit.Variable`
-// should now directly use `Qubit` or `FixedQubit`/`FormalArgument` instead,
-// while usage of `Qubit.Placeholder(QubitPlaceholder())` should now use `QubitPlaceholder`;
-// the latter will work with `isinstance` checks against `Qubit`, motivating this change.
-// Note that that specific expression can be replaced directly with `Qubit()`, `Qubit(None)`,
-// or `QubitPlaceholder()`, which are all equivalent.
 
 #[cfg(feature = "stubs")]
 pyo3_stub_gen::inventory::submit! {
@@ -3782,9 +3538,6 @@ impl QubitPlaceholder {
     }
 }
 
-// TODO(migration-guide): PyQuil v4's `RawCapture` took `memory_region` instead of
-// `memory_reference`, and `nonblocking` (defaulting to `False`) instead of `blocking`.
-//
 // This is implemented manually (rather than with `pickleable_new!`)
 // because `nonblocking` isn't a field on the underlying struct.
 #[cfg(feature = "stubs")]
@@ -3897,8 +3650,6 @@ impl RawCapture {
     }
 }
 
-// TODO(migration-guide): PyQuil v4's `SetFrequency` took `freq` instead of `frequency`.
-//
 // This is implemented manually (rather than with `pickleable_new!`)
 // because `freq` isn't a field on the underlying struct.
 #[cfg(feature = "stubs")]
@@ -3971,8 +3722,6 @@ impl SetFrequency {
     }
 }
 
-// TODO(migration-guide): PyQuil v4's `ShiftFrequency` took `freq` instead of `frequency`.
-//
 // This is implemented manually (rather than with `pickleable_new!`)
 // because `freq` isn't a field on the underlying struct.
 #[cfg(feature = "stubs")]
@@ -4155,7 +3904,6 @@ submit! {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl SwapPhases {
-    // TODO(migration-guide): The signature in PyQuil v4 was `(frameA, frameB)`.
     #[expect(non_snake_case)]
     #[new]
     #[pyo3(signature = (frame_1=None, frame_2=None, *, frameA=None, frameB=None))]
@@ -4208,9 +3956,6 @@ impl SwapPhases {
     }
 }
 
-// TODO(migration-guide):
-// - PyQuil v4 called `Store` `ClassicalStore`.
-// - The signature was `(target, left, right)`.
 pickleable_new! {
     impl Store {
         fn __new__(
@@ -4314,10 +4059,6 @@ impl From<TargetLike> for Target {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl Target {
-    // TODO(migration-guide): PyQuil v4's `quilatom.Label` and `quilatom.LabelPlaceholder
-    // are the equivalents of `quil.Target.Fixed`  and `quil.Target.Placeholder`, respectively.
-    // See the notes in `Label` for more details on how these are migrated.
-
     // Developer note: This takes `LabelTargetLike` rather than `TargetLike`,
     // since the latter accepts only `str` and `TargetPlaceholder`,
     // while the former additionally accepts existing `Label`s,
@@ -4339,9 +4080,6 @@ impl Target {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl TargetPlaceholder {
-    // TODO(migration-guide): This type replaces `LabelPlaceholder`,
-    //   but uses `base_label` in places of `prefix`.
-    //   The old type also accepted a `placeholder` parameter.
     /// Create a new `TargetPlaceholder`.
     ///
     /// If you are only constructing a `TargetPlaceholder` to pass to the `Label` constructor,
@@ -4384,9 +4122,6 @@ impl TargetPlaceholder {
     }
 }
 
-// TODO(migration-guide):
-// - PyQuil v4 called `UnaryLogic` `UnaryClassicalInstruction`
-// - The constructor signature just took `target`; `op` was a classvar.
 pickleable_new! {
     impl UnaryLogic {
         fn __new__(
@@ -4432,9 +4167,6 @@ impl UnresolvedCallArgument {
     }
 }
 
-// TODO(migration-guide): PyQuil v4's `DefWaveform` took `parameters` (a list of `Parameter`s,
-// here just their names) and `entries` directly, building the `quil_rs.Waveform` internally.
-// Now, `WaveformDefinition.from_waveform` constructs one from a `name` and a `definition`.
 #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
@@ -4895,9 +4627,6 @@ mod macros {
             impl<'a, 'py> pyo3::FromPyObject<'a, 'py> for Instruction {
                 type Error = pyo3::PyErr;
 
-                // TODO: Consider using the slightly faster `cast_exact` here;
-                // we should only do that if all `PyInstruction` subclasses
-                // are themselves NOT marked `subclass`.
                 fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
                     if false {
                         unreachable!("this makes the macro easier to write");

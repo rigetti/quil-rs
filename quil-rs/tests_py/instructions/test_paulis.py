@@ -191,7 +191,6 @@ class TestTermPower:
 
     def test_expr(self, t_2_X0: PauliTerm):
         k = Expression.parse("2*pi + 1")
-        # TODO: this may justify making Expression work like Instruction, as a class hierarchy.
         exp_i_pi_k = quil_exp(1.0j * Pi * k)
         a = (1 + exp_i_pi_k) / 2
         b = (1 - exp_i_pi_k) / 2

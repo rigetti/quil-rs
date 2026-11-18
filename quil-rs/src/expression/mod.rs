@@ -93,7 +93,6 @@ pub enum Expression {
     FunctionCall(FunctionCallExpression),
     Infix(InfixExpression),
     Number(Complex64),
-    // TODO(migration-guide): PiConstant in Rust is a Unit variant again.
     PiConstant,
     Prefix(PrefixExpression),
     Variable(String),

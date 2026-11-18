@@ -90,7 +90,6 @@ impl<'a, 'py> FromPyObject<'a, 'py> for PauliGate {
 ///
 /// Technically, we only accept `Qubit::Variable` and `Qubit::Fixed` (or `str` and `int`),
 /// but this wraps `Qubit` and raises a type error if the input is `Qubit::Placeholder`.
-// TODO: Now that there are PyQubit subclasses, limit this to the fixed and variable subclasses.
 #[derive(FromPyObject)]
 pub(crate) struct PauliArg(Qubit);
 
@@ -341,28 +340,6 @@ macro_rules! simple {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl PauliTerm {
-    // TODO(migration-guide):
-    // - Rust users making use of the `python` feature need to update usage of `__new__`.
-    // - Python users of `quil` should be aware of the (temporary) combined API.
-    // - In constrast to the behavior of earlier versions of `quil-rs`,
-    //   the current version may rearrange and/or simplify arguments here and in `PauliSum`s.
-    //   The result is always logically equivalent, but may lead to different Quil output,
-    //   and consequently, different compilation and hence observable differences.
-    //   Given that a PauliSum is already a pretty high-level abstraction of a gate,
-    //   users should expect that compiler optimizations and physical realizations
-    //   will impact the observable behavior of a program, in any case.
-    // - The PyQuil v4 methods accepted `Qubit::Placeholder` instances
-    //   and just converted them into a `str`, leading to invalid Quil identifiers.
-    //   Since that was a bug, `Placeholder`s now explicitly raise an error if used.
-    // - Relatedly, the PyQuil v4 methods accepted integers and `Qubit::Fixed` instances
-    //   and converted them into `str`s directly (e.g., `Qubit::Fixed(0)` became `"0"`),
-    //   which again are not a valid Quil identifiers.
-    //   This now prefixes them with a `q` to make them valid identifiers,
-    //   but that could cause conflicts if a user gave a mix of strings and integers.
-    //   Since that's a pretty unlikely thing to see in the wild,
-    //   we just document that it's their responsibility to avoid such conflicts.
-    //   And as always, nothing prevents them from giving an invalid identifier
-    //   directly as a string/`Qubit::Variable`.
     /// Construct a new `PauliTerm` from a single operator and qubit index.
     ///
     /// To construct a `PauliTerm`, provide a `PauliGate` operator and an argument string.
@@ -841,34 +818,6 @@ impl PauliTerm {
         .into_bound_py_any(py)
     }
 
-    // TODO(migration-guide):
-    // - At one time, this method returned an empty string if arguments was empty,
-    // but later the expected logic changed to return `"I"` in that case.
-    // That happened at the same time a `sort_ops=True` argument was added,
-    // which came with an explanation that both would change in the future.
-    // This makes those changes: the default is now `False`, and both empty cases return `"I"`.
-    //
-    // - This adds a new keyword-only `delimiter` argument which is used to join the
-    // operator-argument pair. By default (and for backwards compatibility), it's the empty string.
-    // The `__str__` method below uses `*` to match the original output of the `__repr__` method.
-    // The `__repr__` method itself is replaced with the Rust-derived default,
-    // matching that of all the other classes in this crate.
-    //
-    // - When the afforementioned `delimiter` argument is empty (matching the original behavior),
-    // if an argument contains 'X', 'Y', 'Z', or 'I', then the output would be produced ambiguous.
-    // This works around it by wrapping such arguments in parentheses,
-    // so the output no longer matches the original behavior.
-    //
-    // - The original class primarily focused on integer qubit indicies,
-    // but those are not valid Quil identifiers; the constructor for this class
-    // generally forces those into valid identifier by prefixing them with `q`,
-    // which is to say the original output would have only had output like `X0Y1` etc,
-    // but this will produce `Xq0Yq1` instead.
-    //
-    // - The companion method below to parses these strings is updated with these changes in mind,
-    // so it can still handle unambiguous output from the original class,
-    // but will also handle the more general from this updated method produces.
-    //
     /// Return an identifier string for the PauliTerm (ignoring the coefficient).
     ///
     /// For example, ``PauliTerm.from_list([("X", 0), ("Y", "q")]).id() == "Xq0Yq"``.
@@ -1010,8 +959,6 @@ impl PauliTerm {
                 .join(""),
 
             Some(qubits) => {
-                // TODO: We should really likely have a Python-specific version of PauliTerm
-                // using a HashMap<Qubit, PauliGate> rather than the Quil-specific representation.
                 let mut qubit_map: HashMap<u64, PauliGate> = HashMap::new();
                 for (gate, qubit) in &self.arguments {
                     if let Some(index) = arg_as_index(qubit) {
@@ -1494,13 +1441,6 @@ pyo3_stub_gen::inventory::submit! {
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl PauliSum {
-    // TODO(migration-guide):
-    //
-    // - Rust users of `quil-rs` with the `python` feature
-    //   should be aware that `PauliSum::new` is no longer shared directly with Python.
-    // - Python users of `quil` will receive deprecation warnings
-    //   for existing usage of the `PauliSum.__new__` constructor
-    //   and should update usage from `PauliSum(arguments, terms)` to `PauliSum(terms)`.
     /// Construct a new `PauliSum` from a list of `PauliTerm`s and an optional list of arguments.
     ///
     /// For backwards compatibility, this constructor supports `(arguments, terms)`,
@@ -1577,19 +1517,10 @@ impl PauliSum {
         }
     }
 
-    // TODO: Ideally, we'd store `Qubit`s instead. We could use a Python-specific class,
-    // which has some advantages, or update the Rust version (as a breaking change).
-    // Additionally, we may want to establish a canonical ordering for arguments.
-    // If we expect to support very large numbers of arguments,
-    // we could likely optimize around a bit-packed representation of arguments
-    // within individual terms, but we should benchmark a hashmap-based approach first.
     fn __getnewargs__(&self) -> (Vec<PauliTerm>, Vec<String>) {
         (self.terms.clone(), self.arguments.clone())
     }
 
-    // TODO(migration-guide): The `__repr__` method is replaced with the Rust-derived default,
-    // which is more consistent with the other classes in this crate.
-    // This __str__ method replaces the original `__repr__`.
     /// Return a string representation of the PauliSum.
     fn __str__(&self) -> PyResult<String> {
         let terms_str = self
@@ -1723,12 +1654,6 @@ impl PauliSum {
         }
     }
 
-    // TODO(migration-guide): The PyQuil v4 PauliTerm stored index keys as they came,
-    // and this method returned them as they were:
-    // so given an integer, this would have returned an integer.
-    // Now, because we enforce that all arguments are Quil identifiers,
-    // this method always returns a list of strings,
-    // and the old behavior is not and cannot be supported.
     /// Get a list of all the qubits in the sum of the terms.
     fn get_qubits(&self) -> Vec<String> {
         self.arguments.clone()

@@ -38,7 +38,7 @@ create_init_submodule! {
         Number,
         Parameter,
         PiType,
-        Address, // TODO: Make DeclarationAt or something work here instead.
+        Address,
     ],
     errors: [ errors::EvaluationError, errors::ParseExpressionError ],
     funcs: [
@@ -71,9 +71,6 @@ pub(crate) fn post_init(m: &Bound<'_, PyModule>) -> PyResult<()> {
         "ParameterDesignator",
         union!(py, PyExpression, MemoryReference, PyInt, PyFloat, PyComplex)?,
     )?;
-
-    // TODO
-    // ParameterSubstitutionsMapDesignator = Mapping[Parameter | MemoryReference, ExpressionValueDesignator]
 
     Ok(())
 }
@@ -138,9 +135,6 @@ pub struct PyExpression;
 ///   but it can be used as `Bound<'_, PyExpression>`, which is needed
 ///   for its own `#[pymethods]` block to provide methods for all `Expression` variants.
 ///   You can use `Expression::try_from` to get the actual `Expression` variant.
-///
-// TODO: Now that `Expression` is _not_ a PyClass, can I use it as an input parameter?
-// FromPyObject is implemented manually to handle specifics around PyExpression subclassing.
 #[derive(Debug, Clone)]
 // Generally we don't want to return this as a Python type,
 // but the stub generator needs this when constructing default values in signatures.
@@ -149,7 +143,7 @@ pub(crate) enum ExpressionLike {
     Variable(String),
     PiConstant(PiType),
     Number(Complex64),
-    MemoryReference(MemoryReference), // TODO: rename Address
+    MemoryReference(MemoryReference),
     FunctionCall(FunctionCallExpression),
     Infix(InfixExpression),
     Prefix(PrefixExpression),
@@ -191,7 +185,6 @@ impl<'a, 'py> FromPyObject<'a, 'py> for ExpressionLike {
 impl<'a, 'py> FromPyObject<'a, 'py> for ExpressionView<'a> {
     type Error = CastError<'a, 'py>;
 
-    // TODO: Handle more Memory types -- likely drop Address in favor of PyMemRef or something.
     fn extract(obj: Borrowed<'a, 'py, PyAny>) -> Result<Self, Self::Error> {
         if let Ok(obj) = obj.cast_exact::<Parameter>() {
             Ok(obj.get().as_view())
@@ -228,7 +221,6 @@ impl<'a, 'py> TryFrom<&'a Bound<'py, PyExpression>> for Expression {
         // They currently can't be subclassed (neither in Rust nor in Python),
         // but there's no easy way to catch that at compile time;
         // there are unit tests for this currently, but that's not a perfect solution.
-        // TODO(testing): Actually add unit tests that ensure these can't be subclassed.
         if let Ok(slf) = value.cast_exact::<FunctionCallExpression>() {
             Ok(Expression::FunctionCall(slf.get().clone()))
         } else if let Ok(slf) = value.cast_exact::<InfixExpression>() {
@@ -256,15 +248,6 @@ impl<'a, 'py> TryFrom<&'a Bound<'py, PyExpression>> for Expression {
 
 /// [`Expression`] implements [`FromPyObject`] so it can be used within other Python-exposed types.
 ///
-// TODO: Determine if this should be true:
-// Note that when used, the Python object must be a [`PyExpression`] subclass instance,
-// not just something that can be converted into an [`Expression`].
-// Use [`ExpressionLike`] if you also want that.
-// Currently, we _do_ convert other if they can be, and maybe that is the right way to go?
-// It means that we don't have an easy way (in Rust) to explicitly say
-// "this Python-exposed function requires an existing (Py)Expression instance",
-// but perhaps we don't have any reason for that.
-// Should we even have `ExpressionLike`?
 impl<'a, 'py> FromPyObject<'a, 'py> for Expression {
     type Error = CastError<'a, 'py>;
 
@@ -351,10 +334,6 @@ py_expression!(Parameter);
 // PyType is implemented as a singleton and implemented manually.
 py_expression!(PrefixExpression);
 
-// TODO: We likely could take a similar approach with Instruction subclasses.
-// The main advantage is that those methods show up on the base class.
-// It's unclear how impactful this is on performance, but that might be worth benchmarking.
-
 /// Convert a bound `#[pyclass]` into a `numpy` object array holding just that instance.
 fn to_obj_array<'py, T: PyClass>(obj: &Bound<'py, T>) -> Bound<'py, PyAny> {
     let py = obj.py();
@@ -432,9 +411,6 @@ impl PyExpression {
         Ok(Expression::from_str(input)?)
     }
 
-    // TODO: Benchmark if it's faster to have these implemented on the individual subclasses.
-    // I suspect doing it that way may be better for performance
-    // because it certainly avoids constructing the actual `Expression` enum.
     fn to_quil(slf: &Bound<'_, Self>) -> PyResult<String> {
         Ok(slf
             .as_borrowed()
@@ -793,10 +769,6 @@ py_singleton!(PiType, "Pi", |py| {
 #[cfg(feature = "stubs")]
 pyo3_stub_gen::module_variable!("quil._quil.expression", "Pi", PiType);
 
-// TODO(migration-guide): In PyQuil v4, there wasn't a dedicated `Pi` type.
-// To convert to/from the `Expression::PiConstant` variant, it used `numpy.pi` instead.
-// It's perhaps worth noting that the `__str__`/`__repr__` implementatinos of `numpy.pi`
-// are string representations of its floating point value (`"3.14..."`).
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl PiType {
@@ -838,7 +810,7 @@ impl AsView for Bound<'_, PiType> {
 )]
 #[cfg_attr(not(feature = "python"), strip_pyo3)]
 pub(crate) struct Parameter {
-    name: String, // TODO: replace this with `Py<PyString>` if possible.
+    name: String,
 }
 
 impl std::fmt::Display for Parameter {
@@ -964,7 +936,6 @@ pub(crate) struct Address {
     /// The underlying memory reference, e.g. `theta[0]`.
     pub(crate) memory_reference: Py<MemoryReference>,
 }
-// TODO: Can this be united with `PyMemRef`?
 
 impl FromPyObject<'_, '_> for Address {
     type Error = PyErr;
@@ -1126,11 +1097,6 @@ impl_match_args!(InfixExpression("left", "operator", "right"));
 #[cfg_attr(feature = "stubs", gen_stub_pymethods)]
 #[pymethods]
 impl InfixExpression {
-    // TODO: Augment `pickleable_new` to handle conversions like the kinds used here:
-    // - extract `ExpressionLike` and use its TypeStub impl
-    // - convert into `ArcIntern<Expression>`
-    // - enable `__getnewargs__` to convert to `Expression`
-
     #[new]
     fn __new__(left: ExpressionLike, operator: InfixOperator, right: ExpressionLike) -> Self {
         Self::new(
@@ -1273,13 +1239,6 @@ impl InfixOperator {
         Self::from_str(&value).map_err(|_| ValueError::new_err("not an InfixOperator: {value}"))
     }
 }
-
-// TODO(migration-guide): In PyQuil v4, substitution maps were keyed on a combination of types,
-// including `MemoryReference`s; the latter type implemented its own `__hash__` method
-// as a combination of the name _and_ memory offset.
-// Substitution maps required that each individual memory offset was provided
-// as a distinct memory reference (with different offsets, that is).
-//
 
 /// Used to store memory reference values in a parameter substitution map.
 ///

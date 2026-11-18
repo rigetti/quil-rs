@@ -112,7 +112,6 @@ mod test_waveform_definition {
 
 pub type WaveformParameters = IndexMap<String, Expression>;
 
-// TODO(migration-guide): This class is now frozen.
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(

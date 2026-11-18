@@ -151,7 +151,6 @@ impl Quil for Offset {
     }
 }
 
-// TODO(migration-guide): PyQuil v4 calls this `Declare`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
 #[cfg_attr(
@@ -276,7 +275,6 @@ pub struct MemoryReference {
     )]
     pub name: String,
 
-    // TODO(migration-guide): PyQuil v4 calls this `offset`.
     /// The offset into the memory region.
     pub index: u64,
 }
