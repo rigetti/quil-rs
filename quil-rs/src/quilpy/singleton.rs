@@ -135,3 +135,84 @@ mod private {
 
     impl Sealed for pyo3::Bound<'_, pyo3::types::PyModule> {}
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::instruction::quilpy::{HaltType, NopType};
+    use pyo3::types::{PyModule, PyType};
+
+    #[test]
+    fn get_returns_the_same_instance_every_time() {
+        Python::initialize();
+        Python::attach(|py| {
+            let first = HaltType::get(py).unwrap();
+            let second = HaltType::get(py).unwrap();
+            assert!(first.is(second));
+        });
+    }
+
+    #[test]
+    fn get_is_independent_across_distinct_singleton_types() {
+        Python::initialize();
+        Python::attach(|py| {
+            let halt = HaltType::get(py).unwrap();
+            let nop = NopType::get(py).unwrap();
+            assert!(!halt.as_any().is(nop.as_any()));
+            assert_eq!(<HaltType as PySingleton>::NAME, "Halt");
+            assert_eq!(<NopType as PySingleton>::NAME, "Nop");
+        });
+    }
+
+    #[test]
+    fn new_constructor_returns_the_singleton_instance() {
+        Python::initialize();
+        Python::attach(|py| {
+            let singleton = HaltType::get(py).unwrap();
+            // `#[new]` is private to the `instruction::quilpy` module in Rust,
+            // but is exposed to Python as the normal class constructor.
+            let module = PyModule::new(py, "new_constructor_test_module").unwrap();
+            module.add_singleton::<HaltType>().unwrap();
+            let class = module.getattr("HaltType").unwrap();
+            let constructed = class.call0().unwrap();
+            assert!(singleton.as_any().is(&constructed));
+        });
+    }
+
+    #[test]
+    fn reduce_returns_the_singleton_name_for_pickling() {
+        Python::initialize();
+        Python::attach(|py| {
+            let instance = HaltType::get(py).unwrap();
+            // `__reduce__` is private to the `instruction::quilpy` module in Rust,
+            // but is exposed to Python as the usual pickling dunder method.
+            let reduced = instance.as_any().call_method0("__reduce__").unwrap();
+            assert_eq!(reduced.to_string(), "Halt");
+        });
+    }
+
+    #[test]
+    fn into_pyobject_round_trips_through_the_singleton() {
+        Python::initialize();
+        Python::attach(|py| {
+            let singleton = HaltType::get(py).unwrap().clone();
+            let converted = HaltType.into_pyobject(py).unwrap();
+            assert!(singleton.is(&converted));
+        });
+    }
+
+    #[test]
+    fn add_singleton_registers_both_the_class_and_the_instance_on_a_module() {
+        Python::initialize();
+        Python::attach(|py| {
+            let module = PyModule::new(py, "test_singleton_module").unwrap();
+            module.add_singleton::<HaltType>().unwrap();
+
+            let class = module.getattr("HaltType").unwrap();
+            assert!(class.is_instance_of::<PyType>());
+
+            let instance = module.getattr("Halt").unwrap();
+            assert!(instance.is(HaltType::get(py).unwrap()));
+        });
+    }
+}

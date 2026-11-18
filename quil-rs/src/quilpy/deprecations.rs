@@ -336,3 +336,148 @@ pub(crate) use deprecated_or_new;
 pub(crate) use deprecated_param;
 pub(crate) use deprecated_param_cstr;
 pub(crate) use py_deprecated;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pyo3::exceptions::{PyDeprecationWarning, PyValueError};
+
+    /// Run `f` with the Python `warnings` filter set to `action` (e.g. `"always"` or `"error"`),
+    /// recording any warnings raised, then restore the previous filter state.
+    ///
+    /// Returns `f`'s result along with the number of warnings recorded and the message
+    /// of the last one (empty string if none were recorded).
+    fn with_recorded_warnings<R>(
+        py: Python<'_>,
+        action: &str,
+        f: impl FnOnce() -> R,
+    ) -> (R, usize, String) {
+        let warnings = py.import("warnings").unwrap();
+        let kwargs = pyo3::types::PyDict::new(py);
+        kwargs.set_item("record", true).unwrap();
+        let catch = warnings
+            .call_method("catch_warnings", (), Some(&kwargs))
+            .unwrap();
+        let recorded = catch.call_method0("__enter__").unwrap();
+        warnings.call_method1("simplefilter", (action,)).unwrap();
+
+        let result = f();
+
+        let recorded: Vec<Bound<'_, PyAny>> = recorded.extract().unwrap();
+        let count = recorded.len();
+        let message = recorded
+            .last()
+            .map(|w| w.getattr("message").unwrap().str().unwrap().to_string())
+            .unwrap_or_default();
+
+        catch
+            .call_method1("__exit__", (py.None(), py.None(), py.None()))
+            .unwrap();
+
+        (result, count, message)
+    }
+
+    #[test]
+    fn deprecated_param_cstr_formats_rename_message() {
+        let cstr = deprecated_param_cstr!(new = index, old = offset);
+        assert_eq!(
+            cstr.to_str().unwrap(),
+            "`offset` is deprecated; use `index` instead"
+        );
+    }
+
+    #[test]
+    fn deprecated_param_cstr_formats_rename_message_with_swapped_order() {
+        let cstr = deprecated_param_cstr!(old = offset, new = index);
+        assert_eq!(
+            cstr.to_str().unwrap(),
+            "`offset` is deprecated; use `index` instead"
+        );
+    }
+
+    #[test]
+    fn deprecated_param_cstr_formats_bare_deprecation_message() {
+        let cstr = deprecated_param_cstr!(old = declared_size);
+        assert_eq!(
+            cstr.to_str().unwrap(),
+            "`declared_size` is deprecated and will be removed in the future"
+        );
+    }
+
+    #[test]
+    fn py_deprecated_warns_but_succeeds_under_default_filter() {
+        Python::initialize();
+        Python::attach(|py| {
+            let (result, count, message) =
+                with_recorded_warnings(py, "always", || py_deprecated!(py, c"oh no"));
+            result.unwrap();
+            assert_eq!(count, 1);
+            assert_eq!(message, "oh no");
+        });
+    }
+
+    #[test]
+    fn py_deprecated_becomes_an_error_under_error_filter() {
+        Python::initialize();
+        Python::attach(|py| {
+            let (result, ..) =
+                with_recorded_warnings(py, "error", || py_deprecated!(py, c"oh no"));
+            let err = result.unwrap_err();
+            assert!(err.is_instance_of::<PyDeprecationWarning>(py));
+        });
+    }
+
+    #[test]
+    fn deprecated_or_new_returns_new_without_warning_when_old_is_absent() {
+        Python::initialize();
+        Python::attach(|py| {
+            let (result, count, _) = with_recorded_warnings(py, "always", || {
+                _deprecated_or_new(py, 5u32, None::<u32>, Ok, c"unused")
+            });
+            assert_eq!(result.unwrap(), 5);
+            assert_eq!(count, 0);
+        });
+    }
+
+    #[test]
+    fn deprecated_or_new_converts_old_and_warns_when_old_is_given() {
+        Python::initialize();
+        Python::attach(|py| {
+            let (result, count, message) = with_recorded_warnings(py, "always", || {
+                _deprecated_or_new(py, 0u32, Some(7u32), Ok, c"use `new` instead")
+            });
+            assert_eq!(result.unwrap(), 7);
+            assert_eq!(count, 1);
+            assert_eq!(message, "use `new` instead");
+        });
+    }
+
+    #[test]
+    fn deprecated_or_new_propagates_conversion_errors() {
+        Python::initialize();
+        Python::attach(|py| {
+            let (result, ..) = with_recorded_warnings(py, "always", || {
+                _deprecated_or_new(
+                    py,
+                    0u32,
+                    Some(7u32),
+                    |_| Err(PyValueError::new_err("bad old value")),
+                    c"use `new` instead",
+                )
+            });
+            let err = result.unwrap_err();
+            assert!(err.to_string().contains("bad old value"));
+        });
+    }
+
+    #[test]
+    fn deprecated_or_new_propagates_warning_as_error_under_error_filter() {
+        Python::initialize();
+        Python::attach(|py| {
+            let (result, ..) = with_recorded_warnings(py, "error", || {
+                _deprecated_or_new(py, 0u32, Some(7u32), Ok, c"use `new` instead")
+            });
+            assert!(result.unwrap_err().is_instance_of::<PyDeprecationWarning>(py));
+        });
+    }
+}

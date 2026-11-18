@@ -628,3 +628,251 @@ impl TryAsBorrowed<MemoryReference> for PyMemRef<'_> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::instruction::Vector;
+
+    fn make_declaration<'py>(
+        py: Python<'py>,
+        name: &str,
+        data_type: ScalarType,
+    ) -> Py<Declaration> {
+        Py::new(
+            py,
+            Declaration::new(name.to_string(), Vector::new(data_type, 3), None),
+        )
+        .unwrap()
+    }
+
+    fn make_declaration_at<'py>(
+        py: Python<'py>,
+        name: &str,
+        data_type: ScalarType,
+        index: u64,
+    ) -> Bound<'py, DeclarationAt> {
+        let declaration = make_declaration(py, name, data_type);
+        Bound::new(py, DeclarationAt::new(declaration, index)).unwrap()
+    }
+
+    #[test]
+    fn py_mem_ref_name_and_index_cover_all_variants() {
+        Python::initialize();
+        Python::attach(|py| {
+            let decl_at = make_declaration_at(py, "x", ScalarType::Integer, 2);
+            let as_decl_at = PyMemRef::DeclarationAt(decl_at.clone());
+            assert_eq!(as_decl_at.name(), "x");
+            assert_eq!(as_decl_at.index(), 2);
+            assert_eq!(as_decl_at.to_string(), "x[2]");
+
+            let declaration = Bound::new(
+                py,
+                Declaration::new("y".to_string(), Vector::new(ScalarType::Bit, 1), None),
+            )
+            .unwrap();
+            let as_decl = PyMemRef::Declaration(declaration);
+            assert_eq!(as_decl.name(), "y");
+            // A bare `Declaration`, unlike a `DeclarationAt`, always has index `0`.
+            assert_eq!(as_decl.index(), 0);
+
+            let mem_ref = Bound::new(py, MemoryReference::new("z".to_string(), 5)).unwrap();
+            let as_mem_ref = PyMemRef::MemoryReference(mem_ref);
+            assert_eq!(as_mem_ref.name(), "z");
+            assert_eq!(as_mem_ref.index(), 5);
+        });
+    }
+
+    #[test]
+    fn py_mem_ref_into_memory_reference_preserves_name_and_index() {
+        Python::initialize();
+        Python::attach(|py| {
+            let decl_at = make_declaration_at(py, "x", ScalarType::Integer, 2);
+            let mem_ref: MemoryReference = PyMemRef::DeclarationAt(decl_at).into();
+            assert_eq!(mem_ref, MemoryReference::new("x".to_string(), 2));
+        });
+    }
+
+    #[test]
+    fn py_mem_ref_eq_compares_across_variants_by_underlying_value() {
+        Python::initialize();
+        Python::attach(|py| {
+            let decl_at = PyMemRef::DeclarationAt(make_declaration_at(
+                py,
+                "x",
+                ScalarType::Integer,
+                2,
+            ));
+            let mem_ref = PyMemRef::MemoryReference(
+                Bound::new(py, MemoryReference::new("x".to_string(), 2)).unwrap(),
+            );
+            let different = PyMemRef::MemoryReference(
+                Bound::new(py, MemoryReference::new("x".to_string(), 3)).unwrap(),
+            );
+
+            // `PartialEq for PyMemRef` only compares matching variants (see `_ => false`),
+            // so a `DeclarationAt` and a `MemoryReference` are never considered equal
+            // even when they refer to the same name and index.
+            assert_ne!(decl_at, mem_ref);
+            assert_eq!(mem_ref, PyMemRef::MemoryReference(
+                Bound::new(py, MemoryReference::new("x".to_string(), 2)).unwrap(),
+            ));
+            assert_ne!(mem_ref, different);
+
+            // `PartialEq<MemoryReference> for PyMemRef`, on the other hand,
+            // compares by name/index regardless of variant.
+            assert_eq!(decl_at, MemoryReference::new("x".to_string(), 2));
+            assert_eq!(mem_ref, MemoryReference::new("x".to_string(), 2));
+        });
+    }
+
+    #[test]
+    fn declaration_memref_always_uses_the_given_index() {
+        let declaration = Declaration::new(
+            "x".to_string(),
+            Vector::new(ScalarType::Integer, 3),
+            None,
+        );
+        assert_eq!(declaration.memref(0), MemoryReference::new("x".to_string(), 0));
+        assert_eq!(declaration.memref(7), MemoryReference::new("x".to_string(), 7));
+    }
+
+    #[test]
+    fn declaration_at_memref_combines_name_and_index() {
+        Python::initialize();
+        Python::attach(|py| {
+            let decl_at = make_declaration_at(py, "x", ScalarType::Integer, 4);
+            assert_eq!(decl_at.get().memref(py), MemoryReference::new("x".to_string(), 4));
+        });
+    }
+
+    #[test]
+    fn check_comparison_rejects_non_bit_destination() {
+        Python::initialize();
+        Python::attach(|py| {
+            let decl_at = make_declaration_at(py, "x", ScalarType::Integer, 0);
+            let a = PyMemRef::MemoryReference(
+                Bound::new(py, MemoryReference::new("a".to_string(), 0)).unwrap(),
+            );
+            let b = ComparisonOperandLike::Int(1);
+
+            let err = decl_at.get().check_comparison(py, &a, &b).unwrap_err();
+            assert!(err.to_string().contains("BIT-typed"));
+        });
+    }
+
+    #[test]
+    fn check_comparison_rejects_mismatched_operand_types() {
+        Python::initialize();
+        Python::attach(|py| {
+            let decl_at = make_declaration_at(py, "result", ScalarType::Bit, 0);
+
+            let int_decl = make_declaration(py, "a", ScalarType::Integer);
+            let a = PyMemRef::Declaration(int_decl.bind(py).clone());
+
+            let real_decl = make_declaration(py, "b", ScalarType::Real);
+            let b = ComparisonOperandLike::MemoryReference(PyMemRef::Declaration(
+                real_decl.bind(py).clone(),
+            ));
+
+            let err = decl_at.get().check_comparison(py, &a, &b).unwrap_err();
+            assert!(err.to_string().contains("same type"));
+        });
+    }
+
+    #[test]
+    fn check_comparison_accepts_bit_destination_with_matching_operand_types() {
+        Python::initialize();
+        Python::attach(|py| {
+            let decl_at = make_declaration_at(py, "result", ScalarType::Bit, 0);
+
+            let a_decl = make_declaration(py, "a", ScalarType::Integer);
+            let a = PyMemRef::Declaration(a_decl.bind(py).clone());
+            // Literal operands have no known `Declaration`, so `same_type` can't rule them out.
+            let b = ComparisonOperandLike::Int(1);
+
+            decl_at.get().check_comparison(py, &a, &b).unwrap();
+        });
+    }
+
+    #[test]
+    fn same_type_returns_none_when_either_side_has_no_declaration() {
+        Python::initialize();
+        Python::attach(|py| {
+            let mem_ref = PyMemRef::MemoryReference(
+                Bound::new(py, MemoryReference::new("a".to_string(), 0)).unwrap(),
+            );
+            let other = PyMemRef::MemoryReference(
+                Bound::new(py, MemoryReference::new("b".to_string(), 0)).unwrap(),
+            );
+            // Neither side is backed by a `Declaration`, so the comparison can't be ruled out.
+            assert_eq!(same_type(py, &mem_ref, &other), None);
+        });
+    }
+
+    #[test]
+    fn same_type_compares_declaration_backed_data_types() {
+        Python::initialize();
+        Python::attach(|py| {
+            let a = PyMemRef::Declaration(make_declaration(py, "a", ScalarType::Integer).bind(py).clone());
+            let b_same = PyMemRef::Declaration(make_declaration(py, "b", ScalarType::Integer).bind(py).clone());
+            let b_diff = PyMemRef::Declaration(make_declaration(py, "c", ScalarType::Real).bind(py).clone());
+
+            assert_eq!(same_type(py, &a, &b_same), Some(true));
+            assert_eq!(same_type(py, &a, &b_diff), Some(false));
+        });
+    }
+
+    #[test]
+    fn memory_reference_like_extracts_from_memory_reference_declaration_tuple_and_list() {
+        Python::initialize();
+        Python::attach(|py| {
+            let mem_ref = Bound::new(py, MemoryReference::new("a".to_string(), 2)).unwrap();
+            let extracted: MemoryReferenceLike = mem_ref.extract().unwrap();
+            assert_eq!(MemoryReference::from(extracted), MemoryReference::new("a".to_string(), 2));
+
+            let declaration = make_declaration(py, "b", ScalarType::Integer);
+            let extracted: MemoryReferenceLike = declaration.bind(py).extract().unwrap();
+            assert_eq!(MemoryReference::from(extracted), MemoryReference::new("b".to_string(), 0));
+
+            let decl_at = make_declaration_at(py, "c", ScalarType::Integer, 3);
+            let extracted: MemoryReferenceLike = decl_at.extract().unwrap();
+            assert_eq!(MemoryReference::from(extracted), MemoryReference::new("c".to_string(), 3));
+
+            // Tuples are `(str, int)`, so pass the index as an actual `int`, not a string.
+            let tuple = pyo3::types::PyTuple::new(
+                py,
+                [
+                    "d".into_pyobject(py).unwrap().into_any(),
+                    4i64.into_pyobject(py).unwrap().into_any(),
+                ],
+            )
+            .unwrap();
+            let extracted: MemoryReferenceLike = tuple.extract().unwrap();
+            assert_eq!(MemoryReference::from(extracted), MemoryReference::new("d".to_string(), 4));
+
+            let list = pyo3::types::PyList::new(
+                py,
+                [
+                    "e".into_pyobject(py).unwrap().into_any(),
+                    5i64.into_pyobject(py).unwrap().into_any(),
+                ],
+            )
+            .unwrap();
+            let extracted: MemoryReferenceLike = list.extract().unwrap();
+            assert_eq!(MemoryReference::from(extracted), MemoryReference::new("e".to_string(), 5));
+        });
+    }
+
+    #[test]
+    fn memory_reference_like_rejects_wrong_length_list_and_unsupported_types() {
+        Python::initialize();
+        Python::attach(|py| {
+            let short_list = pyo3::types::PyList::new(py, ["only_one"]).unwrap();
+            assert!(short_list.extract::<MemoryReferenceLike>().is_err());
+
+            let unsupported = 5i64.into_pyobject(py).unwrap().into_any();
+            assert!(unsupported.extract::<MemoryReferenceLike>().is_err());
+        });
+    }
+}

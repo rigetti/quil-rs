@@ -146,3 +146,136 @@ impl<New: PyStubType, Old: PyStubType> PyStubType for Migrate<New, Old> {
         New::type_output() | Old::type_output()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn aliased_impl_prefers_a_when_only_a_is_given() {
+        let result = aliased_impl(Some(1), None::<i32>, Ok, Ok, || Ok(0), "a", "b").unwrap();
+        assert_eq!(result, 1);
+    }
+
+    #[test]
+    fn aliased_impl_prefers_b_when_only_b_is_given() {
+        let result = aliased_impl(None::<i32>, Some(2), Ok, Ok, || Ok(0), "a", "b").unwrap();
+        assert_eq!(result, 2);
+    }
+
+    #[test]
+    fn aliased_impl_uses_the_default_when_neither_is_given() {
+        let result = aliased_impl(None::<i32>, None::<i32>, Ok, Ok, || Ok(42), "a", "b").unwrap();
+        assert_eq!(result, 42);
+    }
+
+    #[test]
+    fn aliased_impl_errors_when_both_are_given() {
+        let err = aliased_impl(Some(1), Some(2), Ok, Ok, || Ok(0), "a", "b").unwrap_err();
+        let message = err.to_string();
+        assert!(message.contains('a') && message.contains('b'));
+    }
+
+    #[test]
+    fn aliased_impl_runs_the_conversion_closure_for_the_given_side() {
+        let result: usize = aliased_impl(
+            Some("hello"),
+            None::<&str>,
+            |s: &str| Ok(s.len()),
+            |s: &str| Ok(s.len()),
+            || Ok(0),
+            "a",
+            "b",
+        )
+        .unwrap();
+        assert_eq!(result, 5);
+    }
+
+    #[test]
+    fn aliased_macro_defaults_to_identity_and_default_value() {
+        fn pick(a: Option<String>, b: Option<String>) -> PyResult<String> {
+            aliased!(a, b)
+        }
+        assert_eq!(pick(Some("x".to_string()), None).unwrap(), "x");
+        assert_eq!(pick(None, Some("y".to_string())).unwrap(), "y");
+        assert_eq!(pick(None, None).unwrap(), "");
+        assert!(pick(Some("x".to_string()), Some("y".to_string())).is_err());
+    }
+
+    #[test]
+    fn aliased_macro_accepts_a_custom_default_value() {
+        fn pick(a: Option<u64>, b: Option<u64>) -> PyResult<u64> {
+            aliased!(a, b, 99)
+        }
+        assert_eq!(pick(None, None).unwrap(), 99);
+        assert_eq!(pick(Some(5), None).unwrap(), 5);
+    }
+
+    #[test]
+    fn aliased_macro_accepts_a_custom_default_closure() {
+        fn pick(a: Option<u64>, b: Option<u64>) -> PyResult<u64> {
+            aliased!(a, b, || Err(pyo3::exceptions::PyValueError::new_err("need `a`")))
+        }
+        assert!(pick(None, None).is_err());
+        assert_eq!(pick(Some(5), None).unwrap(), 5);
+    }
+
+    #[test]
+    fn aliased_macro_none_default_wraps_results_in_option() {
+        fn pick(a: Option<u64>, b: Option<u64>) -> PyResult<Option<u64>> {
+            aliased!(a, b, None)
+        }
+        assert_eq!(pick(None, None).unwrap(), None);
+        assert_eq!(pick(Some(5), None).unwrap(), Some(5));
+        assert_eq!(pick(None, Some(6)).unwrap(), Some(6));
+    }
+
+    #[test]
+    fn aliased_macro_supports_custom_conversion_closures_for_both_sides() {
+        fn pick(name: Option<String>, nm: Option<i64>) -> PyResult<String> {
+            aliased!(
+                |name| if name.is_empty() {
+                    Err(pyo3::exceptions::PyValueError::new_err("`name` must not be empty"))
+                } else {
+                    Ok(name)
+                },
+                |nm| Ok(nm.to_string()),
+                || Err(pyo3::exceptions::PyValueError::new_err("missing required parameter `name`"))
+            )
+        }
+        assert_eq!(pick(Some("ok".to_string()), None).unwrap(), "ok");
+        assert_eq!(pick(None, Some(5)).unwrap(), "5");
+        assert!(pick(Some(String::new()), None).is_err());
+        assert!(pick(None, None).is_err());
+    }
+
+    #[test]
+    fn migrate_from_py_object_prefers_new_over_old() {
+        Python::initialize();
+        Python::attach(|py| {
+            let value = 5i64.into_pyobject(py).unwrap().into_any();
+            let migrated: Migrate<i64, String> = value.extract().unwrap();
+            assert!(matches!(migrated, Migrate::New(5)));
+        });
+    }
+
+    #[test]
+    fn migrate_from_py_object_falls_back_to_old_when_new_extraction_fails() {
+        Python::initialize();
+        Python::attach(|py| {
+            let value = "x".into_pyobject(py).unwrap().into_any();
+            let migrated: Migrate<i64, String> = value.extract().unwrap();
+            assert!(matches!(migrated, Migrate::Old(s) if s == "x"));
+        });
+    }
+
+    #[test]
+    fn migrate_from_py_object_errors_when_neither_matches() {
+        Python::initialize();
+        Python::attach(|py| {
+            let value = pyo3::types::PyList::empty(py).into_any();
+            let result = value.extract::<Migrate<i64, String>>();
+            assert!(result.is_err());
+        });
+    }
+}

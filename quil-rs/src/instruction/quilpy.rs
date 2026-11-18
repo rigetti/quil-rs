@@ -867,6 +867,7 @@ impl CalibrationDefinition {
             ))]
     #[new]
     fn __new__(
+        py: Python<'_>,
         identifier: Option<Migrate<CalibrationIdentifier, String>>,
         instructions: Option<Migrate<Vec<Instruction>, Seq2<ExpressionLike, Expression>>>,
 
@@ -922,7 +923,13 @@ impl CalibrationDefinition {
                 modifiers,
                 Some(name),
                 Some(parameters),
-            ) => Self::from_parts(name, parameters, qubits, instructions, modifiers),
+            ) => {
+                py_deprecated!(
+                    py,
+                    c"this constructor is deprecated; use `CalibrationDefinition.from_parts` instead"
+                )?;
+                Self::from_parts(name, parameters, qubits, instructions, modifiers)
+            },
 
             _ => Err(errors::ValueError::new_err(
                 "CalibrationDefinition does not permit mixing old and new constructor arguments",
