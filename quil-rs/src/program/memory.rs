@@ -175,7 +175,7 @@ pub mod expression {
                         // We're done with this expression and didn't find anything; time to walk down
                         // another tree branch, if there are any left.
                         Expression::Number(_)
-                        | Expression::PiConstant()
+                        | Expression::PiConstant
                         | Expression::Variable(_) => continue 'stack_search,
 
                         // We're done with this expression and it was successful; stop iterating here,

@@ -10,7 +10,12 @@ use rigetti_pyo3::create_init_submodule;
 #[cfg(feature = "stubs")]
 use pyo3_stub_gen::derive::{gen_stub_pyclass, gen_stub_pymethods};
 
-use crate::{instruction::WaveformInvocation, quilpy::errors};
+use crate::{
+    expression::{quilpy::ExpressionLike, Expression},
+    instruction::WaveformInvocation,
+    quilpy::{errors, Seq2},
+    waveform::WaveformParameterError,
+};
 
 use super::{
     builtin::{quilpy::*, BoxcarKernel, ExplicitCommonBuiltinParameters},
@@ -136,6 +141,15 @@ pub struct PyWaveform(pub Waveform<Pythonic>);
 fn call_on_py_any_rust<'py>(f: &Bound<'py, PyAny>, x: &PyAnyRust) -> PyResult<PyAnyRust> {
     let PyAnyRust(x) = x;
     Ok(PyAnyRust(f.call1((x,))?.unbind()))
+}
+
+#[cfg_attr(feature = "stubs", gen_stub_pymethods)]
+#[pymethods]
+impl crate::instruction::Waveform {
+    #[new]
+    fn __new__(matrix: Seq2<ExpressionLike, Expression>, parameters: Vec<String>) -> Self {
+        Self::new(matrix.into(), parameters)
+    }
 }
 
 /// Wrap the `try_evaluate` methods on the various waveform types to expose them to Python as
@@ -353,5 +367,57 @@ impl PyWaveform {
                 "waveform.custom(name={name:?}, parameters={parameters:?})"
             )),
         }
+    }
+
+    // PyQuil v4-compatible methods.
+    fn get_parameter<'py>(&self, py: Python<'py>, name: &str) -> PyResult<Bound<'py, PyAny>> {
+        match &self.0 {
+            Waveform::Builtin {
+                common_parameters, ..
+            } => match name {
+                "duration" => common_parameters.duration.into_bound_py_any(py),
+                "scale" => common_parameters.scale.clone().into_bound_py_any(py),
+                "phase" => common_parameters.phase.clone().into_bound_py_any(py),
+                "detuning" => common_parameters.detuning.clone().into_bound_py_any(py),
+                _ => py.None().into_bound_py_any(py),
+            },
+            Waveform::Custom { parameters, .. } => match parameters.get(name) {
+                Some(value) => value.clone_ref(py).into_bound_py_any(py),
+                None => py.None().into_bound_py_any(py),
+            },
+        }
+    }
+
+    fn set_parameter<'py>(&mut self, name: &str, value: Bound<'py, PyAny>) -> PyResult<()> {
+        match &mut self.0 {
+            Waveform::Builtin {
+                ref mut common_parameters,
+                ..
+            } => match name {
+                "duration" => {
+                    common_parameters.duration = value.extract()?;
+                }
+                "scale" => {
+                    common_parameters.scale = value.extract()?;
+                }
+                "phase" => {
+                    common_parameters.phase = value.extract()?;
+                }
+                "detuning" => {
+                    common_parameters.detuning = value.extract()?;
+                }
+                _ => {
+                    Err(WaveformParameterError::Extra(vec![name.to_string()]))?;
+                }
+            },
+            Waveform::Custom { parameters, .. } => {
+                if value.is_none() {
+                    parameters.shift_remove(name);
+                } else {
+                    parameters.insert(name.to_string(), PyAnyRust(value.unbind()));
+                }
+            }
+        }
+        Ok(())
     }
 }

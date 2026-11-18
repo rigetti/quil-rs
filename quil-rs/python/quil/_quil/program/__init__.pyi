@@ -9,6 +9,7 @@ from quil import _quil
 from quil._quil import instructions
 import typing
 import typing_extensions
+from typing import TypeAlias
 __all__ = [
     "BasicBlock",
     "BasicBlockScheduleError",
@@ -18,6 +19,7 @@ __all__ = [
     "ComputedScheduleError",
     "ControlFlowGraph",
     "FrameSet",
+    "InstructionIndex",
     "InstructionSourceMap",
     "InstructionSourceMapEntry",
     "InstructionTarget",
@@ -28,17 +30,15 @@ __all__ = [
     "QubitGraphError",
     "ScheduleSeconds",
     "ScheduleSecondsItem",
+    "Seconds",
     "TimeSpanSeconds",
 ]
 
+InstructionIndex: TypeAlias = builtins.int
+Seconds: TypeAlias = builtins.float
 class BasicBlock:
     @property
-    def instructions(self) -> builtins.list[instructions.Instruction]:
-        r"""
-        A list of the instructions in the block, in order of definition.
-        
-        This does not include the label or terminator instructions.
-        """
+    def instructions(self) -> builtins.list[_quil.instructions.Instruction]: ...
     @property
     def label(self) -> typing.Optional[_quil.instructions.Target]:
         r"""
@@ -410,6 +410,7 @@ class InstructionTarget:
     
 
 class MemoryRegion:
+    __match_args__: tuple[builtins.str, builtins.str] = ('size', 'sharing')
     @property
     def sharing(self) -> typing.Optional[instructions.Sharing]: ...
     @property
@@ -527,7 +528,10 @@ class Program:
     ```
     """
     @property
-    def body_instructions(self) -> builtins.list[instructions.Instruction]: ...
+    def body_instructions(self) -> collections.abc.Sequence[instructions.Instruction]:
+        r"""
+        This is an alternative alias for `instructions`.
+        """
     @property
     def calibrations(self) -> CalibrationSet: ...
     @calibrations.setter
@@ -547,7 +551,21 @@ class Program:
     @gate_definitions.setter
     def gate_definitions(self, value: typing.Mapping[builtins.str, instructions.GateDefinition]) -> None: ...
     @property
-    def instructions(self) -> builtins.list[instructions.Instruction]: ...
+    def instructions(self) -> collections.abc.Sequence[instructions.Instruction]:
+        r"""
+        Returns a read-only view over the program's instructions.
+        
+        The return value acts as a `collections.abc.Sequence` over the instructions,
+        and so acts much the same as would a `list` (including slicing),
+        but only copies `Instruction`s when accessed, not when the view is created.
+        This is *not* a fully live view: the view's length is captured once, at the time
+        this property is accessed, and is not re-checked afterward.
+        Holding instances while mutating the `Program`'s instructions
+        can lead to seemingly inconsistent behavior,
+        so users should either avoid mutating the `Program` while holding onto a view
+        (re-accessing the property after any mutation to get a new view),
+        or wrap the view in `list()` to get a snapshot of the instructions at that time.
+        """
     @instructions.setter
     def instructions(self, value: typing.Sequence[instructions.Instruction]) -> None: ...
     @property
@@ -608,9 +626,9 @@ class Program:
         instructions are still added to the [`Program::extern_pragma_map`];
         duplicate `PRAGMA EXTERN` names are overwritten.
         """
-    def add_instructions(self, instructions: typing.Sequence[_quil.instructions.Instruction]) -> None:
+    def add_instructions(self, instructions: _quil.instructions.Instruction  |  typing.Sequence[_quil.instructions.Instruction], *more: typing.Any) -> None:
         r"""
-        Add a list of instructions to the end of the program.
+        Add one or more instructions to the end of the program.
         """
     def clone_without_body_instructions(self) -> Program:
         r"""
@@ -783,8 +801,7 @@ class Program:
         r"""
         Resolve ``TargetPlaceholder``s and ``QubitPlaceholder``s within the program.
         
-        The resolved values will remain unique to that placeholder
-        within the scope of the program.
+        The resolved values will remain unique to that placeholder within the scope of the program.
         If you provide ``target_resolver`` and/or ``qubit_resolver``,
         those will be used to resolve those values respectively.
         If your resolver returns `None` for a particular placeholder,
@@ -808,6 +825,24 @@ class Program:
         # Errors
         
         Returns an error if the program contains instructions other than `Gate`s.
+        """
+    def with_loop(self, num_iterations: builtins.int, iteration_count_reference: _quil.instructions.MemoryReference, start_label: typing.Optional[_quil.instructions.Label], *, end_label: typing.Optional[_quil.instructions.Label] = None) -> Program:
+        r"""
+        Return a copy of the `Program` wrapped in a loop that repeats `iterations` times.
+        
+        The loop is constructed by wrapping the body of the program in classical Quil instructions.
+        The given `loop_count_reference` must refer to an INTEGER memory region. The value at the
+        reference given will be set to `iterations` and decremented in the loop. The loop will
+        terminate when the reference reaches 0. For this reason your program should not itself
+        modify the value at the reference unless you intend to modify the remaining number of
+        iterations (i.e. to break the loop).
+        
+        The given `start_target` is used as a label to mark the start of the loop.
+        The default (`None`) will generate a `Target.Placeholder` which must be resolved
+        using `Program.resolve_placeholders` before you can generate Quil from the `Program`;
+        if you provide a `Target`, it must be unique within the `Program`.
+        
+        If `iterations` is 0, then a copy of the program is returned without any changes.
         """
     @typing.overload
     def wrap_in_loop(self, loop_count_reference: _quil.instructions.MemoryReference, start_target: _quil.instructions.Target, iterations: builtins.int) -> Program:

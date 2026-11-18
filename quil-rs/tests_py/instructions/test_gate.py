@@ -1,35 +1,24 @@
 import pytest
-from quil.expression import Expression
+
 from quil.instructions import (
     MeasureCalibrationDefinition,
     MeasureCalibrationIdentifier,
     Measurement,
     MemoryReference,
-    PauliGate,
-    PauliTerm,
     Qubit,
     CalibrationDefinition,
     CalibrationIdentifier,
-    QubitPlaceholder,
-    Instruction,
     Delay,
     Gate,
 )
 
-class TestPauliTerm:
-    def test_new(self):
-        pt = PauliTerm([(PauliGate.X, "a")], Expression.Pi())
-        assert pt.arguments == [(PauliGate.X, "a")]
-        pt = PauliTerm([(PauliGate.Y, "b")], Expression.Pi())
-        assert pt.arguments == [(PauliGate.Y, "b")]
-
 
 def test_calibration_getters():
-    placeholder = Qubit.Placeholder(QubitPlaceholder())
+    placeholder = Qubit()
 
     calibration = CalibrationDefinition(
         CalibrationIdentifier("MYCAL", [], [placeholder], []),
-        [Instruction.Delay(Delay(Expression.Number(complex(0.5)), [], [placeholder]))],
+        [Delay(0.5, [placeholder])],
     )
 
     assert calibration.name == "MYCAL"
@@ -39,9 +28,9 @@ def test_calibration_getters():
 
 
 def test_measure_calibration_getters():
-    placeholder = Qubit.Placeholder(QubitPlaceholder())
+    placeholder = Qubit()
 
-    calibration = MeasureCalibrationDefinition(
+    calibration = MeasureCalibrationDefinition.from_calibration(
         MeasureCalibrationIdentifier(placeholder, "addr"),
         [],
     )
@@ -52,9 +41,9 @@ def test_measure_calibration_getters():
     assert calibration.instructions == []
 
 def test_named_measure_calibration_getters():
-    placeholder = Qubit.Placeholder(QubitPlaceholder())
+    placeholder = Qubit()
 
-    calibration = MeasureCalibrationDefinition(
+    calibration = MeasureCalibrationDefinition.from_calibration(
         MeasureCalibrationIdentifier(placeholder, "addr", name = "midcircuit"),
         [],
     )
@@ -66,7 +55,7 @@ def test_named_measure_calibration_getters():
 
 
 def test_measurement_getters():
-    placeholder = Qubit.Placeholder(QubitPlaceholder())
+    placeholder = Qubit()
     addr = MemoryReference("addr", 0)
 
     measurement = Measurement(placeholder, addr)
@@ -77,7 +66,7 @@ def test_measurement_getters():
 
 
 def test_named_measurement_getters():
-    placeholder = Qubit.Placeholder(QubitPlaceholder())
+    placeholder = Qubit()
     addr = MemoryReference("addr", 0)
 
     measurement = Measurement(placeholder, addr, name = "midcircuit")

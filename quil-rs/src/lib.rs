@@ -107,7 +107,9 @@ pub mod quilpy;
 /// ```ignore
 /// pickleable_new! {
 ///     impl Foo {
-///         pub fn new(bar: i32, baz: &str) -> Self {
+///         // You MUST name the return type; `Self` won't be valid in the macro body.
+///         //                                  v---`Self` won't work here!
+///         pub fn new(bar: i32, baz: &str) -> Foo {
 ///             Self {
 ///                 bar,
 ///                 baz: baz.to_string(),
@@ -131,20 +133,35 @@ macro_rules! pickleable_new {
         $(#[$impl_meta:meta])*
         impl $name:ident {
             $(#[$meta:meta])*
-            $pub:vis fn $new:ident( $($field:ident: $field_type:ty$(,)?)*);
+            $pub:vis fn $new:ident $(<$($type_params:tt),+>)? (
+                $(py: Python<$py_life:lifetime>,)?
+                $(
+                    $(#[$field_meta:meta])*
+                    $field:ident: $field_type:ty $(as $other_type:ty)?
+                ),*
+                $(,)?
+            );
         }
     ) => {
-        pickleable_new! {
+        $crate::pickleable_new!(
             $(#[$impl_meta])*
             impl $name {
                 $(#[$meta])*
-                $pub fn $new($($field: $field_type,)*) -> $name {
+                $pub fn $new $(<$($type_params),+>)? (
+                    $(py: Python<$py_life>,)?
+                    $(
+                        $(#[$field_meta])*
+                        $field: $field_type $(as $other_type)?
+                    ),*
+                    ) -> $name {
                     Self {
-                        $($field,)*
+                        $(
+                            $field: $crate::pickleable_new!(@extract $field: $field_type $(as $other_type)?),
+                        )*
                     }
                 }
             }
-        }
+        );
     };
 
     // If __new__ needs actual logic, you can supply a body.
@@ -152,22 +169,42 @@ macro_rules! pickleable_new {
         $(#[$impl_meta:meta])*
         impl $name:ident {
             $(#[$meta:meta])*
-            $pub:vis fn $new:ident( $($field:ident: $field_type:ty$(,)?)*) -> $ret:ty {
+            $pub:vis fn $new:ident $(<$($type_params:tt),+>)? (
+                $(py: Python<$py_life:lifetime>,)?
+                $(
+                    $(#[$field_meta:meta])*
+                    $field:ident: $field_type:ty $(as $other_type:ty)?
+                ),*
+                $(,)?
+                ) -> $ret:ty {
                 $($body:tt)+
             }
         }
     ) => {
         $(#[$impl_meta])*
-        #[cfg(feature = "python")]
         #[cfg_attr(feature = "stubs", pyo3_stub_gen::derive::gen_stub_pymethods)]
-        #[pyo3::pymethods]
+        #[cfg_attr(not(feature = "python"), optipy::strip_pyo3)]
+        #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+        #[cfg_attr(feature = "python", pyo3::pymethods)]
         impl $name {
             $(#[$meta])*
             #[new]
-            $pub fn $new($($field: $field_type,)*) -> $ret {
+            $pub fn $new $(<$($type_params),+>)? (
+                $(py: Python<$py_life>,)?
+                $(
+                    $(#[$field_meta])*
+                    $field: $crate::pickleable_new!(@field_or_other $field_type $(as $other_type)?)
+                ),*
+                ) -> $ret {
                 $($body)+
             }
+        }
 
+        #[cfg(feature = "python")]
+        #[cfg_attr(feature = "stubs", pyo3_stub_gen::derive::gen_stub_pymethods)]
+        #[cfg_attr(not(feature = "stubs"), optipy::strip_pyo3(only_stubs))]
+        #[pyo3::pymethods]
+        impl $name {
             fn __getnewargs__(&self) -> ($($field_type,)*) {
                 (
                     $((self.$field).clone(),)*
@@ -175,15 +212,18 @@ macro_rules! pickleable_new {
             }
         }
 
-        $(#[$impl_meta])*
-        #[cfg(not(feature = "python"))]
-        impl $name {
-            $(#[$meta])*
-            $pub fn $new($($field: $field_type,)*) -> $ret {
-                $($body)+
-            }
-        }
+        #[cfg(feature = "python")]
+        $crate::quilpy::impl_match_args!($name($(stringify!($field)),*));
     };
+
+    // These internal rules allow you to write a `some_field: T as U` in the macro input;
+    // `T` should be the type of the field in the struct, but `U` is the field `__new__` accepts,
+    // and `U` will be converted into `T` using `.into()`.
+    // The `__getnewargs__` method will return `T` as the type of that field.
+    (@field_or_other $field_type:ty as $other_type:ty) => { $other_type };
+    (@field_or_other $field_type:ty) => { $field_type };
+    (@extract $field:ident: $field_type:ty as $other_type:ty) => { $field.into() };
+    (@extract $field:ident: $field_type:ty) => { $field };
 }
 
 pub(crate) use pickleable_new;

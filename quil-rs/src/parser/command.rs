@@ -1311,7 +1311,7 @@ mod tests {
             let gate1 = Gate::new(
                 "RX",
                 vec![Expression::Infix(InfixExpression {
-                    left: ArcIntern::new(Expression::PiConstant()),
+                    left: ArcIntern::new(Expression::PiConstant),
                     operator: InfixOperator::Slash,
                     right: ArcIntern::new(Expression::Number(Complex64 { re: 2.0, im: 0.0 })),
                 })],
@@ -1338,7 +1338,7 @@ mod tests {
             let gate1 = Gate::new(
                 "RX",
                 vec![Expression::Infix(InfixExpression {
-                    left: ArcIntern::new(Expression::PiConstant()),
+                    left: ArcIntern::new(Expression::PiConstant),
                     operator: InfixOperator::Slash,
                     right: ArcIntern::new(Expression::Number(Complex64 { re: 2.0, im: 0.0 })),
                 })],
@@ -1365,7 +1365,7 @@ mod tests {
             let gate1 = Gate::new(
                 "RX",
                 vec![Expression::Infix(InfixExpression {
-                    left: ArcIntern::new(Expression::PiConstant()),
+                    left: ArcIntern::new(Expression::PiConstant),
                     operator: InfixOperator::Slash,
                     right: ArcIntern::new(Expression::Number(Complex64 { re: 2.0, im: 0.0 })),
                 })],

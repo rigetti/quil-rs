@@ -58,6 +58,9 @@ resulting in a large jump since the last version.
 
 The new version comes with breaking changes, particularly for Python users,
 which are summarized below and detailed in the `CHANGELOG`.
+For a detailed, class-by-class list of the changes needed to migrate code
+written against PyQuil v4's `quilatom`/`quilbase` classes,
+see [`PYQUIL_MIGRATION.md`](PYQUIL_MIGRATION.md).
 For the trouble, we now support the latest versions of `PyO3` and Python.
 This comes with improvements to security, stability, and performance
 and makes our codebase much easier to support moving forward.

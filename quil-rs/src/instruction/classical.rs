@@ -5,7 +5,10 @@ use pyo3_stub_gen::derive::{
 
 use super::MemoryReference;
 
-use crate::{floating_point_eq, pickleable_new, quil::Quil};
+use crate::{floating_point_eq, quil::Quil};
+
+#[cfg(feature = "python")]
+use crate::instruction::quilpy::PyInstruction;
 
 #[derive(Clone, Debug, Hash, PartialEq)]
 #[cfg_attr(feature = "stubs", gen_stub_pyclass)]
@@ -14,6 +17,7 @@ use crate::{floating_point_eq, pickleable_new, quil::Quil};
     pyo3::pyclass(
         module = "quil._quil.instructions",
         eq,
+        extends = PyInstruction,
         frozen,
         hash,
         get_all,
@@ -27,13 +31,17 @@ pub struct Arithmetic {
     pub source: ArithmeticOperand,
 }
 
-pickleable_new! {
-    impl Arithmetic {
-        pub fn new(
-            operator: ArithmeticOperator,
-            destination: MemoryReference,
-            source: ArithmeticOperand,
-        );
+impl Arithmetic {
+    pub fn new(
+        operator: ArithmeticOperator,
+        destination: MemoryReference,
+        source: ArithmeticOperand,
+    ) -> Self {
+        Self {
+            operator,
+            destination,
+            source,
+        }
     }
 }
 
@@ -61,8 +69,9 @@ impl Quil for Arithmetic {
         frozen,
         hash,
         get_all,
-        from_py_object
-    )
+        skip_from_py_object
+    ),
+    derive(pyo3::FromPyObject)
 )]
 pub enum ArithmeticOperand {
     LiteralInteger(i64),
@@ -163,7 +172,7 @@ impl Quil for ArithmeticOperator {
         frozen,
         hash,
         get_all,
-        from_py_object
+        skip_from_py_object
     )
 )]
 pub enum BinaryOperand {
@@ -256,6 +265,7 @@ impl Quil for BinaryOperator {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -285,13 +295,17 @@ impl Quil for BinaryLogic {
     }
 }
 
-pickleable_new! {
-    impl BinaryLogic {
-        pub fn new(
-            operator: BinaryOperator,
-            destination: MemoryReference,
-            source: BinaryOperand,
-        );
+impl BinaryLogic {
+    pub fn new(
+        operator: BinaryOperator,
+        destination: MemoryReference,
+        source: BinaryOperand,
+    ) -> Self {
+        Self {
+            operator,
+            destination,
+            source,
+        }
     }
 }
 
@@ -301,6 +315,7 @@ pickleable_new! {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -314,9 +329,12 @@ pub struct Convert {
     pub source: MemoryReference,
 }
 
-pickleable_new! {
-    impl Convert {
-        pub fn new(destination: MemoryReference, source: MemoryReference);
+impl Convert {
+    pub fn new(destination: MemoryReference, source: MemoryReference) -> Self {
+        Self {
+            destination,
+            source,
+        }
     }
 }
 
@@ -340,6 +358,7 @@ impl Quil for Convert {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -353,9 +372,12 @@ pub struct Move {
     pub source: ArithmeticOperand,
 }
 
-pickleable_new! {
-    impl Move {
-        pub fn new(destination: MemoryReference, source: ArithmeticOperand);
+impl Move {
+    pub fn new(destination: MemoryReference, source: ArithmeticOperand) -> Self {
+        Self {
+            destination,
+            source,
+        }
     }
 }
 
@@ -379,6 +401,7 @@ impl Quil for Move {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -406,9 +429,9 @@ impl Quil for Exchange {
     }
 }
 
-pickleable_new! {
-    impl Exchange {
-        pub fn new(left: MemoryReference, right: MemoryReference);
+impl Exchange {
+    pub fn new(left: MemoryReference, right: MemoryReference) -> Self {
+        Self { left, right }
     }
 }
 
@@ -418,6 +441,7 @@ pickleable_new! {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -433,14 +457,19 @@ pub struct Comparison {
     pub rhs: ComparisonOperand,
 }
 
-pickleable_new! {
-    impl Comparison {
-        pub fn new(
-            operator: ComparisonOperator,
-            destination: MemoryReference,
-            lhs: MemoryReference,
-            rhs: ComparisonOperand,
-        );
+impl Comparison {
+    pub fn new(
+        operator: ComparisonOperator,
+        destination: MemoryReference,
+        lhs: MemoryReference,
+        rhs: ComparisonOperand,
+    ) -> Self {
+        Self {
+            operator,
+            destination,
+            lhs,
+            rhs,
+        }
     }
 }
 
@@ -589,6 +618,7 @@ impl Quil for ComparisonOperator {
     feature = "python",
     pyo3::pyclass(
         module = "quil._quil.instructions",
+        extends = PyInstruction,
         eq,
         frozen,
         hash,
@@ -602,9 +632,9 @@ pub struct UnaryLogic {
     pub operand: MemoryReference,
 }
 
-pickleable_new! {
-    impl UnaryLogic {
-        pub fn new(operator: UnaryOperator, operand: MemoryReference);
+impl UnaryLogic {
+    pub fn new(operator: UnaryOperator, operand: MemoryReference) -> Self {
+        Self { operator, operand }
     }
 }
 
