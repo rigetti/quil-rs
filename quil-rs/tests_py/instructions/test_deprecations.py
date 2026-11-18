@@ -50,6 +50,16 @@ class TestConstructorAliasDeprecationWarnings:
     identically to using the new name.
     """
 
+    def test_calibration_definition_old_style_constructor(self):
+        placeholder = Qubit()
+        with pytest.warns(DeprecationWarning):
+            CalibrationDefinition(
+                "MYCAL",
+                [1.0],
+                [placeholder],
+                [Delay(0.5, [placeholder])],
+            )
+
     def test_comparison_target_left_right(self):
         with pytest.warns(DeprecationWarning):
             old = Comparison(
@@ -164,7 +174,6 @@ class TestConstructorAliasDeprecationWarnings:
         with pytest.warns(DeprecationWarning):
             Pragma("FOO", data="")
 
-
 class TestMutuallyExclusiveAliasErrors:
     """Passing both the old and new parameter names should raise an error."""
 
@@ -194,10 +203,7 @@ class TestMutuallyExclusiveAliasErrors:
 
 
 class TestIntentionalNonDeprecatedAliases:
-    """These aliases are permanent, backwards-compatible alternate names that
-    are *not* scheduled for removal, so using them should **not** raise a
-    `DeprecationWarning`.
-    """
+    """These backwards-compatible aliases that are *not* scheduled for removal."""
 
     def test_gate_params_alias_is_silent(self):
         with warnings.catch_warnings():
@@ -230,10 +236,10 @@ class TestIntentionalNonDeprecatedAliases:
 
 
 class TestInstrsGetterDeprecations:
-    """Unlike the `instrs`/`instructions` constructor keyword (a silent,
-    non-deprecated alias -- see above), the `instrs` *getter* on both
-    `CalibrationDefinition` and `MeasureCalibrationDefinition` is explicitly
-    marked deprecated in favor of the `instructions` getter.
+    """Unlike the `instrs`/`instructions` constructor keyword
+    (a silent, non-deprecated alias -- see above),
+    the `instrs` *getter* on both `CalibrationDefinition` and `MeasureCalibrationDefinition`
+    is explicitly marked deprecated in favor of the `instructions` getter.
     """
 
     def test_calibration_definition_instrs_getter_warns(self):
@@ -251,30 +257,3 @@ class TestInstrsGetterDeprecations:
             assert calibration.instrs == calibration.instructions
 
 
-class TestCalibrationDefinitionOldStyleConstructor:
-    """`CalibrationDefinition`'s fully-positional
-    `(name, parameters, qubits, instrs, modifiers)` constructor is marked
-    `@typing_extensions.deprecated` in the generated type stubs, but nothing
-    in the Rust `__new__` implementation actually raises a runtime
-    `DeprecationWarning` for it. This test documents that gap and is
-    expected to fail (`xfail`) until the implementation is fixed to match
-    the stubs.
-    """
-
-    @pytest.mark.xfail(
-        reason=(
-            "CalibrationDefinition's old-style positional constructor is "
-            "marked `@typing_extensions.deprecated` in the stubs, but no "
-            "runtime `DeprecationWarning` is actually raised."
-        ),
-        strict=True,
-    )
-    def test_old_style_constructor_warns(self):
-        placeholder = Qubit()
-        with pytest.warns(DeprecationWarning):
-            CalibrationDefinition(
-                "MYCAL",
-                [],
-                [placeholder],
-                [Delay(0.5, [placeholder])],
-            )
