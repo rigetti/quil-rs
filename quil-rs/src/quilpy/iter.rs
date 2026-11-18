@@ -472,18 +472,6 @@ where
             return_type: PhantomData,
         }
     }
-
-    /// Create a new `IteratorOf` over data owned by a mutable `obj` using a closure.
-    pub(crate) fn new_mut<T, F>(obj: Bound<'_, T>, len: usize, getitem: F) -> Self
-    where
-        T: PyClass<Frozen = False> + Sync,
-        F: Fn(&T, usize) -> PyResult<Option<R>> + Send + Sync + 'static,
-    {
-        Self {
-            inner: SequenceOf::new_mut(obj, len, getitem).into_iterator(),
-            return_type: PhantomData,
-        }
-    }
 }
 
 impl<'py, R> IntoPyObject<'py> for IteratorOf<R>
