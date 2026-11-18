@@ -407,12 +407,12 @@ impl DeclarationAt {
 
     #[pyo3(signature = (other, /))]
     fn ior<'py>(&self, py: Python<'py>, other: BinaryOperandLike) -> BinaryLogic {
-        BinaryLogic::new(BinaryOperator::And, self.memref(py), other.into())
+        BinaryLogic::new(BinaryOperator::Ior, self.memref(py), other.into())
     }
 
     #[pyo3(signature = (other, /))]
     fn xor<'py>(&self, py: Python<'py>, other: BinaryOperandLike) -> BinaryLogic {
-        BinaryLogic::new(BinaryOperator::And, self.memref(py), other.into())
+        BinaryLogic::new(BinaryOperator::Xor, self.memref(py), other.into())
     }
 
     /// Return a new `Arithmetic` instruction representing `ADD self other`.
